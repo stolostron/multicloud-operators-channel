@@ -1,2 +1,2 @@
 # multicloud-operators-channel
-CRD and controller for Channel (Channel Subscription model) for Multicloud Application.
+Multicloud application management with a channel CRD.
