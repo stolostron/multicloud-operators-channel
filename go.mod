@@ -2,11 +2,33 @@ module github.com/IBM/multicloud-operators-channel
 
 require (
 	github.com/go-openapi/spec v0.19.0
+	github.com/gogo/protobuf v1.3.0 // indirect
+	github.com/golang/protobuf v1.3.2 // indirect
+	github.com/grpc-ecosystem/grpc-gateway v1.9.0 // indirect
+	github.com/onsi/ginkgo v1.10.1 // indirect
+	github.com/onsi/gomega v1.7.0 // indirect
 	github.com/operator-framework/operator-sdk v0.10.1-0.20191004014855-dc713e4d7890
-	github.com/spf13/pflag v1.0.3
+	github.com/prometheus/client_golang v0.9.3 // indirect
+	github.com/prometheus/common v0.4.0
+	github.com/rogpeppe/go-internal v1.3.2 // indirect
+	github.com/sirupsen/logrus v1.4.2 // indirect
+	github.com/spf13/pflag v1.0.5
+	github.com/stretchr/testify v1.4.0 // indirect
+	go.uber.org/atomic v1.4.0 // indirect
+	go.uber.org/zap v1.10.0 // indirect
+	golang.org/x/crypto v0.0.0-20190923035154-9ee001bba392 // indirect
+	golang.org/x/net v0.0.0-20190923162816-aa69164e4478 // indirect
+	golang.org/x/sys v0.0.0-20191008105621-543471e840be // indirect
+	golang.org/x/text v0.3.2 // indirect
+	golang.org/x/tools v0.0.0-20191007185444-6536af71d98a // indirect
+	google.golang.org/grpc v1.21.0 // indirect
+	gopkg.in/check.v1 v1.0.0-20190902080502-41f04d3bba15 // indirect
+	gopkg.in/yaml.v2 v2.2.4 // indirect
 	k8s.io/api v0.0.0-20190612125737-db0771252981
+	k8s.io/apiextensions-apiserver v0.0.0-20190409022649-727a075fdec8 // indirect
 	k8s.io/apimachinery v0.0.0-20190612125636-6a5db36e93ad
-	k8s.io/client-go v11.0.0+incompatible
+	k8s.io/apiserver v0.0.0-20181213151703-3ccfe8365421
+	k8s.io/client-go v11.0.1-0.20190409021438-1a26190bd76a+incompatible
 	k8s.io/klog v0.3.1
 	k8s.io/kube-openapi v0.0.0-20190603182131-db7b694dc208
 	sigs.k8s.io/controller-runtime v0.1.12
