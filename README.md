@@ -1,6 +1,6 @@
 # multicloud-operators-channel
 
-[![Build](http://35.227.205.240/badge.svg?jobs=build_multicloud-operators-channel)](http://35.227.205.240/badge.svg?jobs=build_multicloud-operators-channel)
+[![Build](http://35.227.205.240/badge.svg?jobs=images_multicloud-operators-deployable_postsubmit)](http://35.227.205.240/badge.svg?jobs=images_multicloud-operators-deployable_postsubmit)
 [![GoDoc](https://godoc.org/github.com/IBM/multicloud-operators-channel?status.svg)](https://godoc.org/github.com/IBM/multicloud-operators-channel)
 [![Go Report Card](https://goreportcard.com/badge/github.com/IBM/multicloud-operators-channel)](https://goreportcard.com/report/github.com/IBM/multicloud-operators-channel)
 [![License](https://img.shields.io/:license-apache-blue.svg)](http://www.apache.org/licenses/LICENSE-2.0.html)
