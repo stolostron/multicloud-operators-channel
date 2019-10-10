@@ -63,6 +63,12 @@ type ChannelSpec struct {
 	SourceNamespaces []string                `json:"sourceNamespaces,omitempty"`
 }
 
+// ChannelStatus defines the observed state of Channel
+type ChannelStatus struct {
+	// INSERT ADDITIONAL STATUS FIELD - define observed state of cluster
+	// Important: Run "make" to regenerate code after modifying this file
+}
+
 // +genclient
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 
