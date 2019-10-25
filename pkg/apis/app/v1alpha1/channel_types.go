@@ -41,6 +41,8 @@ const (
 	ChannelTypeHelmRepo = "helmrepo"
 	// ChannelTypeObjectBucket defines type name of bucket in object store
 	ChannelTypeObjectBucket = "objectbucket"
+	// ChannelTypeGitHub defines type name of GitHub repository channel
+	ChannelTypeGitHub = "github"
 )
 
 // ChannelGate defines criteria for promote to channel
