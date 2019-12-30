@@ -8,8 +8,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/onsi/gomega"
 	synchronizer "github.com/IBM/multicloud-operators-channel/pkg/synchronizer/helmreposynchronizer"
+	"github.com/onsi/gomega"
 	appv1alpha1 "github.com/IBM/multicloud-operators-deployable/pkg/apis/app/v1alpha1"
 	"golang.org/x/net/context"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"

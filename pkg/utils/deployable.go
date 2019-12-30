@@ -7,21 +7,20 @@ package utils
 import (
 	"context"
 
-	"github.com/golang/glog"
 	appv1alpha1 "github.com/IBM/multicloud-operators-channel/pkg/apis/app/v1alpha1"
 	dplv1alpha1 "github.com/IBM/multicloud-operators-deployable/pkg/apis/app/v1alpha1"
 	dplutils "github.com/IBM/multicloud-operators-deployable/pkg/utils"
-
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/klog"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 // ValidateDeployableInChannel check if a deployable rightfully in channel
 func ValidateDeployableInChannel(deployable *dplv1alpha1.Deployable, channel *appv1alpha1.Channel) bool {
-	if glog.V(10) {
+	if klog.V(10) {
 		fnName := dplutils.GetFnName()
-		glog.Infof("Entering: %v()", fnName)
-		defer glog.Infof("Exiting: %v()", fnName)
+		klog.Infof("Entering: %v()", fnName)
+		defer klog.Infof("Exiting: %v()", fnName)
 	}
 	if deployable == nil || channel == nil {
 		return false
@@ -67,10 +66,10 @@ func ValidateDeployableInChannel(deployable *dplv1alpha1.Deployable, channel *ap
 // // b.1.1 if gate and dpl annotation has a match then promote
 // // b.1.1 dpl doesn't have annotation, then fail
 func ValidateDeployableToChannel(deployable *dplv1alpha1.Deployable, channel *appv1alpha1.Channel) bool {
-	if glog.V(10) {
+	if klog.V(10) {
 		fnName := dplutils.GetFnName()
-		glog.Infof("Entering: %v()", fnName)
-		defer glog.Infof("Exiting: %v()", fnName)
+		klog.Infof("Entering: %v()", fnName)
+		defer klog.Infof("Exiting: %v()", fnName)
 	}
 	found := false
 	if deployable.Spec.Channels != nil {
@@ -120,10 +119,10 @@ func ValidateDeployableToChannel(deployable *dplv1alpha1.Deployable, channel *ap
 // FindDeployableForChannelsInMap check all deployables in certain namespace delete all has the channel set the given channel namespace
 // channelnsMap is a set(), which is used to check up if the dpl is within a channel or not
 func FindDeployableForChannelsInMap(cl client.Client, deployable *dplv1alpha1.Deployable, channelnsMap map[string]string) (*dplv1alpha1.Deployable, map[string]*dplv1alpha1.Deployable, error) {
-	if glog.V(10) {
+	if klog.V(10) {
 		fnName := dplutils.GetFnName()
-		glog.Infof("Entering: %v()", fnName)
-		defer glog.Infof("Exiting: %v()", fnName)
+		klog.Infof("Entering: %v()", fnName)
+		defer klog.Infof("Exiting: %v()", fnName)
 	}
 	if channelnsMap == nil || len(channelnsMap) == 0 {
 		return nil, nil, nil
@@ -131,9 +130,9 @@ func FindDeployableForChannelsInMap(cl client.Client, deployable *dplv1alpha1.De
 
 	var parent *dplv1alpha1.Deployable
 	dpllist := &dplv1alpha1.DeployableList{}
-	err := cl.List(context.TODO(), &client.ListOptions{}, dpllist)
+	err := cl.List(context.TODO(), dpllist, &client.ListOptions{})
 	if err != nil {
-		glog.Error("Failed to list deployable for deployable ", *deployable)
+		klog.Error("Failed to list deployable for deployable ", *deployable)
 		return nil, nil, err
 	}
 
@@ -149,19 +148,19 @@ func FindDeployableForChannelsInMap(cl client.Client, deployable *dplv1alpha1.De
 	}
 
 	parentDplGen := DplGenerateNameStr(deployable)
-	glog.Infof("dplkey: %v", dplkey)
+	klog.Infof("dplkey: %v", dplkey)
 	for _, dpl := range dpllist.Items {
 		key := types.NamespacedName{Name: dpl.Name, Namespace: dpl.Namespace}.String()
 		if key == parentkey {
 			parent = dpl.DeepCopy()
 		}
 
-		glog.V(10).Infof("parent dpl: %v, checking dpl: %v", deployable.GetName(), dpl.GetGenerateName())
+		klog.V(10).Infof("parent dpl: %v, checking dpl: %v", deployable.GetName(), dpl.GetGenerateName())
 		if dpl.GetGenerateName() == parentDplGen && channelnsMap[dpl.Namespace] != "" {
 
 			dplanno := dpl.GetAnnotations()
 			if dplanno != nil && dplanno[appv1alpha1.KeyChannelSource] == dplkey.String() {
-				glog.V(10).Infof("adding dpl: %v to children dpl map", dplkey.String())
+				klog.V(10).Infof("adding dpl: %v to children dpl map", dplkey.String())
 				dplmap[dplanno[appv1alpha1.KeyChannel]] = dpl.DeepCopy()
 			}
 
@@ -174,9 +173,9 @@ func FindDeployableForChannelsInMap(cl client.Client, deployable *dplv1alpha1.De
 	}
 
 	if parent != nil {
-		glog.V(10).Infof("deployable: %#v/%#v, parent: %#v/%#v, dplmap: %#v", deployable.GetNamespace(), deployable.GetName(), parent.GetNamespace(), parent.GetName(), dplmapStr)
+		klog.V(10).Infof("deployable: %#v/%#v, parent: %#v/%#v, dplmap: %#v", deployable.GetNamespace(), deployable.GetName(), parent.GetNamespace(), parent.GetName(), dplmapStr)
 	} else {
-		glog.V(10).Infof("deployable: %#v/%#v, parent: %#v, dplmap: %#v", deployable.GetNamespace(), deployable.GetName(), parent, dplmapStr)
+		klog.V(10).Infof("deployable: %#v/%#v, parent: %#v, dplmap: %#v", deployable.GetNamespace(), deployable.GetName(), parent, dplmapStr)
 	}
 
 	return parent, dplmap, nil
@@ -184,15 +183,15 @@ func FindDeployableForChannelsInMap(cl client.Client, deployable *dplv1alpha1.De
 
 // CleanupDeployables check all deployables in certain namespace delete all has the channel set the given channel name
 func CleanupDeployables(cl client.Client, channel types.NamespacedName) error {
-	if glog.V(10) {
+	if klog.V(10) {
 		fnName := dplutils.GetFnName()
-		glog.Infof("Entering: %v()", fnName)
-		defer glog.Infof("Exiting: %v()", fnName)
+		klog.Infof("Entering: %v()", fnName)
+		defer klog.Infof("Exiting: %v()", fnName)
 	}
 	dpllist := &dplv1alpha1.DeployableList{}
-	err := cl.List(context.TODO(), &client.ListOptions{Namespace: channel.Namespace}, dpllist)
+	err := cl.List(context.TODO(), dpllist, &client.ListOptions{Namespace: channel.Namespace})
 	if err != nil {
-		glog.Error("Failed to list deployable for channel namespace ", channel.Namespace)
+		klog.Error("Failed to list deployable for channel namespace ", channel.Namespace)
 		return err
 	}
 
@@ -211,10 +210,10 @@ func CleanupDeployables(cl client.Client, channel types.NamespacedName) error {
 
 // GenerateDeployableForChannel generate a copy of deployable for channel with label, annotation, template and channel info
 func GenerateDeployableForChannel(deployable *dplv1alpha1.Deployable, channel types.NamespacedName) (*dplv1alpha1.Deployable, error) {
-	if glog.V(10) {
+	if klog.V(10) {
 		fnName := dplutils.GetFnName()
-		glog.Infof("Entering: %v()", fnName)
-		defer glog.Infof("Exiting: %v()", fnName)
+		klog.Infof("Entering: %v()", fnName)
+		defer klog.Infof("Exiting: %v()", fnName)
 	}
 	if deployable == nil {
 		return nil, nil
@@ -268,10 +267,10 @@ func GenerateDeployableForChannel(deployable *dplv1alpha1.Deployable, channel ty
 
 //DplGenerateNameStr  will generate a string for the dpl generate name
 func DplGenerateNameStr(deployable *dplv1alpha1.Deployable) string {
-	if glog.V(10) {
+	if klog.V(10) {
 		fnName := dplutils.GetFnName()
-		glog.Infof("Entering: %v()", fnName)
-		defer glog.Infof("Exiting: %v()", fnName)
+		klog.Infof("Entering: %v()", fnName)
+		defer klog.Infof("Exiting: %v()", fnName)
 	}
 	gn := ""
 	if deployable.GetGenerateName() == "" {

@@ -8,7 +8,6 @@ import (
 	"context"
 	"strings"
 
-	"github.com/golang/glog"
 	chnv1alpha1 "github.com/IBM/multicloud-operators-channel/pkg/apis/app/v1alpha1"
 	gitsync "github.com/IBM/multicloud-operators-channel/pkg/synchronizer/githubsynchronizer"
 	helmsync "github.com/IBM/multicloud-operators-channel/pkg/synchronizer/helmreposynchronizer"
@@ -16,6 +15,7 @@ import (
 
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/client-go/tools/record"
+	"k8s.io/klog"
 
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
@@ -81,7 +81,7 @@ func (r *ReconcileChannel) Reconcile(request reconcile.Request) (reconcile.Resul
 	// Fetch the Deployable instance
 	instance := &chnv1alpha1.Channel{}
 	err := r.KubeClient.Get(context.TODO(), request.NamespacedName, instance)
-	glog.Info("Reconciling channel:", request.NamespacedName, " with Get err:", err)
+	klog.Info("Reconciling channel:", request.NamespacedName, " with Get err:", err)
 	if err != nil {
 		if errors.IsNotFound(err) {
 			// Object not found, return.  Created objects are automatically garbage collected.
@@ -90,12 +90,12 @@ func (r *ReconcileChannel) Reconcile(request reconcile.Request) (reconcile.Resul
 			return reconcile.Result{}, nil
 		}
 		// Error reading the object - requeue the request.
-		glog.V(10).Info("Reconciling - Errored.", request.NamespacedName, " with Get err:", err)
+		klog.V(10).Info("Reconciling - Errored.", request.NamespacedName, " with Get err:", err)
 		return reconcile.Result{}, err
 	}
 
 	if strings.ToLower(string(instance.Spec.Type)) != chnv1alpha1.ChannelTypeHelmRepo {
-		glog.V(10).Info("Ignoring type ", instance.Spec.Type)
+		klog.V(10).Info("Ignoring type ", instance.Spec.Type)
 		return reconcile.Result{}, nil
 	}
 

@@ -11,11 +11,11 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/golang/glog"
 	chnv1alpha1 "github.com/IBM/multicloud-operators-channel/pkg/apis/app/v1alpha1"
 	"gopkg.in/yaml.v2"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/klog"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -48,7 +48,7 @@ func (desc *ChannelDescriptor) ValidateChannel(chn *chnv1alpha1.Channel, kubeCli
 	// Add new channel to the map
 	if chndesc == nil {
 		if err := desc.initChannelDescription(chn, kubeClient); err != nil {
-			glog.Error(err, "Unable to initialize channel ObjectStore description")
+			klog.Error(err, "Unable to initialize channel ObjectStore description")
 			return err
 		}
 	} else {
@@ -57,9 +57,9 @@ func (desc *ChannelDescriptor) ValidateChannel(chn *chnv1alpha1.Channel, kubeCli
 		if err != nil || !reflect.DeepEqual(chndesc.Channel, chn) {
 			// remove invalid channel description
 			desc.Delete(chn.Name)
-			glog.Info("Updating ObjectStore description for channel ", chn.Name)
+			klog.Info("Updating ObjectStore description for channel ", chn.Name)
 			if err := desc.initChannelDescription(chn, kubeClient); err != nil {
-				glog.Error(err, "Unable to initialize channel ObjectStore description")
+				klog.Error(err, "Unable to initialize channel ObjectStore description")
 				return err
 			}
 		}
@@ -74,7 +74,7 @@ func (desc *ChannelDescriptor) initChannelDescription(chn *chnv1alpha1.Channel, 
 	pathName := chn.Spec.PathName
 	if pathName == "" {
 		errmsg := "Empty Pathname in channel " + chn.Name
-		glog.Error(errmsg)
+		klog.Error(errmsg)
 		return errors.New(errmsg)
 	}
 	if strings.HasSuffix(pathName, "/") {
@@ -85,7 +85,7 @@ func (desc *ChannelDescriptor) initChannelDescription(chn *chnv1alpha1.Channel, 
 	endpoint := pathName[:loc]
 	chndesc.Bucket = pathName[loc+1:]
 
-	glog.Info("Trying to connect to aws ", endpoint, " | ", chndesc.Bucket)
+	klog.Info("Trying to connect to aws ", endpoint, " | ", chndesc.Bucket)
 
 	awshandler := &AWSHandler{}
 	accessKeyID := ""
@@ -98,7 +98,7 @@ func (desc *ChannelDescriptor) initChannelDescription(chn *chnv1alpha1.Channel, 
 		}
 		err := kubeClient.Get(context.TODO(), types.NamespacedName{Name: chn.Spec.SecretRef.Name, Namespace: secns}, secret)
 		if err != nil {
-			glog.Error(err, "Unable to get secret")
+			klog.Error(err, "Unable to get secret")
 			return err
 		}
 
@@ -106,12 +106,12 @@ func (desc *ChannelDescriptor) initChannelDescription(chn *chnv1alpha1.Channel, 
 		yaml.Unmarshal(secret.Data[SecretMapKeySecretAccessKey], &secretAccessKey)
 	}
 	if err := awshandler.InitObjectStoreConnection(endpoint, accessKeyID, secretAccessKey); err != nil {
-		glog.Error(err, "Unable to initialize object store settings")
+		klog.Error(err, "Unable to initialize object store settings")
 		return err
 	}
 	// Check whether the connection is setup successfully
 	if err := awshandler.Exists(chndesc.Bucket); err != nil {
-		glog.Error(err, "Unable to access object store bucket ", chndesc.Bucket, " for channel ", chn.Name)
+		klog.Error(err, "Unable to access object store bucket ", chndesc.Bucket, " for channel ", chn.Name)
 		return err
 	}
 	chndesc.ObjectStore = awshandler
@@ -120,7 +120,7 @@ func (desc *ChannelDescriptor) initChannelDescription(chn *chnv1alpha1.Channel, 
 
 	desc.Put(chn.Name, chndesc)
 
-	glog.Info("Channel ObjectStore descriptor for ", chn.Name, " is initialized: ", chndesc)
+	klog.Info("Channel ObjectStore descriptor for ", chn.Name, " is initialized: ", chndesc)
 
 	return nil
 }

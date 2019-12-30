@@ -7,10 +7,9 @@ package utils
 import (
 	"context"
 
-	"github.com/golang/glog"
 	appv1alpha1 "github.com/IBM/multicloud-operators-channel/pkg/apis/app/v1alpha1"
 	dplutils "github.com/IBM/multicloud-operators-deployable/pkg/utils"
-
+	"k8s.io/klog"
 	"strings"
 
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -18,14 +17,14 @@ import (
 
 // GenerateChannelMap finds all channels and build map with key of channel name
 func GenerateChannelMap(cl client.Client) (map[string]*appv1alpha1.Channel, error) {
-	if glog.V(10) {
+	if klog.V(10) {
 		fnName := dplutils.GetFnName()
-		glog.Infof("Entering: %v()", fnName)
-		defer glog.Infof("Exiting: %v()", fnName)
+		klog.Infof("Entering: %v()", fnName)
+		defer klog.Infof("Exiting: %v()", fnName)
 	}
 	// try to load channelmap if it is empty
 	chlist := &appv1alpha1.ChannelList{}
-	err := cl.List(context.TODO(), &client.ListOptions{}, chlist)
+	err := cl.List(context.TODO(), chlist, &client.ListOptions{})
 
 	if err != nil {
 		return nil, err
@@ -33,7 +32,7 @@ func GenerateChannelMap(cl client.Client) (map[string]*appv1alpha1.Channel, erro
 
 	chmap := make(map[string]*appv1alpha1.Channel)
 	for _, ch := range chlist.Items {
-		glog.V(10).Infof("Channel namespacedname: %v/%v,  type: %v, sourceNamespaces: %v, gates: %#v", ch.Namespace, ch.Name, ch.Spec.Type, ch.Spec.SourceNamespaces, ch.Spec.Gates)
+		klog.V(10).Infof("Channel namespacedname: %v/%v,  type: %v, sourceNamespaces: %v, gates: %#v", ch.Namespace, ch.Name, ch.Spec.Type, ch.Spec.SourceNamespaces, ch.Spec.Gates)
 		chmap[ch.Name] = ch.DeepCopy()
 	}
 
@@ -42,14 +41,14 @@ func GenerateChannelMap(cl client.Client) (map[string]*appv1alpha1.Channel, erro
 
 // LocateChannel finds channel by name
 func LocateChannel(cl client.Client, name string) (*appv1alpha1.Channel, error) {
-	if glog.V(10) {
+	if klog.V(10) {
 		fnName := dplutils.GetFnName()
-		glog.Infof("Entering: %v()", fnName)
-		defer glog.Infof("Exiting: %v()", fnName)
+		klog.Infof("Entering: %v()", fnName)
+		defer klog.Infof("Exiting: %v()", fnName)
 	}
 	// try to load channelmap if it is empty
 	chlist := &appv1alpha1.ChannelList{}
-	err := cl.List(context.TODO(), &client.ListOptions{}, chlist)
+	err := cl.List(context.TODO(), chlist, &client.ListOptions{})
 	if err != nil {
 		return nil, err
 	}
@@ -65,10 +64,10 @@ func LocateChannel(cl client.Client, name string) (*appv1alpha1.Channel, error) 
 
 // UpdateServingChannel add/remove the given channel to the current serving channel
 func UpdateServingChannel(servingChannel string, channelKey string, action string) string {
-	if glog.V(10) {
+	if klog.V(10) {
 		fnName := dplutils.GetFnName()
-		glog.Infof("Entering: %v()", fnName)
-		defer glog.Infof("Exiting: %v()", fnName)
+		klog.Infof("Entering: %v()", fnName)
+		defer klog.Infof("Exiting: %v()", fnName)
 	}
 	parsedstr := strings.Split(servingChannel, ",")
 

@@ -10,12 +10,11 @@ import (
 	"testing"
 	"time"
 
-	"github.com/ghodss/yaml"
-	"github.com/golang/glog"
-	"github.com/onsi/gomega"
 	chnv1alpha1 "github.com/IBM/multicloud-operators-channel/pkg/apis/app/v1alpha1"
 	"github.com/IBM/multicloud-operators-channel/pkg/utils"
 	dplv1alpha1 "github.com/IBM/multicloud-operators-deployable/pkg/apis/app/v1alpha1"
+	"github.com/ghodss/yaml"
+	"github.com/onsi/gomega"
 	"golang.org/x/net/context"
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -23,6 +22,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/kubernetes"
+	"k8s.io/klog"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
@@ -89,7 +89,7 @@ func TestReconcile(t *testing.T) {
 	nsobjFetched := &v1.Namespace{}
 	nsobjFetched, err = clientset.CoreV1().Namespaces().Get(channelNamespace, metav1.GetOptions{})
 	g.Expect(err).NotTo(gomega.HaveOccurred())
-	glog.V(10).Infof("nameSpace created : %+v", nsobjFetched)
+	klog.V(10).Infof("nameSpace created : %+v", nsobjFetched)
 
 	// ----- Create new Channel instance -----
 	var chnobj chnv1alpha1.Channel
@@ -321,7 +321,7 @@ func TestReconcile(t *testing.T) {
 	g.Eventually(requests, timeout).Should(gomega.Receive(gomega.Equal(expectedRequestObj)))
 	// Expect that deployable is deleted
 	dpllist := &dplv1alpha1.DeployableList{}
-	err = c.List(context.TODO(), &client.ListOptions{Namespace: chnobj.Namespace}, dpllist)
+	err = c.List(context.TODO(), dpllist, &client.ListOptions{Namespace: chnobj.Namespace})
 	g.Expect(err).NotTo(gomega.HaveOccurred())
 	g.Expect(len(dpllist.Items)).To(gomega.Equal(0))
 	// Expect that the template is not deleted from objectstore

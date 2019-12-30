@@ -9,17 +9,16 @@ import (
 	"encoding/json"
 	"time"
 
-	"github.com/golang/glog"
 	chnv1alpha1 "github.com/IBM/multicloud-operators-channel/pkg/apis/app/v1alpha1"
 	"github.com/IBM/multicloud-operators-channel/pkg/utils"
 	dplv1alpha1 "github.com/IBM/multicloud-operators-deployable/pkg/apis/app/v1alpha1"
 	deputils "github.com/IBM/multicloud-operators-deployable/pkg/utils"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/client-go/rest"
-
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/wait"
+	"k8s.io/client-go/rest"
+	"k8s.io/klog"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 )
@@ -38,7 +37,7 @@ func CreateSynchronizer(config *rest.Config, scheme *runtime.Scheme, syncInterva
 
 	client, err := client.New(config, client.Options{})
 	if err != nil {
-		glog.Error("Failed to initialize client for synchronizer. err: ", err)
+		klog.Error("Failed to initialize client for synchronizer. err: ", err)
 		return nil, err
 	}
 
@@ -54,15 +53,15 @@ func CreateSynchronizer(config *rest.Config, scheme *runtime.Scheme, syncInterva
 
 // Start - starts the sync process
 func (sync *ChannelSynchronizer) Start(s <-chan struct{}) error {
-	if glog.V(deputils.QuiteLogLel) {
+	if klog.V(deputils.QuiteLogLel) {
 		fnName := deputils.GetFnName()
-		glog.Infof("Entering: %v()", fnName)
-		defer glog.Infof("Exiting: %v()", fnName)
+		klog.Infof("Entering: %v()", fnName)
+		defer klog.Infof("Exiting: %v()", fnName)
 	}
 	sync.Signal = s
 
 	go wait.Until(func() {
-		glog.Info("Housekeeping loop ...")
+		klog.Info("Housekeeping loop ...")
 		sync.syncChannelsWithHelmRepo()
 	}, time.Duration(sync.SyncInterval)*time.Second, sync.Signal)
 
@@ -74,14 +73,14 @@ func (sync *ChannelSynchronizer) Start(s <-chan struct{}) error {
 // Sync cluster namespace / objectbucket channels with object store
 
 func (sync *ChannelSynchronizer) syncChannelsWithHelmRepo() {
-	if glog.V(deputils.QuiteLogLel) {
+	if klog.V(deputils.QuiteLogLel) {
 		fnName := deputils.GetFnName()
-		glog.Infof("Entering: %v()", fnName)
-		defer glog.Infof("Exiting: %v()", fnName)
+		klog.Infof("Entering: %v()", fnName)
+		defer klog.Infof("Exiting: %v()", fnName)
 	}
 
 	for _, ch := range sync.ChannelMap {
-		glog.V(10).Info("synching channel ", ch.Name)
+		klog.V(10).Info("synching channel ", ch.Name)
 		sync.syncChannel(ch)
 	}
 
@@ -97,7 +96,7 @@ func (sync *ChannelSynchronizer) syncChannel(chn *chnv1alpha1.Channel) {
 	// retrieve helm chart list from helm repo
 	idx, err := utils.GetHelmRepoIndex(chn.Spec.PathName)
 	if err != nil {
-		glog.Error("Error getting index for channel: ", chn.Namespace, " ", chn.Name)
+		klog.Error("Error getting index for channel: ", chn.Namespace, " ", chn.Name)
 		return
 	}
 	idx.SortEntries()
@@ -106,10 +105,10 @@ func (sync *ChannelSynchronizer) syncChannel(chn *chnv1alpha1.Channel) {
 	generalmap := make(map[string]map[string]bool)
 	majorversion := make(map[string]string)
 	for k, cv := range idx.Entries {
-		glog.V(10).Info("Key: ", k)
+		klog.V(10).Info("Key: ", k)
 		chartmap := make(map[string]bool)
 		for _, chart := range cv {
-			glog.V(10).Info("Chart:", chart.Name, " Version:", chart.Version)
+			klog.V(10).Info("Chart:", chart.Name, " Version:", chart.Version)
 			chartmap[chart.Version] = false
 		}
 		generalmap[k] = chartmap
@@ -120,23 +119,23 @@ func (sync *ChannelSynchronizer) syncChannel(chn *chnv1alpha1.Channel) {
 	listopt := &client.ListOptions{Namespace: chn.Namespace}
 	dpllist := &dplv1alpha1.DeployableList{}
 
-	err = sync.kubeClient.List(context.TODO(), listopt, dpllist)
+	err = sync.kubeClient.List(context.TODO(), dpllist, listopt)
 	if err != nil {
-		glog.Info("Error in listing deployables in channel namespace: ", chn.Namespace)
+		klog.Info("Error in listing deployables in channel namespace: ", chn.Namespace)
 		return
 	}
 
 	for _, dpl := range dpllist.Items {
-		glog.V(10).Info("synching dpl ", dpl.Name)
+		klog.V(10).Info("synching dpl ", dpl.Name)
 		obj := &unstructured.Unstructured{}
 		err := json.Unmarshal(dpl.Spec.Template.Raw, obj)
 		if err != nil {
-			glog.Warning("Processing local deployable with error template:", dpl, err)
+			klog.Warning("Processing local deployable with error template:", dpl, err)
 			continue
 		}
 
 		if obj.GetKind() != utils.HelmCRKind || obj.GetAPIVersion() != utils.HelmCRAPIVersion {
-			glog.Info("Skipping non helm chart deployable:", obj.GetKind(), ".", obj.GetAPIVersion())
+			klog.Info("Skipping non helm chart deployable:", obj.GetKind(), ".", obj.GetAPIVersion())
 			continue
 		}
 
@@ -163,7 +162,7 @@ func (sync *ChannelSynchronizer) syncChannel(chn *chnv1alpha1.Channel) {
 				specMap[utils.HelmCRRepoURL] = chn.Spec.PathName
 				err = sync.kubeClient.Update(context.TODO(), &dpl)
 				if err != nil {
-					glog.Error("Failed to update deployable in helm repo channel:", dpl.Name, " to ", chn.Spec.PathName)
+					klog.Error("Failed to update deployable in helm repo channel:", dpl.Name, " to ", chn.Spec.PathName)
 				}
 			}
 		}
@@ -181,7 +180,7 @@ func (sync *ChannelSynchronizer) syncChannel(chn *chnv1alpha1.Channel) {
 		specMap[utils.HelmCRRepoURL] = chn.Spec.PathName
 
 		obj.Object["spec"] = specMap
-		glog.V(10).Info("Object: ", obj.Object)
+		klog.V(10).Info("Object: ", obj.Object)
 
 		if synced := charts[mv]; !synced {
 			dpl := &dplv1alpha1.Deployable{}
@@ -196,14 +195,14 @@ func (sync *ChannelSynchronizer) syncChannel(chn *chnv1alpha1.Channel) {
 			dpl.Spec.Template = &runtime.RawExtension{}
 			dpl.Spec.Template.Raw, err = json.Marshal(obj)
 			if err != nil {
-				glog.Info("Failed to marshal helm cr to template, err:", err)
+				klog.Info("Failed to marshal helm cr to template, err:", err)
 				break
 			}
 			err = sync.kubeClient.Create(context.TODO(), dpl)
 			if err != nil {
-				glog.Info("Failed to create helmcr deployable, err:", err)
+				klog.Info("Failed to create helmcr deployable, err:", err)
 			}
-			glog.Info("creating dpl ", k)
+			klog.Info("creating dpl ", k)
 		}
 	}
 

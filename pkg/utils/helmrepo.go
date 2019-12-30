@@ -10,8 +10,8 @@ import (
 	"net/http"
 
 	"github.com/ghodss/yaml"
-	"github.com/golang/glog"
 	"k8s.io/helm/pkg/repo"
+	"k8s.io/klog"
 )
 
 var (
@@ -64,25 +64,25 @@ func GetHelmRepoIndex(channelPathName string) (*repo.IndexFile, error) {
 
 	client, err := decideHTTPClient(repoURL)
 	if err != nil {
-		glog.Error(err, "Failed to decide http protocol ", repoURL)
+		klog.Error(err, "Failed to decide http protocol ", repoURL)
 		return nil, err
 	}
 
 	resp, err := client.Get(repoURL)
 	if err != nil {
-		glog.Error(err, "Failed to contact repo: ", repoURL)
+		klog.Error(err, "Failed to contact repo: ", repoURL)
 		return nil, err
 	}
 	defer resp.Body.Close()
-	glog.V(10).Info("Done retrieving URL: ", repoURL)
+	klog.V(10).Info("Done retrieving URL: ", repoURL)
 
 	body, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
-		glog.Error(err, "Unable to read body", repoURL)
+		klog.Error(err, "Unable to read body", repoURL)
 		return nil, err
 	}
 
-	glog.V(10).Info("Index file: \n", string(body))
+	klog.V(10).Info("Index file: \n", string(body))
 
 	i := &repo.IndexFile{}
 	err = yaml.Unmarshal(body, i)

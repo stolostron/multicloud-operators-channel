@@ -7,7 +7,6 @@ package objectstore
 import (
 	"context"
 
-	"github.com/golang/glog"
 	chnv1alpha1 "github.com/IBM/multicloud-operators-channel/pkg/apis/app/v1alpha1"
 	gitsync "github.com/IBM/multicloud-operators-channel/pkg/synchronizer/githubsynchronizer"
 	helmsync "github.com/IBM/multicloud-operators-channel/pkg/synchronizer/helmreposynchronizer"
@@ -17,6 +16,7 @@ import (
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/tools/record"
+	"k8s.io/klog"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
@@ -52,9 +52,9 @@ type channelMapper struct {
 func (mapper *channelMapper) Map(obj handler.MapObject) []reconcile.Request {
 
 	dpllist := &appv1alpha1.DeployableList{}
-	err := mapper.List(context.TODO(), &client.ListOptions{Namespace: obj.Meta.GetNamespace()}, dpllist)
+	err := mapper.List(context.TODO(), dpllist, &client.ListOptions{Namespace: obj.Meta.GetNamespace()})
 	if err != nil {
-		glog.Error("Failed to list all deployable: ", err)
+		klog.Error("Failed to list all deployable: ", err)
 		return nil
 	}
 
@@ -104,7 +104,7 @@ func (r *ReconcileDeployable) Reconcile(request reconcile.Request) (reconcile.Re
 	// Fetch the Deployable instance
 	instance := &appv1alpha1.Deployable{}
 	err := r.KubeClient.Get(context.TODO(), request.NamespacedName, instance)
-	glog.Info("Reconciling:", request.NamespacedName, " with Get err:", err)
+	klog.Info("Reconciling:", request.NamespacedName, " with Get err:", err)
 	if err != nil {
 		if errors.IsNotFound(err) {
 			// Object not found, return.  Created objects are automatically garbage collected.
@@ -115,13 +115,13 @@ func (r *ReconcileDeployable) Reconcile(request reconcile.Request) (reconcile.Re
 			return reconcile.Result{}, nil
 		}
 		// Error reading the object - requeue the request.
-		glog.V(10).Info("Reconciling - Errored.", request.NamespacedName, " with Get err:", err)
+		klog.V(10).Info("Reconciling - Errored.", request.NamespacedName, " with Get err:", err)
 		return reconcile.Result{}, err
 	}
 
 	_, err = r.reconcileForChannel(instance)
 	if err != nil {
-		glog.Error("Failed to reconcile deployable for channel")
+		klog.Error("Failed to reconcile deployable for channel")
 	}
 
 	return reconcile.Result{}, err

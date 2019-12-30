@@ -48,7 +48,7 @@ func TestFindDeployableForChannelsInMap(t *testing.T) {
 
 func listDplObj(cl client.Client) {
 	dpllist := &dplv1alpha1.DeployableList{}
-	err := cl.List(context.TODO(), &client.ListOptions{}, dpllist)
+	err := cl.List(context.TODO(), dpllist, &client.ListOptions{})
 	if err != nil {
 		log.Printf("Failed to list deployables for")
 		return

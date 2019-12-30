@@ -21,8 +21,10 @@ import (
 	"runtime"
 
 	// Import all Kubernetes client auth plugins (e.g. Azure, GCP, OIDC, etc.)
+	"k8s.io/client-go/kubernetes"
 	_ "k8s.io/client-go/plugin/pkg/client/auth"
 	"k8s.io/client-go/rest"
+	"k8s.io/client-go/tools/record"
 
 	"github.com/prometheus/common/log"
 
@@ -34,6 +36,7 @@ import (
 	sdkVersion "github.com/operator-framework/operator-sdk/version"
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
+	typedcorev1 "k8s.io/client-go/kubernetes/typed/core/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client/config"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/manager/signals"
@@ -42,6 +45,14 @@ import (
 
 	"github.com/IBM/multicloud-operators-channel/pkg/apis"
 	"github.com/IBM/multicloud-operators-channel/pkg/controller"
+	"github.com/IBM/multicloud-operators-channel/pkg/utils"
+	"github.com/IBM/multicloud-operators-channel/pkg/webhook"
+
+	gitsync "github.com/IBM/multicloud-operators-channel/pkg/synchronizer/githubsynchronizer"
+	helmsync "github.com/IBM/multicloud-operators-channel/pkg/synchronizer/helmreposynchronizer"
+	objsync "github.com/IBM/multicloud-operators-channel/pkg/synchronizer/objectstoresynchronizer"
+
+	dplutils "github.com/IBM/multicloud-operators-deployable/pkg/utils"
 )
 
 // Change below variables to serve metrics on different host or port.
@@ -75,6 +86,20 @@ func RunManager() {
 		os.Exit(1)
 	}
 
+	// Register Channel CRD into hub kubernetes cluster
+	err = dplutils.CheckAndInstallCRD(cfg, options.CRDPathName)
+	if err != nil {
+		klog.Error("unable to install channel crd in hub.", err)
+		os.Exit(1)
+	}
+
+	// Register deployable and channel CRDs into hub kubernetes cluster
+	err = dplutils.CheckAndInstallCRD(cfg, options.DeployableCRDPathName)
+	if err != nil {
+		klog.Error("unable to install deployable crd in hub.", err)
+		os.Exit(1)
+	}
+
 	// Create a new Cmd to provide shared dependencies and start components
 	mgr, err := manager.New(cfg, manager.Options{
 		MapperProvider:     restmapper.NewDynamicRESTMapper,
@@ -85,17 +110,86 @@ func RunManager() {
 		os.Exit(1)
 	}
 
-	klog.Info("Registering Components.")
-
-	// Setup Scheme for all resources
-	if err := apis.AddToScheme(mgr.GetScheme()); err != nil {
-		klog.Error(err, "")
+	// Create channel descriptor
+	chdesc, err := utils.CreateChannelDescriptor()
+	if err != nil {
+		klog.Error("unable to create channel descriptor.", err)
 		os.Exit(1)
 	}
 
+	// Create channel synchronizer
+	osync, err := objsync.CreateSynchronizer(cfg, chdesc, options.SyncInterval)
+
+	if err != nil {
+		klog.Error("unable to create object-store syncrhonizer on destination cluster.", err)
+		os.Exit(1)
+	}
+
+	err = mgr.Add(osync)
+	if err != nil {
+		klog.Error("Failed to register synchronizer.", err)
+		os.Exit(1)
+	}
+
+	// Create channel synchronizer for helm repo
+	hsync, err := helmsync.CreateSynchronizer(cfg, mgr.GetScheme(), options.SyncInterval)
+
+	if err != nil {
+		klog.Error("unable to create helo-repo syncrhonizer on destination cluster.", err)
+		os.Exit(1)
+	}
+
+	err = mgr.Add(hsync)
+	if err != nil {
+		klog.Error("Failed to register synchronizer.", err)
+		os.Exit(1)
+	}
+
+	// Create channel synchronizer for github
+	gsync, err := gitsync.CreateSynchronizer(cfg, mgr.GetScheme(), options.SyncInterval)
+
+	if err != nil {
+		klog.Error("unable to create github syncrhonizer on destination cluster.", err)
+		os.Exit(1)
+	}
+
+	err = mgr.Add(gsync)
+	if err != nil {
+		klog.Error("Failed to register synchronizer.", err)
+		os.Exit(1)
+	}
+
+	klog.Info("Registering Components.")
+
+	// Setup Scheme for all resources
+	klog.Info("setting up scheme")
+	if err := apis.AddToScheme(mgr.GetScheme()); err != nil {
+		klog.Error(err, "unable add APIs to scheme")
+		os.Exit(1)
+	}
+
+	//create channel events handler on hub cluster.
+	hubClientSet, err := kubernetes.NewForConfig(cfg)
+	if err != nil {
+		klog.Error("Failed to get hub cluster clientset. err: ", err)
+		os.Exit(1)
+	}
+
+	eventBroadcaster := record.NewBroadcaster()
+	eventBroadcaster.StartLogging(klog.Infof)
+	eventBroadcaster.StartRecordingToSink(&typedcorev1.EventSinkImpl{Interface: hubClientSet.CoreV1().Events("")})
+	recorder := eventBroadcaster.NewRecorder(mgr.GetScheme(), v1.EventSource{Component: "channel"})
+
 	// Setup all Controllers
-	if err := controller.AddToManager(mgr); err != nil {
-		klog.Error(err, "")
+	klog.Info("Setting up controller")
+	if err := controller.AddToManager(mgr, recorder, chdesc, hsync, gsync); err != nil {
+		klog.Error(err, "unable to register controllers to the manager")
+		os.Exit(1)
+	}
+
+	klog.Info("setting up webhooks")
+	if err := webhook.AddToManager(mgr); err != nil {
+		klog.Error(err, "unable to register webhooks to the manager")
 		os.Exit(1)
 	}
 

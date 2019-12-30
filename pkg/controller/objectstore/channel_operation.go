@@ -10,13 +10,13 @@ import (
 	"reflect"
 	"strings"
 
-	"github.com/ghodss/yaml"
-	"github.com/golang/glog"
 	chnv1alpha1 "github.com/IBM/multicloud-operators-channel/pkg/apis/app/v1alpha1"
 	"github.com/IBM/multicloud-operators-channel/pkg/utils"
 	appv1alpha1 "github.com/IBM/multicloud-operators-deployable/pkg/apis/app/v1alpha1"
+	"github.com/ghodss/yaml"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/klog"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
@@ -38,21 +38,21 @@ func (r *ReconcileDeployable) deleteDeployableInObjectStore(request types.Namesp
 
 	chndesc, ok := r.ChannelDescriptor.Get(dplchn.Name)
 	if !ok {
-		glog.Info("Failed to get channel description for ", dplchn.Name)
+		klog.Info("Failed to get channel description for ", dplchn.Name)
 		return reconcile.Result{}, nil
 	}
 
 	//ignoring deployable generate name, since channel is managing deployable via deployable name
 	dplObj, err := chndesc.ObjectStore.Get(chndesc.Bucket, request.Name)
 	if err != nil {
-		glog.Error("Failed to get object ", chndesc.Bucket, "/", request.Name, " err:", err)
+		klog.Error("Failed to get object ", chndesc.Bucket, "/", request.Name, " err:", err)
 		return reconcile.Result{}, err
 	}
 
 	objtpl := &unstructured.Unstructured{}
 	err = yaml.Unmarshal(dplObj.Content, objtpl)
 	if err != nil {
-		glog.Error("Failed to unmashall ", chndesc.Bucket, "/", request.Name, " err:", err)
+		klog.Error("Failed to unmashall ", chndesc.Bucket, "/", request.Name, " err:", err)
 		return reconcile.Result{}, err
 	}
 
@@ -66,7 +66,7 @@ func (r *ReconcileDeployable) deleteDeployableInObjectStore(request types.Namesp
 		return reconcile.Result{}, nil
 	}
 
-	glog.Info("Deleting ", chndesc.Bucket, request.Name)
+	klog.Info("Deleting ", chndesc.Bucket, request.Name)
 
 	err = chndesc.ObjectStore.Delete(chndesc.Bucket, request.Name)
 
@@ -88,18 +88,18 @@ func (r *ReconcileDeployable) reconcileForChannel(deployable *appv1alpha1.Deploy
 
 	chndesc, ok := r.ChannelDescriptor.Get(dplchn.Name)
 	if !ok {
-		glog.Info("Failed to get channel description for ", dplchn.Name)
+		klog.Info("Failed to get channel description for ", dplchn.Name)
 		return reconcile.Result{}, nil
 	}
 
 	template := &unstructured.Unstructured{}
 	if deployable.Spec.Template == nil {
-		glog.Warning("Processing deployable without template:", deployable)
+		klog.Warning("Processing deployable without template:", deployable)
 		return reconcile.Result{}, nil
 	}
 	err = json.Unmarshal(deployable.Spec.Template.Raw, template)
 	if err != nil {
-		glog.Error("Failed to unmarshal template with error: ", err, " with ", string(deployable.Spec.Template.Raw))
+		klog.Error("Failed to unmarshal template with error: ", err, " with ", string(deployable.Spec.Template.Raw))
 		return reconcile.Result{}, err
 	}
 
@@ -136,7 +136,7 @@ func (r *ReconcileDeployable) reconcileForChannel(deployable *appv1alpha1.Deploy
 
 	tplb, err := yaml.Marshal(template)
 	if err != nil {
-		glog.V(10).Info("YAML marshall ", template, "error:", err)
+		klog.V(10).Info("YAML marshall ", template, "error:", err)
 		return reconcile.Result{}, err
 	}
 
@@ -161,14 +161,14 @@ func (r *ReconcileDeployable) reconcileForChannel(deployable *appv1alpha1.Deploy
 
 func (r *ReconcileDeployable) getChannelForNamespace(namespace string) (*chnv1alpha1.Channel, error) {
 	dplchnlist := &chnv1alpha1.ChannelList{}
-	err := r.KubeClient.List(context.TODO(), &client.ListOptions{Namespace: namespace}, dplchnlist)
+	err := r.KubeClient.List(context.TODO(), dplchnlist, &client.ListOptions{Namespace: namespace})
 	if err != nil {
-		glog.Info("Failed to find channel info in namespace ", namespace, " with error:", err)
+		klog.Info("Failed to find channel info in namespace ", namespace, " with error:", err)
 		return nil, err
 	}
 
 	if len(dplchnlist.Items) != 1 {
-		glog.V(10).Info("Incorrect channel setting for namespace:", namespace, " items:", dplchnlist.Items, " It might be ok if it is not a channel namespace")
+		klog.V(10).Info("Incorrect channel setting for namespace:", namespace, " items:", dplchnlist.Items, " It might be ok if it is not a channel namespace")
 		return nil, err
 	}
 
@@ -185,16 +185,16 @@ func (r *ReconcileDeployable) validateChannel(dplchn *chnv1alpha1.Channel) error
 
 	_, ok := r.ChannelDescriptor.Get(dplchn.Name)
 	if !ok {
-		glog.Info("Syncing channel ", dplchn.Name)
+		klog.Info("Syncing channel ", dplchn.Name)
 		err := r.syncChannel(dplchn)
 		if err != nil {
-			glog.Info("Failed to sync channel ", dplchn.Name, " err:", err)
+			klog.Info("Failed to sync channel ", dplchn.Name, " err:", err)
 			return err
 		}
 	} else {
 		err := r.ChannelDescriptor.ValidateChannel(dplchn, r.KubeClient)
 		if err != nil {
-			glog.Info("Failed to validate channel ", dplchn.Name, " err:", err)
+			klog.Info("Failed to validate channel ", dplchn.Name, " err:", err)
 			return err
 		}
 	}
@@ -208,20 +208,20 @@ func (r *ReconcileDeployable) syncChannel(dplchn *chnv1alpha1.Channel) error {
 
 	err := r.ChannelDescriptor.ValidateChannel(dplchn, r.KubeClient)
 	if err != nil {
-		glog.Info("Failed to validate channel ", dplchn.Name, " err:", err)
+		klog.Info("Failed to validate channel ", dplchn.Name, " err:", err)
 		return err
 	}
 
 	chndesc, ok := r.ChannelDescriptor.Get(dplchn.Name)
 	if !ok {
-		glog.Info("Failed to get channel description for ", dplchn.Name)
+		klog.Info("Failed to get channel description for ", dplchn.Name)
 		return nil
 	}
 
 	dpllist := &appv1alpha1.DeployableList{}
-	err = r.KubeClient.List(context.TODO(), &client.ListOptions{Namespace: dplchn.GetNamespace()}, dpllist)
+	err = r.KubeClient.List(context.TODO(), dpllist, &client.ListOptions{Namespace: dplchn.GetNamespace()})
 	if err != nil {
-		glog.Error("Failed to list all deployable ")
+		klog.Error("Failed to list all deployable ")
 		return nil
 	}
 
@@ -232,7 +232,7 @@ func (r *ReconcileDeployable) syncChannel(dplchn *chnv1alpha1.Channel) error {
 
 	objnames, err := chndesc.List(chndesc.Bucket)
 	if err != nil {
-		glog.Error("Failed to list all objects in bucket ", chndesc.Bucket)
+		klog.Error("Failed to list all objects in bucket ", chndesc.Bucket)
 		return nil
 	}
 
@@ -240,14 +240,14 @@ func (r *ReconcileDeployable) syncChannel(dplchn *chnv1alpha1.Channel) error {
 
 		dplObj, err := chndesc.ObjectStore.Get(chndesc.Bucket, name)
 		if err != nil {
-			glog.Error("Failed to get object ", chndesc.Bucket, "/", name, " err:", err)
+			klog.Error("Failed to get object ", chndesc.Bucket, "/", name, " err:", err)
 			continue
 		}
 
 		objtpl := &unstructured.Unstructured{}
 		err = yaml.Unmarshal(dplObj.Content, objtpl)
 		if err != nil {
-			glog.Error("Failed to unmashall ", chndesc.Bucket, "/", name, " err:", err)
+			klog.Error("Failed to unmashall ", chndesc.Bucket, "/", name, " err:", err)
 			continue
 		}
 
@@ -271,12 +271,12 @@ func (r *ReconcileDeployable) syncChannel(dplchn *chnv1alpha1.Channel) error {
 		dpl := chndplmap[name]
 		dpltpl := &unstructured.Unstructured{}
 		if dpl.Spec.Template == nil {
-			glog.Warning("Processing deployable without template:", dpl)
+			klog.Warning("Processing deployable without template:", dpl)
 			continue
 		}
 		err = json.Unmarshal(dpl.Spec.Template.Raw, dpltpl)
 		if err != nil {
-			glog.Error("Failed to unmashall ", chndesc.Bucket, "/", name, " err:", err)
+			klog.Error("Failed to unmashall ", chndesc.Bucket, "/", name, " err:", err)
 			continue
 		}
 
@@ -308,14 +308,14 @@ func (r *ReconcileDeployable) syncChannel(dplchn *chnv1alpha1.Channel) error {
 		if !reflect.DeepEqual(objtpl, dpltpl) {
 			dplb, err := yaml.Marshal(dpltpl)
 			if err != nil {
-				glog.Error("YAML UnMashall ", dpl, " err:", err)
+				klog.Error("YAML UnMashall ", dpl, " err:", err)
 				continue
 			}
 			dplObj.Content = dplb
 			dplObj.Version = dpltplannotations[appv1alpha1.AnnotationDeployableVersion]
 			err = chndesc.ObjectStore.Put(chndesc.Bucket, dplObj)
 			if err != nil {
-				glog.Error("Failed to Put", chndesc.Bucket, "/", name, " err:", err)
+				klog.Error("Failed to Put", chndesc.Bucket, "/", name, " err:", err)
 			}
 
 		}

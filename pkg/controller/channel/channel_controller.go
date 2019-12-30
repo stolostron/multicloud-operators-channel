@@ -9,7 +9,6 @@ import (
 	"reflect"
 	"strings"
 
-	"github.com/golang/glog"
 	appv1alpha1 "github.com/IBM/multicloud-operators-channel/pkg/apis/app/v1alpha1"
 	gitsync "github.com/IBM/multicloud-operators-channel/pkg/synchronizer/githubsynchronizer"
 	helmsync "github.com/IBM/multicloud-operators-channel/pkg/synchronizer/helmreposynchronizer"
@@ -25,6 +24,7 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/tools/record"
 	clusterv1alpha1 "k8s.io/cluster-registry/pkg/apis/clusterregistry/v1alpha1"
+	"k8s.io/klog"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
@@ -70,10 +70,10 @@ func newReconciler(mgr manager.Manager, recorder record.EventRecorder) reconcile
 
 // add adds a new Controller to mgr with r as the reconcile.Reconciler
 func add(mgr manager.Manager, r reconcile.Reconciler) error {
-	if glog.V(10) {
+	if klog.V(10) {
 		fnName := dplutils.GetFnName()
-		glog.Infof("Entering: %v()", fnName)
-		defer glog.Infof("Exiting: %v()", fnName)
+		klog.Infof("Entering: %v()", fnName)
+		defer klog.Infof("Exiting: %v()", fnName)
 	}
 	// Create a new controller
 	c, err := controller.New("channel-controller", mgr, controller.Options{Reconciler: r})
@@ -101,19 +101,19 @@ type clusterMapper struct {
 
 // Map triggers all placements
 func (mapper *clusterMapper) Map(obj handler.MapObject) []reconcile.Request {
-	if glog.V(10) {
+	if klog.V(10) {
 		fnName := dplutils.GetFnName()
-		glog.Infof("Entering: %v()", fnName)
-		defer glog.Infof("Exiting: %v()", fnName)
+		klog.Infof("Entering: %v()", fnName)
+		defer klog.Infof("Exiting: %v()", fnName)
 	}
 	cname := obj.Meta.GetName()
 
-	glog.Info("In cluster Mapper for ", cname)
+	klog.Info("In cluster Mapper for ", cname)
 
 	plList := &appv1alpha1.ChannelList{}
 
 	listopts := &client.ListOptions{}
-	mapper.List(context.TODO(), listopts, plList)
+	mapper.List(context.TODO(), plList, listopts)
 
 	var requests []reconcile.Request
 
@@ -147,14 +147,14 @@ type ReconcileChannel struct {
 // +kubebuilder:rbac:groups=app.ibm.com,resources=channels,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups=app.ibm.com,resources=channels/status,verbs=get;update;patch
 func (r *ReconcileChannel) Reconcile(request reconcile.Request) (reconcile.Result, error) {
-	if glog.V(10) {
+	if klog.V(10) {
 		fnName := dplutils.GetFnName()
-		glog.Infof("Entering: %v()", fnName)
-		defer glog.Infof("Exiting: %v()", fnName)
+		klog.Infof("Entering: %v()", fnName)
+		defer klog.Infof("Exiting: %v()", fnName)
 	}
 	// Fetch the Channel instance
 
-	glog.Info("Reconciling:", request.NamespacedName)
+	klog.Info("Reconciling:", request.NamespacedName)
 
 	instance := &appv1alpha1.Channel{}
 	err := r.Get(context.TODO(), request.NamespacedName, instance)
@@ -179,7 +179,7 @@ func (r *ReconcileChannel) Reconcile(request reconcile.Request) (reconcile.Resul
 		instance.Spec.PathName = instance.GetNamespace()
 		err := r.Update(context.TODO(), instance)
 		if err != nil {
-			glog.Infof("Can't update the pathName field due to %v", err)
+			klog.Infof("Can't update the pathName field due to %v", err)
 			return reconcile.Result{}, err
 		}
 		return reconcile.Result{}, nil
@@ -187,7 +187,7 @@ func (r *ReconcileChannel) Reconcile(request reconcile.Request) (reconcile.Resul
 
 	err = r.validateClusterRBAC(instance)
 	if err != nil {
-		glog.Info("Failed to validate RBAC for clusters for channel ", instance.Name, " with error: ", err)
+		klog.Info("Failed to validate RBAC for clusters for channel ", instance.Name, " with error: ", err)
 		return reconcile.Result{}, err
 	}
 
@@ -211,7 +211,7 @@ func (r *ReconcileChannel) Reconcile(request reconcile.Request) (reconcile.Resul
 			secrectInstance.SetLabels(localLabels)
 
 			err = r.Update(context.TODO(), secrectInstance)
-			glog.Infof("Set label serving-channel to secret object: %#v, error: %#v", *secrectInstance, err)
+			klog.Infof("Set label serving-channel to secret object: %#v, error: %#v", *secrectInstance, err)
 		}
 		//sync the channel to the serving-channel annotation in all involved secrets.
 		r.syncSecrectAnnotation(instance, request.NamespacedName)
@@ -237,7 +237,7 @@ func (r *ReconcileChannel) Reconcile(request reconcile.Request) (reconcile.Resul
 			configInstance.SetLabels(localLabels)
 
 			err = r.Update(context.TODO(), configInstance)
-			glog.Infof("Set label serving-channel to configMap object: %#v, error: %#v", *configInstance, err)
+			klog.Infof("Set label serving-channel to configMap object: %#v, error: %#v", *configInstance, err)
 
 		}
 	}
@@ -248,10 +248,10 @@ func (r *ReconcileChannel) Reconcile(request reconcile.Request) (reconcile.Resul
 }
 
 func (r *ReconcileChannel) syncSecrectAnnotation(channel *appv1alpha1.Channel, channelKey types.NamespacedName) {
-	if glog.V(10) {
+	if klog.V(10) {
 		fnName := dplutils.GetFnName()
-		glog.Infof("Entering: %v()", fnName)
-		defer glog.Infof("Exiting: %v()", fnName)
+		klog.Infof("Entering: %v()", fnName)
+		defer klog.Infof("Exiting: %v()", fnName)
 	}
 	secList := &corev1.SecretList{}
 
@@ -264,14 +264,14 @@ func (r *ReconcileChannel) syncSecrectAnnotation(channel *appv1alpha1.Channel, c
 	}
 	clSelector, err := dplutils.ConvertLabels(labelSelector)
 	if err != nil {
-		glog.Error("Failed to set label selector for secret objects. err: ", err)
+		klog.Error("Failed to set label selector for secret objects. err: ", err)
 		return
 	}
 	secListOptions.LabelSelector = clSelector
 
-	err = r.Client.List(context.TODO(), secListOptions, secList)
+	err = r.Client.List(context.TODO(), secList, secListOptions)
 	if err != nil {
-		glog.Error("Failed to list Secret objects. error: ", err)
+		klog.Error("Failed to list Secret objects. error: ", err)
 		return
 	}
 
@@ -302,16 +302,16 @@ func (r *ReconcileChannel) syncSecrectAnnotation(channel *appv1alpha1.Channel, c
 		secret.SetAnnotations(annotations)
 
 		err = r.Update(context.TODO(), &secret)
-		glog.Infof("Annotate secret object: %#v, error: %#v", secret, err)
+		klog.Infof("Annotate secret object: %#v, error: %#v", secret, err)
 
 	}
 }
 
 func (r *ReconcileChannel) syncConfigAnnotation(channel *appv1alpha1.Channel, channelKey types.NamespacedName) {
-	if glog.V(10) {
+	if klog.V(10) {
 		fnName := dplutils.GetFnName()
-		glog.Infof("Entering: %v()", fnName)
-		defer glog.Infof("Exiting: %v()", fnName)
+		klog.Infof("Entering: %v()", fnName)
+		defer klog.Infof("Exiting: %v()", fnName)
 	}
 	configList := &corev1.ConfigMapList{}
 
@@ -324,14 +324,14 @@ func (r *ReconcileChannel) syncConfigAnnotation(channel *appv1alpha1.Channel, ch
 	}
 	clSelector, err := dplutils.ConvertLabels(labelSelector)
 	if err != nil {
-		glog.Error("Failed to set label selector for configMap objects. err: ", err)
+		klog.Error("Failed to set label selector for configMap objects. err: ", err)
 		return
 	}
 	configListOptions.LabelSelector = clSelector
 
-	err = r.Client.List(context.TODO(), configListOptions, configList)
+	err = r.Client.List(context.TODO(), configList, configListOptions)
 	if err != nil {
-		glog.Error("Failed to list ConfigMap objects. error: ", err)
+		klog.Error("Failed to list ConfigMap objects. error: ", err)
 		return
 	}
 
@@ -356,16 +356,16 @@ func (r *ReconcileChannel) syncConfigAnnotation(channel *appv1alpha1.Channel, ch
 		config.SetAnnotations(annotations)
 
 		err = r.Update(context.TODO(), &config)
-		glog.Infof("Annotate configMap object: %#v, error: %#v", config, err)
+		klog.Infof("Annotate configMap object: %#v, error: %#v", config, err)
 
 	}
 }
 
 func (r *ReconcileChannel) validateClusterRBAC(instance *appv1alpha1.Channel) error {
-	if glog.V(10) {
+	if klog.V(10) {
 		fnName := dplutils.GetFnName()
-		glog.Infof("Entering: %v()", fnName)
-		defer glog.Infof("Exiting: %v()", fnName)
+		klog.Infof("Entering: %v()", fnName)
+		defer klog.Infof("Exiting: %v()", fnName)
 	}
 
 	role := &rbac.Role{}
@@ -397,7 +397,7 @@ func (r *ReconcileChannel) validateClusterRBAC(instance *appv1alpha1.Channel) er
 	rolebinding := &rbac.RoleBinding{}
 	var subjects []rbac.Subject
 	cllist := &clusterv1alpha1.ClusterList{}
-	err = r.List(context.TODO(), &client.ListOptions{}, cllist)
+	err = r.List(context.TODO(), cllist, &client.ListOptions{})
 	if err != nil {
 		if errors.IsNotFound(err) {
 			return nil

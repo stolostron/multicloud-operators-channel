@@ -9,10 +9,10 @@
 package apis
 
 import (
-	"github.com/golang/glog"
 	dplv1alpha1 "github.com/IBM/multicloud-operators-deployable/pkg/apis"
 	"k8s.io/apimachinery/pkg/runtime"
 	clusterv1alpha1 "k8s.io/cluster-registry/pkg/apis/clusterregistry/v1alpha1"
+	"k8s.io/klog"
 )
 
 // AddToSchemes may be used to add all resources defined in the project to a Scheme
@@ -24,11 +24,11 @@ func AddToScheme(s *runtime.Scheme) error {
 	var err error
 	// add mcm scheme, mcm scheme only on hub cluster
 	if err = dplv1alpha1.AddToScheme(s); err != nil {
-		glog.Error("unable add deployable APIs to scheme", err)
+		klog.Error("unable add deployable APIs to scheme", err)
 		return err
 	}
 	if err = clusterv1alpha1.AddToScheme(s); err != nil {
-		glog.Error("unable add deployable APIs to scheme", err)
+		klog.Error("unable add deployable APIs to scheme", err)
 		return err
 	}
 
