@@ -2,13 +2,13 @@
 // (c) Copyright IBM Corporation 2016, 2019. All Rights Reserved.
 // US Government Users Restricted Rights - Use, duplication or disclosure restricted by GSA ADP  Schedule Contract with IBM Corp.
 
-package apis
+package controller
 
 import (
-	"github.com/IBM/multicloud-operators-channel/pkg/apis/app/v1alpha1"
+	"github.com/IBM/multicloud-operators-channel/pkg/controller/github"
 )
 
 func init() {
-	// Register the types with the Scheme so the components can map objects to GroupVersionKinds and back
-	AddToSchemes = append(AddToSchemes, v1alpha1.SchemeBuilder.AddToScheme)
+	// AddToManagerFuncs is a list of functions to create controllers and add them to a manager.
+	AddToManagerFuncs = append(AddToManagerFuncs, github.Add)
 }

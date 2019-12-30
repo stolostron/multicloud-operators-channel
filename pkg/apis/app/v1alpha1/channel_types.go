@@ -1,16 +1,6 @@
-// Copyright 2019 The Kubernetes Authors.
-//
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-//     http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
+// Licensed Materials - Property of IBM
+// (c) Copyright IBM Corporation 2016, 2019. All Rights Reserved.
+// US Government Users Restricted Rights - Use, duplication or disclosure restricted by GSA ADP  Schedule Contract with IBM Corp.
 
 package v1alpha1
 
@@ -41,7 +31,7 @@ const (
 	ChannelTypeHelmRepo = "helmrepo"
 	// ChannelTypeObjectBucket defines type name of bucket in object store
 	ChannelTypeObjectBucket = "objectbucket"
-	// ChannelTypeGitHub defines type name of GitHub repository channel
+	// ChannelTypeGitHub defines type name of GitHub repository
 	ChannelTypeGitHub = "github"
 )
 
@@ -56,13 +46,14 @@ type ChannelGate struct {
 type ChannelSpec struct {
 	// INSERT ADDITIONAL SPEC FIELDS - desired state of cluster
 	// Important: Run "make" to regenerate code after modifying this file
-	// +kubebuilder:validation:Enum=Namespace,HelmRepo,ObjectBucket,namespace,helmrepo,objectbucket
-	Type             ChannelType             `json:"type"`
-	PathName         string                  `json:"pathname"`
-	SecretRef        *corev1.ObjectReference `json:"secretRef,omitempty"`
-	ConfigMapRef     *corev1.ObjectReference `json:"configRef,omitempty"`
-	Gates            *ChannelGate            `json:"gates,omitempty"`
-	SourceNamespaces []string                `json:"sourceNamespaces,omitempty"`
+	// +kubebuilder:validation:Enum=Namespace,HelmRepo,ObjectBucket,GitHub,namespace,helmrepo,objectbucket,github
+	Type         ChannelType             `json:"type"`
+	PathName     string                  `json:"pathName"`
+	SecretRef    *corev1.ObjectReference `json:"secretRef,omitempty"`
+	ConfigMapRef *corev1.ObjectReference `json:"configMapRef,omitempty"`
+	Gates        *ChannelGate            `json:"gates,omitempty"`
+	// +listType=set
+	SourceNamespaces []string `json:"sourceNamespaces,omitempty"`
 }
 
 // ChannelStatus defines the observed state of Channel
@@ -83,7 +74,8 @@ type Channel struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
 
-	Spec ChannelSpec `json:"spec,omitempty"`
+	Spec   ChannelSpec   `json:"spec,omitempty"`
+	Status ChannelStatus `json:"status,omitempty"`
 }
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
@@ -92,7 +84,8 @@ type Channel struct {
 type ChannelList struct {
 	metav1.TypeMeta `json:",inline"`
 	metav1.ListMeta `json:"metadata,omitempty"`
-	Items           []Channel `json:"items"`
+	// +listType=set
+	Items []Channel `json:"items"`
 }
 
 func init() {

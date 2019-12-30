@@ -30,6 +30,7 @@ func (in *Channel) DeepCopyInto(out *Channel) {
 	out.TypeMeta = in.TypeMeta
 	in.ObjectMeta.DeepCopyInto(&out.ObjectMeta)
 	in.Spec.DeepCopyInto(&out.Spec)
+	out.Status = in.Status
 	return
 }
 
@@ -83,7 +84,7 @@ func (in *ChannelGate) DeepCopy() *ChannelGate {
 func (in *ChannelList) DeepCopyInto(out *ChannelList) {
 	*out = *in
 	out.TypeMeta = in.TypeMeta
-	out.ListMeta = in.ListMeta
+	in.ListMeta.DeepCopyInto(&out.ListMeta)
 	if in.Items != nil {
 		in, out := &in.Items, &out.Items
 		*out = make([]Channel, len(*in))

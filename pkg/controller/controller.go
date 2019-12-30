@@ -1,33 +1,27 @@
-// Copyright 2019 The Kubernetes Authors.
-//
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-//     http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
+// Licensed Materials - Property of IBM
+// (c) Copyright IBM Corporation 2016, 2019. All Rights Reserved.
+// US Government Users Restricted Rights - Use, duplication or disclosure restricted by GSA ADP  Schedule Contract with IBM Corp.
 
 package controller
 
 import (
+	gitsync "github.com/IBM/multicloud-operators-channel/pkg/synchronizer/githubsynchronizer"
+	helmsync "github.com/IBM/multicloud-operators-channel/pkg/synchronizer/helmreposynchronizer"
+	"github.com/IBM/multicloud-operators-channel/pkg/utils"
+	"k8s.io/client-go/tools/record"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 )
 
 // AddToManagerFuncs is a list of functions to add all Controllers to the Manager
-var AddToManagerFuncs []func(manager.Manager) error
+var AddToManagerFuncs []func(manager.Manager, record.EventRecorder, *utils.ChannelDescriptor, *helmsync.ChannelSynchronizer, *gitsync.ChannelSynchronizer) error
 
 // AddToManager adds all Controllers to the Manager
-func AddToManager(m manager.Manager) error {
+func AddToManager(m manager.Manager, recorder record.EventRecorder, chdesc *utils.ChannelDescriptor, sync *helmsync.ChannelSynchronizer, gsync *gitsync.ChannelSynchronizer) error {
+
 	for _, f := range AddToManagerFuncs {
-		if err := f(m); err != nil {
+		if err := f(m, recorder, chdesc, sync, gsync); err != nil {
 			return err
 		}
 	}
-
 	return nil
 }
