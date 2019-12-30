@@ -12,10 +12,6 @@ import (
 	"strings"
 	"time"
 
-	chnv1alpha1 "github.com/IBM/multicloud-operators-channel/pkg/apis/app/v1alpha1"
-	"github.com/IBM/multicloud-operators-channel/pkg/utils"
-	dplv1alpha1 "github.com/IBM/multicloud-operators-deployable/pkg/apis/app/v1alpha1"
-	deputils "github.com/IBM/multicloud-operators-deployable/pkg/utils"
 	"github.com/ghodss/yaml"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -26,6 +22,11 @@ import (
 	"k8s.io/klog"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
+
+	chnv1alpha1 "github.com/IBM/multicloud-operators-channel/pkg/apis/app/v1alpha1"
+	"github.com/IBM/multicloud-operators-channel/pkg/utils"
+	dplv1alpha1 "github.com/IBM/multicloud-operators-deployable/pkg/apis/app/v1alpha1"
+	deputils "github.com/IBM/multicloud-operators-deployable/pkg/utils"
 )
 
 // ChannelSynchronizer syncs github channels with github repository

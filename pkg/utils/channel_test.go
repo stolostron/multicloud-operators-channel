@@ -11,7 +11,6 @@ import (
 	"github.com/onsi/gomega"
 
 	appv1alpha1 "github.com/IBM/multicloud-operators-channel/pkg/apis/app/v1alpha1"
-
 	"github.com/IBM/multicloud-operators-channel/pkg/utils"
 )
 

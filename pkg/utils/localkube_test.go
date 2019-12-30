@@ -12,6 +12,7 @@ import (
 	"testing"
 
 	"github.com/IBM/multicloud-operators-channel/pkg/apis"
+
 	appv1alpha1 "github.com/IBM/multicloud-operators-channel/pkg/apis/app/v1alpha1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
