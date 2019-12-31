@@ -1,5 +1,4 @@
 // Copyright 2019 The Kubernetes Authors.
-//
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
@@ -18,7 +17,7 @@ import (
 	pflag "github.com/spf13/pflag"
 )
 
-// PlacementRuleCMDOptions for command line flag parsing
+// ChannelCMDOptions for command line flag parsing
 type ChannelCMDOptions struct {
 	MetricsAddr           string
 	CRDPathName           string
@@ -33,7 +32,6 @@ var options = ChannelCMDOptions{
 	CRDPathName:           "/usr/local/etc/channel/crds/app_v1alpha1_channel.yaml",
 	DeployableCRDPathName: "/usr/local/etc/deployable/crds/app_v1alpha1_deployable.yaml",
 }
-
 
 // ProcessFlags parses command line parameters into options
 func ProcessFlags() {
@@ -72,5 +70,6 @@ func ProcessFlags() {
 		&options.LeaderElect,
 		"leader-elect",
 		false,
-		"Enable a leader client to gain leadership before executing the main loop")
+		"Enable a leader client to gain leadership before executing the main loop",
+	)
 }

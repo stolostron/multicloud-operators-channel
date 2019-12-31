@@ -7,11 +7,11 @@ package utils
 import (
 	//"github.com/google/go-github/github"
 	//"golang.org/x/oauth2"
-	"github.com/golang/glog"
 	"gopkg.in/src-d/go-git.v4"
 	"gopkg.in/src-d/go-git.v4/plumbing"
 	githttp "gopkg.in/src-d/go-git.v4/plumbing/transport/http"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/klog"
 
 	//"io/ioutil"
 	"os"
@@ -53,7 +53,7 @@ func CloneGitRepo(chn *chnv1alpha1.Channel, kubeClient client.Client) (*repo.Ind
 		}
 		err := kubeClient.Get(context.TODO(), types.NamespacedName{Name: chn.Spec.SecretRef.Name, Namespace: secns}, secret)
 		if err != nil {
-			glog.Error(err, "Unable to get secret.")
+			klog.Error(err, "Unable to get secret.")
 			return nil, nil, err
 		}
 
@@ -75,17 +75,17 @@ func CloneGitRepo(chn *chnv1alpha1.Channel, kubeClient client.Client) (*repo.Ind
 		os.RemoveAll(repoRoot)
 	}
 
-	glog.V(10).Info("Cloning ", chn.Spec.PathName, " into ", repoRoot)
+	klog.V(10).Info("Cloning ", chn.Spec.PathName, " into ", repoRoot)
 	_, err := git.PlainClone(repoRoot, false, options)
 	if err != nil {
-		glog.Error("Failed to git clone: ", err.Error())
+		klog.Error("Failed to git clone: ", err.Error())
 		return nil, nil, err
 	}
 
 	// Generate index.yaml
 	indexFile, resourceDirs, err := generateIndexYAML(repoRoot)
 	if err != nil {
-		glog.Error("Failed to generate helm chart index file", err.Error())
+		klog.Error("Failed to generate helm chart index file", err.Error())
 	}
 	// Generate list of resource dirs
 	return indexFile, resourceDirs, nil
@@ -105,17 +105,17 @@ func generateIndexYAML(repoRoot string) (*repo.IndexFile, map[string]string, err
 				return err
 			}
 			if info.IsDir() {
-				glog.V(10).Info("Ignoring subfolders of ", currentChartDir)
+				klog.V(10).Info("Ignoring subfolders of ", currentChartDir)
 				if _, err := os.Stat(path + "/Chart.yaml"); err == nil {
-					glog.V(10).Info("Found Chart.yaml in ", path)
+					klog.V(10).Info("Found Chart.yaml in ", path)
 					if !strings.HasPrefix(path, currentChartDir) {
-						glog.V(10).Info("This is a helm chart folder.")
+						klog.V(10).Info("This is a helm chart folder.")
 						chartDirs[path+"/"] = path + "/"
 						currentChartDir = path + "/"
 					}
 				} else {
 					if !strings.HasPrefix(path, currentChartDir) && !strings.HasPrefix(path, repoRoot+"/.git") {
-						glog.V(10).Info("This is not a helm chart directory. ", path)
+						klog.V(10).Info("This is not a helm chart directory. ", path)
 						resourceDirs[path+"/"] = path + "/"
 					}
 				}
@@ -135,13 +135,13 @@ func generateIndexYAML(repoRoot string) (*repo.IndexFile, map[string]string, err
 		chartBaseDir := strings.SplitAfter(chartParentDir, repoRoot+"/")[1]
 		chartMetadata, err := chartutil.LoadChartfile(chartDir + "Chart.yaml")
 		if err != nil {
-			glog.Error("There was a problem in generating helm charts index file: ", err.Error())
+			klog.Error("There was a problem in generating helm charts index file: ", err.Error())
 			return nil, nil, err
 		}
 		indexFile.Add(chartMetadata, chartFolderName, chartBaseDir, "generated-by-multicloud-operators-subscription")
 	}
 	indexFile.SortEntries()
 	b, _ := yaml.Marshal(indexFile)
-	glog.V(10).Info("New index file ", string(b))
+	klog.V(10).Info("New index file ", string(b))
 	return indexFile, resourceDirs, nil
 }

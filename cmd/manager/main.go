@@ -30,6 +30,7 @@ import (
 
 func main() {
 	exec.ProcessFlags()
+
 	klog.InitFlags(nil)
 
 	pflag.CommandLine.AddGoFlagSet(flag.CommandLine)
