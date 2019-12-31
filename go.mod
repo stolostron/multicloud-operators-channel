@@ -49,3 +49,5 @@ replace (
 	k8s.io/metrics => k8s.io/metrics v0.0.0-20190918202012-3c1ca76f5bda
 	k8s.io/sample-apiserver => k8s.io/sample-apiserver v0.0.0-20190918201353-5cc279503896
 )
+
+replace golang.org/x/net => github.com/golang/net v0.0.0-20191209160850-c0dbc17a3553

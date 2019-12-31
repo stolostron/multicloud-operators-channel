@@ -34,9 +34,11 @@ var options = ChannelCMDOptions{
 	DeployableCRDPathName: "/usr/local/etc/deployable/crds/app_v1alpha1_deployable.yaml",
 }
 
+
 // ProcessFlags parses command line parameters into options
 func ProcessFlags() {
 	flag := pflag.CommandLine
+
 	// add flags
 	flag.StringVar(
 		&options.MetricsAddr,
