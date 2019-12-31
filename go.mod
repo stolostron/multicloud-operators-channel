@@ -8,7 +8,6 @@ require (
 	github.com/aws/aws-sdk-go-v2 v0.18.0
 	github.com/ghodss/yaml v1.0.1-0.20180820084758-c7ce16629ff4
 	github.com/go-openapi/spec v0.19.0
-	github.com/golang/glog v0.0.0-20160126235308-23def4e6c14b
 	github.com/onsi/gomega v1.5.0
 	github.com/operator-framework/operator-sdk v0.12.0
 	github.com/prometheus/common v0.4.1
