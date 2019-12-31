@@ -42,6 +42,7 @@ func TestGenerateChannelMap(t *testing.T) {
 func TestLocateChannel(t *testing.T) {
 	g := gomega.NewWithT(t)
 	got, err := utils.LocateChannel(c, chName)
+
 	if err != nil {
 		t.Fatalf("fatal error at the local channel test, %v\n", err)
 	}

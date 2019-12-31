@@ -165,6 +165,7 @@ func (sync *ChannelSynchronizer) syncChannel(chn *chnv1alpha1.Channel) {
 					file, _ := ioutil.ReadFile(filepath.Join(dir, f.Name()))
 					t := kubeResource{}
 					err = yaml.Unmarshal([]byte(file), &t)
+
 					if t.APIVersion == "" || t.Kind == "" {
 						klog.V(10).Info("Not a Kubernetes resource")
 					} else {
@@ -172,6 +173,7 @@ func (sync *ChannelSynchronizer) syncChannel(chn *chnv1alpha1.Channel) {
 
 						obj := &unstructured.Unstructured{}
 						err = yaml.Unmarshal([]byte(file), &obj)
+
 						if err != nil {
 							klog.Info("Failed to unmarshal Kubernetes resource, err:", err)
 							break
@@ -205,6 +207,7 @@ func (sync *ChannelSynchronizer) syncChannel(chn *chnv1alpha1.Channel) {
 	// chartname, chartversion, exists
 	generalmap := make(map[string]map[string]bool) // chartname, chartversion, false
 	majorversion := make(map[string]string)        // chartname, chartversion
+
 	for k, cv := range idx.Entries {
 		klog.V(10).Info("Key: ", k)
 
@@ -235,13 +238,16 @@ func (sync *ChannelSynchronizer) syncChannel(chn *chnv1alpha1.Channel) {
 		//obj := &unstructured.Unstructured{}
 		obj := &helmTemplate{}
 		err := json.Unmarshal(dpl.Spec.Template.Raw, obj)
+
 		if err != nil {
 			klog.Warning("Processing local deployable with error template:", dpl, err)
+
 			continue
 		}
 
 		if obj.Kind != utils.HelmCRKind || obj.APIVersion != utils.HelmCRAPIVersion {
 			klog.Info("Skipping non helm chart deployable:", obj.Kind, ".", obj.APIVersion)
+
 			continue
 		}
 
@@ -250,6 +256,7 @@ func (sync *ChannelSynchronizer) syncChannel(chn *chnv1alpha1.Channel) {
 
 		keep := false
 		chmap := generalmap[cname]
+
 		if cname != "" || cver != "" {
 			if chmap != nil {
 				if _, ok := chmap[cver]; ok {

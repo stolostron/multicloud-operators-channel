@@ -73,8 +73,11 @@ func StartTestManager(mgr manager.Manager, g *gomega.GomegaWithT) (chan struct{}
 	stop := make(chan struct{})
 	wg := &sync.WaitGroup{}
 	wg.Add(1)
+
 	go func() {
+
 		defer wg.Done()
+
 		g.Expect(mgr.Start(stop)).NotTo(gomega.HaveOccurred())
 	}()
 
