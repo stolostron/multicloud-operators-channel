@@ -56,7 +56,7 @@ type ChannelGate struct {
 type ChannelSpec struct {
 	// INSERT ADDITIONAL SPEC FIELDS - desired state of cluster
 	// Important: Run "make" to regenerate code after modifying this file
-	// +kubebuilder:validation:Enum=Namespace,HelmRepo,ObjectBucket,GitHub,namespace,helmrepo,objectbucket,github
+	// +kubebuilder:validation:Enum={Namespace,HelmRepo,ObjectBucket,GitHub,namespace,helmrepo,objectbucket,github}
 	Type         ChannelType             `json:"type"`
 	PathName     string                  `json:"pathName"`
 	SecretRef    *corev1.ObjectReference `json:"secretRef,omitempty"`
@@ -80,6 +80,7 @@ type ChannelStatus struct {
 // +kubebuilder:printcolumn:name="Type",type="string",JSONPath=".spec.type",description="type of the channel"
 // +kubebuilder:printcolumn:name="PathName",type="string",JSONPath=".spec.pathname",description="pathname of the channel"
 // +kubebuilder:printcolumn:name="Age",type="date",JSONPath=".metadata.creationTimestamp"
+// +kubebuilder:resource:scope=Namespaced
 type Channel struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
