@@ -1,6 +1,16 @@
-// Licensed Materials - Property of IBM
-// (c) Copyright IBM Corporation 2016, 2019. All Rights Reserved.
-// US Government Users Restricted Rights - Use, duplication or disclosure restricted by GSA ADP  Schedule Contract with IBM Corp.
+// Copyright 2019 The Kubernetes Authors.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
 
 package objectstoresynchronizer
 
@@ -14,16 +24,17 @@ import (
 
 	"github.com/ghodss/yaml"
 
-	chnv1alpha1 "github.com/IBM/multicloud-operators-channel/pkg/apis/app/v1alpha1"
-	"github.com/IBM/multicloud-operators-channel/pkg/utils"
-	dplv1alpha1 "github.com/IBM/multicloud-operators-deployable/pkg/apis/app/v1alpha1"
-	dplutils "github.com/IBM/multicloud-operators-deployable/pkg/utils"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/client-go/rest"
 	"k8s.io/klog"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+
+	chnv1alpha1 "github.com/IBM/multicloud-operators-channel/pkg/apis/app/v1alpha1"
+	"github.com/IBM/multicloud-operators-channel/pkg/utils"
+	dplv1alpha1 "github.com/IBM/multicloud-operators-deployable/pkg/apis/app/v1alpha1"
+	dplutils "github.com/IBM/multicloud-operators-deployable/pkg/utils"
 )
 
 // ChannelSynchronizer syncs objectbucket channels with ObjectStore
@@ -39,7 +50,6 @@ type ChannelSynchronizer struct {
 
 // CreateSynchronizer - creates an instance of ChannelSynchronizer
 func CreateSynchronizer(config *rest.Config, chdesc *utils.ChannelDescriptor, syncInterval int) (*ChannelSynchronizer, error) {
-
 	client, err := client.New(config, client.Options{})
 	if err != nil {
 		klog.Error("Failed to initialize client for synchronizer. err: ", err)
@@ -51,6 +61,7 @@ func CreateSynchronizer(config *rest.Config, chdesc *utils.ChannelDescriptor, sy
 		ChannelDescriptor: chdesc,
 		SyncInterval:      syncInterval,
 	}
+
 	return s, nil
 }
 
@@ -59,8 +70,10 @@ func (sync *ChannelSynchronizer) Start(s <-chan struct{}) error {
 	if klog.V(dplutils.QuiteLogLel) {
 		fnName := dplutils.GetFnName()
 		klog.Infof("Entering: %v()", fnName)
+
 		defer klog.Infof("Exiting: %v()", fnName)
 	}
+
 	sync.Signal = s
 
 	go wait.Until(func() {
@@ -77,6 +90,7 @@ func (sync *ChannelSynchronizer) syncWithObjectStore() error {
 	if klog.V(dplutils.QuiteLogLel) {
 		fnName := dplutils.GetFnName()
 		klog.Infof("Entering: %v()", fnName)
+
 		defer klog.Infof("Exiting: %v()", fnName)
 	}
 
@@ -91,6 +105,7 @@ func (sync *ChannelSynchronizer) syncWithObjectStore() error {
 func (sync *ChannelSynchronizer) syncChannelsWithObjStore() error {
 	chlist := &chnv1alpha1.ChannelList{}
 	err := sync.kubeClient.List(context.TODO(), chlist, &client.ListOptions{})
+
 	if err != nil {
 		klog.Error(err, "Sync - Failed to list all channels ")
 		return nil
@@ -101,6 +116,7 @@ func (sync *ChannelSynchronizer) syncChannelsWithObjStore() error {
 		if strings.ToLower(string(ch.Spec.Type)) != chnv1alpha1.ChannelTypeObjectBucket {
 			continue
 		}
+
 		sync.syncChannel(&ch)
 	}
 
@@ -137,6 +153,7 @@ func (sync *ChannelSynchronizer) syncChannel(chn *chnv1alpha1.Channel) error {
 
 		objtpl := &unstructured.Unstructured{}
 		err = yaml.Unmarshal(objb.Content, objtpl)
+
 		if err != nil {
 			klog.Error("Sync - Failed to unmashall ", chndesc.Bucket, "/", name, " err:", err)
 			continue
@@ -147,13 +164,13 @@ func (sync *ChannelSynchronizer) syncChannel(chn *chnv1alpha1.Channel) error {
 
 	dpllist := &dplv1alpha1.DeployableList{}
 	err = sync.kubeClient.List(context.TODO(), dpllist, &client.ListOptions{Namespace: chn.GetNamespace()})
+
 	if err != nil {
 		klog.Error("Sync - Failed to list all deployable", " err:", err)
 		return nil
 	}
 
 	for _, dpl := range dpllist.Items {
-
 		dpltpl, err := getUnstructuredTemplateFromDeployable(&dpl)
 		if err != nil {
 			delete(tplmap, dpl.Name)
@@ -164,9 +181,11 @@ func (sync *ChannelSynchronizer) syncChannel(chn *chnv1alpha1.Channel) error {
 		if _, ok := tplmap[dpl.Name]; !ok {
 			klog.Info("Sync - Deleting deployable ", dpl.Namespace, "/", dpl.Name, " from channel ", chn.Name)
 			err = sync.kubeClient.Delete(context.TODO(), &dpl)
+
 			if err != nil {
 				klog.Error("Sync - Failed to delete deployable with error: ", err, " with ", dpl.Name)
 			}
+
 			continue
 		}
 
@@ -174,9 +193,11 @@ func (sync *ChannelSynchronizer) syncChannel(chn *chnv1alpha1.Channel) error {
 		// Ignore deployable AnnotationExternalSource when comparing with template
 		tpl := tplmap[dpl.Name]
 		tplannotations := tpl.GetAnnotations()
+
 		if tplannotations == nil {
 			tplannotations = make(map[string]string)
 		}
+
 		tplannotations[dplv1alpha1.AnnotationExternalSource] = chn.Spec.PathName
 		tpl.SetAnnotations(tplannotations)
 
@@ -185,10 +206,13 @@ func (sync *ChannelSynchronizer) syncChannel(chn *chnv1alpha1.Channel) error {
 			if err != nil {
 				klog.Info("Sync - Error in mashalling template ", tpl)
 				delete(tplmap, dpl.Name)
+
 				continue
 			}
+
 			klog.Info("Sync - Updating existing deployable ", dpl.Name, " in channel ", chn.Name)
 			err = sync.kubeClient.Update(context.TODO(), &dpl)
+
 			if err != nil {
 				klog.Error("Sync - Failed to update deployable with error: ", err, " with ", dpl.Name)
 			}
@@ -221,13 +245,16 @@ func (sync *ChannelSynchronizer) syncChannel(chn *chnv1alpha1.Channel) error {
 		dpl.Namespace = chn.Namespace
 		dpl.Spec.Template = &runtime.RawExtension{}
 		dpl.Spec.Template.Raw, err = json.Marshal(tpl)
+
 		if err != nil {
 			klog.Info("Sync - Error in mashalling template ", tpl)
 			continue
 		}
 
 		klog.Info("Sync - Creating deployable ", tplname, " in channel ", chn.GetName())
+
 		err = sync.kubeClient.Create(context.TODO(), dpl)
+
 		if err != nil {
 			klog.Error("Sync - Failed to create deployable with error: ", err, " with ", dpl)
 		}
@@ -238,12 +265,14 @@ func (sync *ChannelSynchronizer) syncChannel(chn *chnv1alpha1.Channel) error {
 
 // getUnstructuredTemplateFromDeployable return error if needed
 func getUnstructuredTemplateFromDeployable(dpl *dplv1alpha1.Deployable) (*unstructured.Unstructured, error) {
-
 	dpltpl := &unstructured.Unstructured{}
+
 	if dpl.Spec.Template == nil {
-		return nil, errors.New("Processing deployable without tempalte:" + dpl.GetName())
+		return nil, errors.New("Processing deployable without template:" + dpl.GetName())
 	}
+
 	err := json.Unmarshal(dpl.Spec.Template.Raw, dpltpl)
+
 	if err != nil {
 		klog.Error("Sync - Failed to unmarshal template with error: ", err, " with ", string(dpl.Spec.Template.Raw))
 		return nil, err
@@ -255,6 +284,7 @@ func getUnstructuredTemplateFromDeployable(dpl *dplv1alpha1.Deployable) (*unstru
 	if dpltplannotations == nil {
 		return nil, errors.New("Deployable is not created by this synchronizer:" + dpl.GetName())
 	}
+
 	if _, ok := dpltplannotations[dplv1alpha1.AnnotationExternalSource]; !ok {
 		return nil, errors.New("Deployable is not created by this synchronizer:" + dpl.GetName())
 	}

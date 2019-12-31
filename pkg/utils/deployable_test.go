@@ -1,6 +1,16 @@
-// Licensed Materials - Property of IBM
-// (c) Copyright IBM Corporation 2016, 2019. All Rights Reserved.
-// US Government Users Restricted Rights - Use, duplication or disclosure restricted by GSA ADP  Schedule Contract with IBM Corp.
+// Copyright 2019 The Kubernetes Authors.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
 
 package utils_test // this way, the test will access the package as a client
 import (
@@ -8,15 +18,12 @@ import (
 	"log"
 	"testing"
 
+	"k8s.io/klog"
+	"sigs.k8s.io/controller-runtime/pkg/client"
+
 	"github.com/IBM/multicloud-operators-channel/pkg/utils"
 	dplv1alpha1 "github.com/IBM/multicloud-operators-deployable/pkg/apis/app/v1alpha1"
-	"sigs.k8s.io/controller-runtime/pkg/client"
 )
-
-// parentDpl
-
-// curDpl
-var parentName = "generateddpl"
 
 type Expected struct {
 	pdpl  string // the name of the parent dpl
@@ -36,6 +43,7 @@ func TestFindDeployableForChannelsInMap(t *testing.T) {
 	}
 
 	listDplObj(c)
+
 	for _, tC := range testCases {
 		t.Run(tC.desc, func(t *testing.T) {
 			p, dpls, err := utils.FindDeployableForChannelsInMap(c, tC.dpl, tC.ch)
@@ -57,11 +65,15 @@ func listDplObj(cl client.Client) {
 	for _, dpl := range dpllist.Items {
 		log.Printf("have dpl %v/%v", dpl.GetName(), dpl.GetNamespace())
 	}
+
 	log.Printf("In total %v dpl is found", len(dpllist.Items))
+
 	return
 }
 
 func assertDpls(expect Expected, cname string, pdpls *dplv1alpha1.Deployable, dpls *dplv1alpha1.Deployable, err error) bool {
+	klog.Infof("expected %v, cname %v", expect, cname)
+
 	if expect.err != err {
 		return false
 	}

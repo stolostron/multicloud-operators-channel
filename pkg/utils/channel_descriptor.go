@@ -1,6 +1,16 @@
-// Licensed Materials - Property of IBM
-// (c) Copyright IBM Corporation 2016, 2019. All Rights Reserved.
-// US Government Users Restricted Rights - Use, duplication or disclosure restricted by GSA ADP  Schedule Contract with IBM Corp.
+// Copyright 2019 The Kubernetes Authors.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
 
 package utils
 
@@ -11,12 +21,13 @@ import (
 	"strings"
 	"sync"
 
-	chnv1alpha1 "github.com/IBM/multicloud-operators-channel/pkg/apis/app/v1alpha1"
 	"gopkg.in/yaml.v2"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/klog"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+
+	chnv1alpha1 "github.com/IBM/multicloud-operators-channel/pkg/apis/app/v1alpha1"
 )
 
 // ChannelDescription contains channel and its object store information
@@ -75,12 +86,15 @@ func (desc *ChannelDescriptor) initChannelDescription(chn *chnv1alpha1.Channel, 
 	if pathName == "" {
 		errmsg := "Empty Pathname in channel " + chn.Name
 		klog.Error(errmsg)
+
 		return errors.New(errmsg)
 	}
+
 	if strings.HasSuffix(pathName, "/") {
 		last := len(pathName) - 1
 		pathName = pathName[:last]
 	}
+
 	loc := strings.LastIndex(pathName, "/")
 	endpoint := pathName[:loc]
 	chndesc.Bucket = pathName[loc+1:]
@@ -90,13 +104,17 @@ func (desc *ChannelDescriptor) initChannelDescription(chn *chnv1alpha1.Channel, 
 	awshandler := &AWSHandler{}
 	accessKeyID := ""
 	secretAccessKey := ""
+
 	if chn.Spec.SecretRef != nil {
 		secret := &corev1.Secret{}
 		secns := chn.Spec.SecretRef.Namespace
+
 		if secns == "" {
 			secns = chn.Namespace
 		}
+
 		err := kubeClient.Get(context.TODO(), types.NamespacedName{Name: chn.Spec.SecretRef.Name, Namespace: secns}, secret)
+
 		if err != nil {
 			klog.Error(err, "Unable to get secret")
 			return err
@@ -105,6 +123,7 @@ func (desc *ChannelDescriptor) initChannelDescription(chn *chnv1alpha1.Channel, 
 		yaml.Unmarshal(secret.Data[SecretMapKeyAccessKeyID], &accessKeyID)
 		yaml.Unmarshal(secret.Data[SecretMapKeySecretAccessKey], &secretAccessKey)
 	}
+
 	if err := awshandler.InitObjectStoreConnection(endpoint, accessKeyID, secretAccessKey); err != nil {
 		klog.Error(err, "Unable to initialize object store settings")
 		return err
@@ -114,6 +133,7 @@ func (desc *ChannelDescriptor) initChannelDescription(chn *chnv1alpha1.Channel, 
 		klog.Error(err, "Unable to access object store bucket ", chndesc.Bucket, " for channel ", chn.Name)
 		return err
 	}
+
 	chndesc.ObjectStore = awshandler
 
 	chndesc.Channel = chn.DeepCopy()
@@ -130,6 +150,7 @@ func (desc *ChannelDescriptor) Get(chname string) (chdesc *ChannelDescription, o
 	desc.RLock()
 	result, ok := desc.channelDescriptorMap[chname]
 	desc.RUnlock()
+
 	return result, ok
 }
 

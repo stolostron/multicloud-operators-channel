@@ -1,6 +1,16 @@
-// Licensed Materials - Property of IBM
-// (c) Copyright IBM Corporation 2016, 2019. All Rights Reserved.
-// US Government Users Restricted Rights - Use, duplication or disclosure restricted by GSA ADP  Schedule Contract with IBM Corp.
+// Copyright 2019 The Kubernetes Authors.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
 
 package helmrepo
 
@@ -8,9 +18,7 @@ import (
 	"testing"
 	"time"
 
-	synchronizer "github.com/IBM/multicloud-operators-channel/pkg/synchronizer/helmreposynchronizer"
 	"github.com/onsi/gomega"
-	appv1alpha1 "github.com/IBM/multicloud-operators-deployable/pkg/apis/app/v1alpha1"
 	"golang.org/x/net/context"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -18,6 +26,9 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
+
+	synchronizer "github.com/IBM/multicloud-operators-channel/pkg/synchronizer/helmreposynchronizer"
+	appv1alpha1 "github.com/IBM/multicloud-operators-deployable/pkg/apis/app/v1alpha1"
 )
 
 var c client.Client
@@ -43,6 +54,7 @@ func TestReconcile(t *testing.T) {
 	mgr, err := manager.New(cfg, manager.Options{})
 
 	g.Expect(err).NotTo(gomega.HaveOccurred())
+
 	c = mgr.GetClient()
 
 	recFn, requests := SetupTestReconcile(newReconciler(mgr, &synchronizer.ChannelSynchronizer{}))
@@ -63,7 +75,10 @@ func TestReconcile(t *testing.T) {
 		t.Logf("failed to create object, got an invalid object error: %v", err)
 		return
 	}
+
 	g.Expect(err).NotTo(gomega.HaveOccurred())
+
 	defer c.Delete(context.TODO(), instance)
+
 	g.Eventually(requests, timeout).Should(gomega.Receive(gomega.Equal(expectedRequest)))
 }

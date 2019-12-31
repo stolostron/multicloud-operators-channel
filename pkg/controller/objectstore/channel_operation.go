@@ -1,6 +1,16 @@
-// Licensed Materials - Property of IBM
-// (c) Copyright IBM Corporation 2016, 2019. All Rights Reserved.
-// US Government Users Restricted Rights - Use, duplication or disclosure restricted by GSA ADP  Schedule Contract with IBM Corp.
+// Copyright 2019 The Kubernetes Authors.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
 
 package objectstore
 
@@ -10,22 +20,22 @@ import (
 	"reflect"
 	"strings"
 
-	chnv1alpha1 "github.com/IBM/multicloud-operators-channel/pkg/apis/app/v1alpha1"
-	"github.com/IBM/multicloud-operators-channel/pkg/utils"
-	appv1alpha1 "github.com/IBM/multicloud-operators-deployable/pkg/apis/app/v1alpha1"
 	"github.com/ghodss/yaml"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/klog"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
+
+	chnv1alpha1 "github.com/IBM/multicloud-operators-channel/pkg/apis/app/v1alpha1"
+	"github.com/IBM/multicloud-operators-channel/pkg/utils"
+	appv1alpha1 "github.com/IBM/multicloud-operators-deployable/pkg/apis/app/v1alpha1"
 )
 
 //
 
 // ReconcileForChannel populate object store with channel when turned on
 func (r *ReconcileDeployable) deleteDeployableInObjectStore(request types.NamespacedName) (reconcile.Result, error) {
-
 	dplchn, _ := r.getChannelForNamespace(request.Namespace)
 	if dplchn == nil {
 		return reconcile.Result{}, nil
@@ -59,9 +69,11 @@ func (r *ReconcileDeployable) deleteDeployableInObjectStore(request types.Namesp
 	// Only delete templates created and uploaded to objectstore by deployables Reconcile
 	// meaning AnnotationHosting must be set in their template
 	tplannotations := objtpl.GetAnnotations()
+
 	if tplannotations == nil {
 		return reconcile.Result{}, nil
 	}
+
 	if _, ok := tplannotations[appv1alpha1.AnnotationHosting]; !ok {
 		return reconcile.Result{}, nil
 	}
@@ -75,7 +87,6 @@ func (r *ReconcileDeployable) deleteDeployableInObjectStore(request types.Namesp
 
 // ReconcileForChannel populate object store with channel when turned on
 func (r *ReconcileDeployable) reconcileForChannel(deployable *appv1alpha1.Deployable) (reconcile.Result, error) {
-
 	dplchn, err := r.getChannelForNamespace(deployable.Namespace)
 	if dplchn == nil {
 		return reconcile.Result{}, nil
@@ -93,10 +104,12 @@ func (r *ReconcileDeployable) reconcileForChannel(deployable *appv1alpha1.Deploy
 	}
 
 	template := &unstructured.Unstructured{}
+
 	if deployable.Spec.Template == nil {
 		klog.Warning("Processing deployable without template:", deployable)
 		return reconcile.Result{}, nil
 	}
+
 	err = json.Unmarshal(deployable.Spec.Template.Raw, template)
 	if err != nil {
 		klog.Error("Failed to unmarshal template with error: ", err, " with ", string(deployable.Spec.Template.Raw))
@@ -131,6 +144,7 @@ func (r *ReconcileDeployable) reconcileForChannel(deployable *appv1alpha1.Deploy
 		for k, v := range labels {
 			tpllbls[k] = v
 		}
+
 		template.SetLabels(tpllbls)
 	}
 
@@ -182,7 +196,6 @@ func (r *ReconcileDeployable) getChannelForNamespace(namespace string) (*chnv1al
 }
 
 func (r *ReconcileDeployable) validateChannel(dplchn *chnv1alpha1.Channel) error {
-
 	_, ok := r.ChannelDescriptor.Get(dplchn.Name)
 	if !ok {
 		klog.Info("Syncing channel ", dplchn.Name)
@@ -205,7 +218,6 @@ func (r *ReconcileDeployable) validateChannel(dplchn *chnv1alpha1.Channel) error
 // sync channel info with channel namespace. For ObjectBucket channel, namespace is source of truth
 // WARNNING: if channel is deleted during controller outage, bucket won't be cleaned up
 func (r *ReconcileDeployable) syncChannel(dplchn *chnv1alpha1.Channel) error {
-
 	err := r.ChannelDescriptor.ValidateChannel(dplchn, r.KubeClient)
 	if err != nil {
 		klog.Info("Failed to validate channel ", dplchn.Name, " err:", err)
@@ -237,7 +249,6 @@ func (r *ReconcileDeployable) syncChannel(dplchn *chnv1alpha1.Channel) error {
 	}
 
 	for _, name := range objnames {
-
 		dplObj, err := chndesc.ObjectStore.Get(chndesc.Bucket, name)
 		if err != nil {
 			klog.Error("Failed to get object ", chndesc.Bucket, "/", name, " err:", err)
@@ -257,6 +268,7 @@ func (r *ReconcileDeployable) syncChannel(dplchn *chnv1alpha1.Channel) error {
 		if tplannotations == nil {
 			continue
 		}
+
 		if _, ok := tplannotations[appv1alpha1.AnnotationHosting]; !ok {
 			continue
 		}
@@ -274,7 +286,9 @@ func (r *ReconcileDeployable) syncChannel(dplchn *chnv1alpha1.Channel) error {
 			klog.Warning("Processing deployable without template:", dpl)
 			continue
 		}
+
 		err = json.Unmarshal(dpl.Spec.Template.Raw, dpltpl)
+
 		if err != nil {
 			klog.Error("Failed to unmashall ", chndesc.Bucket, "/", name, " err:", err)
 			continue
@@ -288,6 +302,7 @@ func (r *ReconcileDeployable) syncChannel(dplchn *chnv1alpha1.Channel) error {
 		for k, v := range dpl.GetAnnotations() {
 			dpltplannotations[k] = v
 		}
+
 		hosting := types.NamespacedName{Name: dpl.GetName(), Namespace: dpl.GetNamespace()}.String()
 		dpltplannotations[appv1alpha1.AnnotationHosting] = hosting
 		dpltpl.SetAnnotations(dpltplannotations)
@@ -302,6 +317,7 @@ func (r *ReconcileDeployable) syncChannel(dplchn *chnv1alpha1.Channel) error {
 			for k, v := range labels {
 				tpllbls[k] = v
 			}
+
 			dpltpl.SetLabels(tpllbls)
 		}
 
@@ -311,15 +327,14 @@ func (r *ReconcileDeployable) syncChannel(dplchn *chnv1alpha1.Channel) error {
 				klog.Error("YAML UnMashall ", dpl, " err:", err)
 				continue
 			}
+
 			dplObj.Content = dplb
 			dplObj.Version = dpltplannotations[appv1alpha1.AnnotationDeployableVersion]
 			err = chndesc.ObjectStore.Put(chndesc.Bucket, dplObj)
 			if err != nil {
 				klog.Error("Failed to Put", chndesc.Bucket, "/", name, " err:", err)
 			}
-
 		}
-
 	}
 
 	return nil

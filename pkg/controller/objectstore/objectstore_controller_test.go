@@ -1,6 +1,16 @@
-// Licensed Materials - Property of IBM
-// (c) Copyright IBM Corporation 2016, 2019. All Rights Reserved.
-// US Government Users Restricted Rights - Use, duplication or disclosure restricted by GSA ADP  Schedule Contract with IBM Corp.
+// Copyright 2019 The Kubernetes Authors.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
 
 package objectstore
 
@@ -10,9 +20,6 @@ import (
 	"testing"
 	"time"
 
-	chnv1alpha1 "github.com/IBM/multicloud-operators-channel/pkg/apis/app/v1alpha1"
-	"github.com/IBM/multicloud-operators-channel/pkg/utils"
-	dplv1alpha1 "github.com/IBM/multicloud-operators-deployable/pkg/apis/app/v1alpha1"
 	"github.com/ghodss/yaml"
 	"github.com/onsi/gomega"
 	"golang.org/x/net/context"
@@ -26,6 +33,10 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
+
+	chnv1alpha1 "github.com/IBM/multicloud-operators-channel/pkg/apis/app/v1alpha1"
+	"github.com/IBM/multicloud-operators-channel/pkg/utils"
+	dplv1alpha1 "github.com/IBM/multicloud-operators-deployable/pkg/apis/app/v1alpha1"
 )
 
 var c client.Client
@@ -93,8 +104,9 @@ func TestReconcile(t *testing.T) {
 
 	// ----- Create new Channel instance -----
 	var chnobj chnv1alpha1.Channel
+
 	var chndata []byte
-	// current directoy is deployable-objectstore/pkg/controller/objectstore/
+	// current directory is deployable-objectstore/pkg/controller/objectstore/
 	chndata, err = ioutil.ReadFile("../../../hack/test/test_channel.yaml")
 	g.Expect(err).NotTo(gomega.HaveOccurred())
 
@@ -108,8 +120,9 @@ func TestReconcile(t *testing.T) {
 
 	// ----- Create new Secret instance -----
 	var secobj v1.Secret
+
 	var secdata []byte
-	// current directoy is deployable-objectstore/pkg/controller/objectstore/
+	// current directory is deployable-objectstore/pkg/controller/objectstore/
 	secdata, err = ioutil.ReadFile("../../../hack/test/test_secret.yaml")
 	g.Expect(err).NotTo(gomega.HaveOccurred())
 
@@ -123,8 +136,9 @@ func TestReconcile(t *testing.T) {
 
 	// ----- Upload some templates to objectstore to test channel sync -----
 	var tplNoHosting = "tplNoHosting"
+
 	var tplWithHosting = "tplWithHosting"
-	// current directoy is deployable-objectstore/pkg/controller/objectstore/
+	// current directory is deployable-objectstore/pkg/controller/objectstore/
 	tpldata, err := ioutil.ReadFile("../../../hack/test/test_template.yaml")
 	g.Expect(err).NotTo(gomega.HaveOccurred())
 
@@ -142,7 +156,9 @@ func TestReconcile(t *testing.T) {
 	tpl := &unstructured.Unstructured{}
 	err = yaml.Unmarshal(tpldata, tpl)
 	g.Expect(err).NotTo(gomega.HaveOccurred())
+
 	tplannotation := make(map[string]string)
+
 	hosting := types.NamespacedName{Name: "test", Namespace: channelNamespace}.String()
 	tplannotation[dplv1alpha1.AnnotationHosting] = hosting
 	tpl.SetAnnotations(tplannotation)
@@ -159,8 +175,9 @@ func TestReconcile(t *testing.T) {
 	// ---------- Create ----------
 	// Create new Deployable instance
 	var dplobj dplv1alpha1.Deployable
+
 	var dpldata []byte
-	// current directoy is deployable-objectstore/pkg/controller/objectstore/
+	// current directory is deployable-objectstore/pkg/controller/objectstore/
 	dpldata, err = ioutil.ReadFile("../../../hack/test/test_deployable.yaml")
 	g.Expect(err).NotTo(gomega.HaveOccurred())
 
@@ -196,6 +213,7 @@ func TestReconcile(t *testing.T) {
 	actuallocal, ok := tplannotations[dplv1alpha1.AnnotationLocal]
 	g.Expect(ok).To(gomega.BeTrue())
 	g.Expect(actuallocal).To(gomega.Equal("false"))
+
 	actualversion, ok := tplannotations[dplv1alpha1.AnnotationDeployableVersion]
 	g.Expect(ok).To(gomega.BeTrue())
 	g.Expect(actualversion).To(gomega.Equal("1.1.0"))
@@ -221,6 +239,7 @@ func TestReconcile(t *testing.T) {
 	dpltpl := &unstructured.Unstructured{}
 	err = json.Unmarshal(dplobj.Spec.Template.Raw, dpltpl)
 	g.Expect(err).NotTo(gomega.HaveOccurred())
+
 	lbls := make(map[string]string)
 	lbls["test-label"] = "test-value"
 	dpltpl.SetLabels(lbls)
@@ -247,9 +266,12 @@ func TestReconcile(t *testing.T) {
 	g.Expect(actualhosting).To(gomega.Equal(expectedhosting))
 	// Check deployable annotations are carried with template to the objectstore
 	actuallocal, ok = tplannotations[dplv1alpha1.AnnotationLocal]
+
 	g.Expect(ok).To(gomega.BeTrue())
 	g.Expect(actuallocal).To(gomega.Equal("false"))
+
 	actualversion, ok = tplannotations[dplv1alpha1.AnnotationDeployableVersion]
+
 	g.Expect(ok).To(gomega.BeTrue())
 	g.Expect(actualversion).To(gomega.Equal("1.1.0"))
 	// Check deployable labels are carried with template to the objectstore
@@ -276,12 +298,15 @@ func TestReconcile(t *testing.T) {
 	// ---------- Create ----------
 	// Create a deployable for a template from objectstore
 	var tplbyte []byte
-	// current directoy is deployable-objectstore/pkg/controller/objectstore/
+	// current directory is deployable-objectstore/pkg/controller/objectstore/
 	tplbyte, err = ioutil.ReadFile("../../../hack/test/test_template.yaml")
 	g.Expect(err).NotTo(gomega.HaveOccurred())
+
 	template := &unstructured.Unstructured{}
 	err = yaml.Unmarshal(tplbyte, template)
+
 	g.Expect(err).NotTo(gomega.HaveOccurred())
+
 	tplannots := make(map[string]string)
 	tplannots[dplv1alpha1.AnnotationExternalSource] = "http://127.0.0.1:9000/ch-qa"
 	template.SetAnnotations(tplannots)

@@ -1,6 +1,16 @@
-// Licensed Materials - Property of IBM
-// (c) Copyright IBM Corporation 2016, 2019. All Rights Reserved.
-// US Government Users Restricted Rights - Use, duplication or disclosure restricted by GSA ADP  Schedule Contract with IBM Corp.
+// Copyright 2019 The Kubernetes Authors.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
 
 package deployable
 
@@ -9,13 +19,14 @@ import (
 	"reflect"
 	"strings"
 
+	"k8s.io/klog"
+
 	appv1alpha1 "github.com/IBM/multicloud-operators-channel/pkg/apis/app/v1alpha1"
 	gitsync "github.com/IBM/multicloud-operators-channel/pkg/synchronizer/githubsynchronizer"
 	helmsync "github.com/IBM/multicloud-operators-channel/pkg/synchronizer/helmreposynchronizer"
 	"github.com/IBM/multicloud-operators-channel/pkg/utils"
 	dplv1alpha1 "github.com/IBM/multicloud-operators-deployable/pkg/apis/app/v1alpha1"
 	dplutils "github.com/IBM/multicloud-operators-deployable/pkg/utils"
-	"k8s.io/klog"
 
 	v1 "k8s.io/api/core/v1"
 
@@ -69,6 +80,7 @@ func (mapper *channelMapper) Map(obj handler.MapObject) []reconcile.Request {
 	for _, dpl := range dpllist.Items {
 		requests = append(requests, reconcile.Request{NamespacedName: types.NamespacedName{Name: dpl.GetName(), Namespace: dpl.GetNamespace()}})
 	}
+
 	return requests
 }
 
@@ -111,10 +123,11 @@ func (r *ReconcileDeployable) appendEvent(rootInstance *appv1alpha1.Channel, dpl
 		evnetMsg = addtionalMsg + ", Status: Failed, " + "Channel: " + phost.String()
 	} else {
 		eventType = v1.EventTypeNormal
-		evnetMsg = addtionalMsg + ", Status: Sucess, " + "Channel: " + phost.String()
+		evnetMsg = addtionalMsg + ", Status: Success, " + "Channel: " + phost.String()
 	}
 
 	r.Recorder.Event(rootInstance, eventType, reason, evnetMsg)
+
 	return nil
 }
 
@@ -157,6 +170,7 @@ func (r *ReconcileDeployable) Reconcile(request reconcile.Request) (reconcile.Re
 			klog.Error("Failed to get all deployables")
 			return reconcile.Result{}, nil
 		}
+
 		channelmap = make(map[string]*appv1alpha1.Channel)
 	}
 
@@ -174,7 +188,6 @@ func (r *ReconcileDeployable) Reconcile(request reconcile.Request) (reconcile.Re
 	klog.V(10).Infof("Dpl Map, before deletion: %#v", dplmap)
 
 	if len(instance.GetFinalizers()) == 0 {
-
 		annotations := instance.Annotations
 		if channelnsMap[instance.Namespace] != "" && annotations != nil && annotations[appv1alpha1.KeyChannelSource] != "" && parent == nil {
 			klog.V(10).Infof("Delete instance: The parent of the instance not found: %#v, %#v", annotations[appv1alpha1.KeyChannelSource], instance)
@@ -192,13 +205,13 @@ func (r *ReconcileDeployable) Reconcile(request reconcile.Request) (reconcile.Re
 			if err != nil {
 				klog.Error("Failed to validate deplyable for ", instance)
 			}
+
 			delete(channelmap, chname)
 		}
 
 		for _, ch := range channelmap {
 			r.propagateDeployableToChannel(instance, dplmap, ch)
 		}
-
 	}
 
 	//If the dpl changes its channel, delete all other children of the dpl who were propagated to other channels before.
@@ -234,13 +247,17 @@ func (r *ReconcileDeployable) propagateDeployableToChannel(deployable *dplv1alph
 	if klog.V(10) {
 		fnName := dplutils.GetFnName()
 		klog.Infof("Entering: %v()", fnName)
+
 		defer klog.Infof("Exiting: %v()", fnName)
 	}
+
 	chkey := types.NamespacedName{Name: channel.Name, Namespace: channel.Namespace}.String()
 
 	if deployable.Namespace == channel.Namespace {
 		klog.V(10).Infof("The deployable: %#v exists in channel: %#v.", deployable.GetName(), channel.GetName())
+
 		delete(dplmap, chkey)
+
 		return nil
 	}
 
@@ -268,7 +285,9 @@ func (r *ReconcileDeployable) propagateDeployableToChannel(deployable *dplv1alph
 	if err != nil {
 		return err
 	}
+
 	exdpl, ok := dplmap[chkey]
+
 	if !ok {
 		klog.Info("Creating deployable in channel", *chdpl)
 		err = r.Client.Create(context.TODO(), chdpl)
@@ -294,8 +313,8 @@ func (r *ReconcileDeployable) propagateDeployableToChannel(deployable *dplv1alph
 		dplkey := types.NamespacedName{Name: exdpl.GetName(), Namespace: exdpl.GetNamespace()}
 		addtionalMsg := "Depolyable " + dplkey.String() + " updated in the channel"
 		r.appendEvent(channel, dplkey, err, "Deploy", addtionalMsg)
-
 	}
+
 	delete(dplmap, chkey)
 
 	return err

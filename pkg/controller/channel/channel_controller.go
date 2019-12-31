@@ -1,6 +1,16 @@
-// Licensed Materials - Property of IBM
-// (c) Copyright IBM Corporation 2016, 2019. All Rights Reserved.
-// US Government Users Restricted Rights - Use, duplication or disclosure restricted by GSA ADP  Schedule Contract with IBM Corp.
+// Copyright 2019 The Kubernetes Authors.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
 
 package channel
 
@@ -59,7 +69,6 @@ var (
 // Add creates a new Channel Controller and adds it to the Manager with default RBAC. The Manager will set fields on the Controller
 // and Start it when the Manager is Started.
 func Add(mgr manager.Manager, recorder record.EventRecorder, channelDescriptor *utils.ChannelDescriptor, sync *helmsync.ChannelSynchronizer, gsync *gitsync.ChannelSynchronizer) error {
-
 	return add(mgr, newReconciler(mgr, recorder))
 }
 
@@ -92,6 +101,7 @@ func add(mgr manager.Manager, r reconcile.Reconciler) error {
 		&handler.EnqueueRequestsFromMapFunc{ToRequests: &clusterMapper{mgr.GetClient()}},
 		placementutils.ClusterPredicateFunc,
 	)
+
 	return err
 }
 
@@ -106,6 +116,7 @@ func (mapper *clusterMapper) Map(obj handler.MapObject) []reconcile.Request {
 		klog.Infof("Entering: %v()", fnName)
 		defer klog.Infof("Exiting: %v()", fnName)
 	}
+
 	cname := obj.Meta.GetName()
 
 	klog.Info("In cluster Mapper for ", cname)
@@ -113,7 +124,11 @@ func (mapper *clusterMapper) Map(obj handler.MapObject) []reconcile.Request {
 	plList := &appv1alpha1.ChannelList{}
 
 	listopts := &client.ListOptions{}
-	mapper.List(context.TODO(), plList, listopts)
+	err := mapper.List(context.TODO(), plList, listopts)
+
+	if err != nil {
+		klog.Error(err)
+	}
 
 	var requests []reconcile.Request
 
@@ -182,6 +197,7 @@ func (r *ReconcileChannel) Reconcile(request reconcile.Request) (reconcile.Resul
 			klog.Infof("Can't update the pathName field due to %v", err)
 			return reconcile.Result{}, err
 		}
+
 		return reconcile.Result{}, nil
 	}
 
@@ -207,6 +223,7 @@ func (r *ReconcileChannel) Reconcile(request reconcile.Request) (reconcile.Resul
 			if localLabels == nil {
 				localLabels = make(map[string]string)
 			}
+
 			localLabels[appv1alpha1.ServingChannel] = "true"
 			secrectInstance.SetLabels(localLabels)
 
@@ -215,12 +232,12 @@ func (r *ReconcileChannel) Reconcile(request reconcile.Request) (reconcile.Resul
 		}
 		//sync the channel to the serving-channel annotation in all involved secrets.
 		r.syncSecrectAnnotation(instance, request.NamespacedName)
-
 	}
 
 	if instance.Spec.ConfigMapRef != nil && instance.Spec.ConfigMapRef.Name > "" {
 		configName := instance.Spec.ConfigMapRef.Name
 		configNamespace := instance.Spec.ConfigMapRef.Namespace
+
 		if configNamespace == "" {
 			configNamespace = instance.Namespace
 		}
@@ -233,12 +250,13 @@ func (r *ReconcileChannel) Reconcile(request reconcile.Request) (reconcile.Resul
 			if localLabels == nil {
 				localLabels = make(map[string]string)
 			}
+
 			localLabels[appv1alpha1.ServingChannel] = "true"
 			configInstance.SetLabels(localLabels)
 
 			err = r.Update(context.TODO(), configInstance)
-			klog.Infof("Set label serving-channel to configMap object: %#v, error: %#v", *configInstance, err)
 
+			klog.Infof("Set label serving-channel to configMap object: %#v, error: %#v", *configInstance, err)
 		}
 	}
 	//sync the channel to the serving-channel annotation in all involved ConfigMaps.
@@ -253,6 +271,7 @@ func (r *ReconcileChannel) syncSecrectAnnotation(channel *appv1alpha1.Channel, c
 		klog.Infof("Entering: %v()", fnName)
 		defer klog.Infof("Exiting: %v()", fnName)
 	}
+
 	secList := &corev1.SecretList{}
 
 	secListOptions := &client.ListOptions{}
@@ -267,6 +286,7 @@ func (r *ReconcileChannel) syncSecrectAnnotation(channel *appv1alpha1.Channel, c
 		klog.Error("Failed to set label selector for secret objects. err: ", err)
 		return
 	}
+
 	secListOptions.LabelSelector = clSelector
 
 	err = r.Client.List(context.TODO(), secList, secListOptions)
@@ -303,7 +323,6 @@ func (r *ReconcileChannel) syncSecrectAnnotation(channel *appv1alpha1.Channel, c
 
 		err = r.Update(context.TODO(), &secret)
 		klog.Infof("Annotate secret object: %#v, error: %#v", secret, err)
-
 	}
 }
 
@@ -313,6 +332,7 @@ func (r *ReconcileChannel) syncConfigAnnotation(channel *appv1alpha1.Channel, ch
 		klog.Infof("Entering: %v()", fnName)
 		defer klog.Infof("Exiting: %v()", fnName)
 	}
+
 	configList := &corev1.ConfigMapList{}
 
 	configListOptions := &client.ListOptions{}
@@ -327,6 +347,7 @@ func (r *ReconcileChannel) syncConfigAnnotation(channel *appv1alpha1.Channel, ch
 		klog.Error("Failed to set label selector for configMap objects. err: ", err)
 		return
 	}
+
 	configListOptions.LabelSelector = clSelector
 
 	err = r.Client.List(context.TODO(), configList, configListOptions)
@@ -357,7 +378,6 @@ func (r *ReconcileChannel) syncConfigAnnotation(channel *appv1alpha1.Channel, ch
 
 		err = r.Update(context.TODO(), &config)
 		klog.Infof("Annotate configMap object: %#v, error: %#v", config, err)
-
 	}
 }
 
@@ -395,13 +415,16 @@ func (r *ReconcileChannel) validateClusterRBAC(instance *appv1alpha1.Channel) er
 	}
 
 	rolebinding := &rbac.RoleBinding{}
+
 	var subjects []rbac.Subject
+
 	cllist := &clusterv1alpha1.ClusterList{}
 	err = r.List(context.TODO(), cllist, &client.ListOptions{})
 	if err != nil {
 		if errors.IsNotFound(err) {
 			return nil
 		}
+
 		return err
 	}
 	for _, cl := range cllist.Items {
@@ -411,6 +434,7 @@ func (r *ReconcileChannel) validateClusterRBAC(instance *appv1alpha1.Channel) er
 			Name:     "hcm:clusters:" + cl.Namespace + ":" + cl.Name,
 		})
 	}
+
 	roleref := rbac.RoleRef{
 		APIGroup: "rbac.authorization.k8s.io",
 		Kind:     "Role",

@@ -1,16 +1,28 @@
-// Licensed Materials - Property of IBM
-// (c) Copyright IBM Corporation 2016, 2019. All Rights Reserved.
-// US Government Users Restricted Rights - Use, duplication or disclosure restricted by GSA ADP  Schedule Contract with IBM Corp.
+// Copyright 2019 The Kubernetes Authors.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
 
 package utils
 
 import (
 	"context"
 
+	"strings"
+
+	"k8s.io/klog"
+
 	appv1alpha1 "github.com/IBM/multicloud-operators-channel/pkg/apis/app/v1alpha1"
 	dplutils "github.com/IBM/multicloud-operators-deployable/pkg/utils"
-	"k8s.io/klog"
-	"strings"
 
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
@@ -20,6 +32,7 @@ func GenerateChannelMap(cl client.Client) (map[string]*appv1alpha1.Channel, erro
 	if klog.V(10) {
 		fnName := dplutils.GetFnName()
 		klog.Infof("Entering: %v()", fnName)
+
 		defer klog.Infof("Exiting: %v()", fnName)
 	}
 	// try to load channelmap if it is empty
@@ -31,6 +44,7 @@ func GenerateChannelMap(cl client.Client) (map[string]*appv1alpha1.Channel, erro
 	}
 
 	chmap := make(map[string]*appv1alpha1.Channel)
+
 	for _, ch := range chlist.Items {
 		klog.V(10).Infof("Channel namespacedname: %v/%v,  type: %v, sourceNamespaces: %v, gates: %#v", ch.Namespace, ch.Name, ch.Spec.Type, ch.Spec.SourceNamespaces, ch.Spec.Gates)
 		chmap[ch.Name] = ch.DeepCopy()
@@ -44,11 +58,13 @@ func LocateChannel(cl client.Client, name string) (*appv1alpha1.Channel, error) 
 	if klog.V(10) {
 		fnName := dplutils.GetFnName()
 		klog.Infof("Entering: %v()", fnName)
+
 		defer klog.Infof("Exiting: %v()", fnName)
 	}
 	// try to load channelmap if it is empty
 	chlist := &appv1alpha1.ChannelList{}
 	err := cl.List(context.TODO(), chlist, &client.ListOptions{})
+
 	if err != nil {
 		return nil, err
 	}
@@ -67,8 +83,10 @@ func UpdateServingChannel(servingChannel string, channelKey string, action strin
 	if klog.V(10) {
 		fnName := dplutils.GetFnName()
 		klog.Infof("Entering: %v()", fnName)
+
 		defer klog.Infof("Exiting: %v()", fnName)
 	}
+
 	parsedstr := strings.Split(servingChannel, ",")
 
 	newChannelMap := make(map[string]bool)
@@ -83,6 +101,7 @@ func UpdateServingChannel(servingChannel string, channelKey string, action strin
 			delete(newChannelMap, channelKey)
 		}
 	}
+
 	if action == "add" {
 		_, ok := newChannelMap[channelKey]
 		if !ok {
@@ -95,6 +114,7 @@ func UpdateServingChannel(servingChannel string, channelKey string, action strin
 		if newChannelList > "" {
 			newChannelList = newChannelList + ","
 		}
+
 		newChannelList = newChannelList + newch
 	}
 

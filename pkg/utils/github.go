@@ -1,6 +1,16 @@
-// Licensed Materials - Property of IBM
-// (c) Copyright IBM Corporation 2016, 2019. All Rights Reserved.
-// US Government Users Restricted Rights - Use, duplication or disclosure restricted by GSA ADP  Schedule Contract with IBM Corp.
+// Copyright 2019 The Kubernetes Authors.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
 
 package utils
 
@@ -24,9 +34,10 @@ import (
 	"k8s.io/helm/pkg/chartutil"
 	"k8s.io/helm/pkg/repo"
 
-	chnv1alpha1 "github.com/IBM/multicloud-operators-channel/pkg/apis/app/v1alpha1"
 	corev1 "k8s.io/api/core/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+
+	chnv1alpha1 "github.com/IBM/multicloud-operators-channel/pkg/apis/app/v1alpha1"
 )
 
 const (
@@ -45,13 +56,17 @@ func CloneGitRepo(chn *chnv1alpha1.Channel, kubeClient client.Client) (*repo.Ind
 		RecurseSubmodules: git.DefaultSubmoduleRecursionDepth,
 		ReferenceName:     plumbing.Master,
 	}
+
 	if chn.Spec.SecretRef != nil {
 		secret := &corev1.Secret{}
 		secns := chn.Spec.SecretRef.Namespace
+
 		if secns == "" {
 			secns = chn.Namespace
 		}
+
 		err := kubeClient.Get(context.TODO(), types.NamespacedName{Name: chn.Spec.SecretRef.Name, Namespace: secns}, secret)
+
 		if err != nil {
 			klog.Error(err, "Unable to get secret.")
 			return nil, nil, err
@@ -59,6 +74,7 @@ func CloneGitRepo(chn *chnv1alpha1.Channel, kubeClient client.Client) (*repo.Ind
 
 		username := ""
 		password := ""
+
 		yaml.Unmarshal(secret.Data[UserID], &username)
 		yaml.Unmarshal(secret.Data[Password], &password)
 
@@ -77,6 +93,7 @@ func CloneGitRepo(chn *chnv1alpha1.Channel, kubeClient client.Client) (*repo.Ind
 
 	klog.V(10).Info("Cloning ", chn.Spec.PathName, " into ", repoRoot)
 	_, err := git.PlainClone(repoRoot, false, options)
+
 	if err != nil {
 		klog.Error("Failed to git clone: ", err.Error())
 		return nil, nil, err
@@ -92,11 +109,11 @@ func CloneGitRepo(chn *chnv1alpha1.Channel, kubeClient client.Client) (*repo.Ind
 }
 
 func generateIndexYAML(repoRoot string) (*repo.IndexFile, map[string]string, error) {
-
 	// In the cloned git repo root, find all helm chart directories
 	chartDirs := make(map[string]string)
 	// In the cloned git repo root, also find all non-helm-chart directories
 	resourceDirs := make(map[string]string)
+
 	var currentChartDir string
 	currentChartDir = "NONE"
 	err := filepath.Walk(repoRoot,
@@ -122,26 +139,32 @@ func generateIndexYAML(repoRoot string) (*repo.IndexFile, map[string]string, err
 			}
 			return nil
 		})
+
 	if err != nil {
 		return nil, nil, err
 	}
 
 	// Build a helm repo index file
 	indexFile := repo.NewIndexFile()
+
 	for chartDir := range chartDirs {
 		chartFolderName := filepath.Base(chartDir)
 		chartParentDir := strings.Split(chartDir, chartFolderName)[0]
 		// Get the relative parent directory from the git repo root
 		chartBaseDir := strings.SplitAfter(chartParentDir, repoRoot+"/")[1]
 		chartMetadata, err := chartutil.LoadChartfile(chartDir + "Chart.yaml")
+
 		if err != nil {
 			klog.Error("There was a problem in generating helm charts index file: ", err.Error())
 			return nil, nil, err
 		}
+
 		indexFile.Add(chartMetadata, chartFolderName, chartBaseDir, "generated-by-multicloud-operators-subscription")
 	}
+
 	indexFile.SortEntries()
 	b, _ := yaml.Marshal(indexFile)
 	klog.V(10).Info("New index file ", string(b))
+
 	return indexFile, resourceDirs, nil
 }

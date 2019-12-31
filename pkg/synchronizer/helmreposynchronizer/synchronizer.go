@@ -1,6 +1,16 @@
-// Licensed Materials - Property of IBM
-// (c) Copyright IBM Corporation 2016, 2019. All Rights Reserved.
-// US Government Users Restricted Rights - Use, duplication or disclosure restricted by GSA ADP  Schedule Contract with IBM Corp.
+// Copyright 2019 The Kubernetes Authors.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
 
 package helmreposynchronizer
 
@@ -9,10 +19,6 @@ import (
 	"encoding/json"
 	"time"
 
-	chnv1alpha1 "github.com/IBM/multicloud-operators-channel/pkg/apis/app/v1alpha1"
-	"github.com/IBM/multicloud-operators-channel/pkg/utils"
-	dplv1alpha1 "github.com/IBM/multicloud-operators-deployable/pkg/apis/app/v1alpha1"
-	deputils "github.com/IBM/multicloud-operators-deployable/pkg/utils"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
@@ -21,6 +27,11 @@ import (
 	"k8s.io/klog"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
+
+	chnv1alpha1 "github.com/IBM/multicloud-operators-channel/pkg/apis/app/v1alpha1"
+	"github.com/IBM/multicloud-operators-channel/pkg/utils"
+	dplv1alpha1 "github.com/IBM/multicloud-operators-deployable/pkg/apis/app/v1alpha1"
+	deputils "github.com/IBM/multicloud-operators-deployable/pkg/utils"
 )
 
 // ChannelSynchronizer syncs objectbucket channels with helmrepo
@@ -34,7 +45,6 @@ type ChannelSynchronizer struct {
 
 // CreateSynchronizer - creates an instance of ChannelSynchronizer
 func CreateSynchronizer(config *rest.Config, scheme *runtime.Scheme, syncInterval int) (*ChannelSynchronizer, error) {
-
 	client, err := client.New(config, client.Options{})
 	if err != nil {
 		klog.Error("Failed to initialize client for synchronizer. err: ", err)
@@ -56,8 +66,10 @@ func (sync *ChannelSynchronizer) Start(s <-chan struct{}) error {
 	if klog.V(deputils.QuiteLogLel) {
 		fnName := deputils.GetFnName()
 		klog.Infof("Entering: %v()", fnName)
+
 		defer klog.Infof("Exiting: %v()", fnName)
 	}
+
 	sync.Signal = s
 
 	go wait.Until(func() {
@@ -76,11 +88,12 @@ func (sync *ChannelSynchronizer) syncChannelsWithHelmRepo() {
 	if klog.V(deputils.QuiteLogLel) {
 		fnName := deputils.GetFnName()
 		klog.Infof("Entering: %v()", fnName)
+
 		defer klog.Infof("Exiting: %v()", fnName)
 	}
 
 	for _, ch := range sync.ChannelMap {
-		klog.V(10).Info("synching channel ", ch.Name)
+		klog.V(5).Info("synching channel ", ch.Name)
 		sync.syncChannel(ch)
 	}
 
@@ -88,7 +101,6 @@ func (sync *ChannelSynchronizer) syncChannelsWithHelmRepo() {
 }
 
 func (sync *ChannelSynchronizer) syncChannel(chn *chnv1alpha1.Channel) {
-
 	if chn == nil {
 		return
 	}
@@ -99,18 +111,24 @@ func (sync *ChannelSynchronizer) syncChannel(chn *chnv1alpha1.Channel) {
 		klog.Error("Error getting index for channel: ", chn.Namespace, " ", chn.Name)
 		return
 	}
+
 	idx.SortEntries()
 
 	// chartname, chartversion, exists
 	generalmap := make(map[string]map[string]bool)
 	majorversion := make(map[string]string)
+
 	for k, cv := range idx.Entries {
 		klog.V(10).Info("Key: ", k)
+
 		chartmap := make(map[string]bool)
+
 		for _, chart := range cv {
 			klog.V(10).Info("Chart:", chart.Name, " Version:", chart.Version)
+
 			chartmap[chart.Version] = false
 		}
+
 		generalmap[k] = chartmap
 		majorversion[k] = cv[0].Version
 	}
@@ -127,8 +145,10 @@ func (sync *ChannelSynchronizer) syncChannel(chn *chnv1alpha1.Channel) {
 
 	for _, dpl := range dpllist.Items {
 		klog.V(10).Info("synching dpl ", dpl.Name)
+
 		obj := &unstructured.Unstructured{}
 		err := json.Unmarshal(dpl.Spec.Template.Raw, obj)
+
 		if err != nil {
 			klog.Warning("Processing local deployable with error template:", dpl, err)
 			continue
@@ -146,6 +166,7 @@ func (sync *ChannelSynchronizer) syncChannel(chn *chnv1alpha1.Channel) {
 
 		keep := false
 		chmap := generalmap[cname]
+
 		if cname != "" || cver != "" {
 			if chmap != nil {
 				if _, ok := chmap[cver]; ok {
@@ -153,6 +174,7 @@ func (sync *ChannelSynchronizer) syncChannel(chn *chnv1alpha1.Channel) {
 				}
 			}
 		}
+
 		if !keep {
 			sync.kubeClient.Delete(context.TODO(), &dpl)
 		} else {
@@ -174,6 +196,7 @@ func (sync *ChannelSynchronizer) syncChannel(chn *chnv1alpha1.Channel) {
 		obj.SetKind(utils.HelmCRKind)
 		obj.SetAPIVersion(utils.HelmCRAPIVersion)
 		obj.SetName(k)
+
 		specMap := make(map[string]string)
 		specMap[utils.HelmCRChartName] = k
 		specMap[utils.HelmCRVersion] = mv
@@ -187,21 +210,27 @@ func (sync *ChannelSynchronizer) syncChannel(chn *chnv1alpha1.Channel) {
 			dpl.Name = chn.GetName() + "-" + obj.GetName() + "-" + mv
 			dpl.Namespace = chn.GetNamespace()
 			controllerutil.SetControllerReference(chn, dpl, sync.Scheme)
+
 			dplanno := make(map[string]string)
 			dplanno[dplv1alpha1.AnnotationExternalSource] = k
 			dplanno[dplv1alpha1.AnnotationLocal] = "false"
 			dplanno[dplv1alpha1.AnnotationDeployableVersion] = mv
+
 			dpl.SetAnnotations(dplanno)
 			dpl.Spec.Template = &runtime.RawExtension{}
 			dpl.Spec.Template.Raw, err = json.Marshal(obj)
+
 			if err != nil {
 				klog.Info("Failed to marshal helm cr to template, err:", err)
 				break
 			}
+
 			err = sync.kubeClient.Create(context.TODO(), dpl)
+
 			if err != nil {
 				klog.Info("Failed to create helmcr deployable, err:", err)
 			}
+
 			klog.Info("creating dpl ", k)
 		}
 	}

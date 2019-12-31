@@ -1,6 +1,16 @@
-// Licensed Materials - Property of IBM
-// (c) Copyright IBM Corporation 2016, 2019. All Rights Reserved.
-// US Government Users Restricted Rights - Use, duplication or disclosure restricted by GSA ADP  Schedule Contract with IBM Corp.
+// Copyright 2019 The Kubernetes Authors.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
 
 package objectstore
 
@@ -33,7 +43,6 @@ import (
 // Add creates a new Deployable Controller and adds it to the Manager with default RBAC. The Manager will set fields on the Controller
 // and Start it when the Manager is Started.
 func Add(mgr manager.Manager, recorder record.EventRecorder, channelDescriptor *utils.ChannelDescriptor, sync *helmsync.ChannelSynchronizer, gsync *gitsync.ChannelSynchronizer) error {
-
 	return add(mgr, newReconciler(mgr, channelDescriptor))
 }
 
@@ -50,7 +59,6 @@ type channelMapper struct {
 }
 
 func (mapper *channelMapper) Map(obj handler.MapObject) []reconcile.Request {
-
 	dpllist := &appv1alpha1.DeployableList{}
 	err := mapper.List(context.TODO(), dpllist, &client.ListOptions{Namespace: obj.Meta.GetNamespace()})
 	if err != nil {
@@ -62,6 +70,7 @@ func (mapper *channelMapper) Map(obj handler.MapObject) []reconcile.Request {
 	for _, dpl := range dpllist.Items {
 		requests = append(requests, reconcile.Request{NamespacedName: types.NamespacedName{Name: dpl.GetName(), Namespace: dpl.GetNamespace()}})
 	}
+
 	return requests
 }
 
@@ -105,6 +114,7 @@ func (r *ReconcileDeployable) Reconcile(request reconcile.Request) (reconcile.Re
 	instance := &appv1alpha1.Deployable{}
 	err := r.KubeClient.Get(context.TODO(), request.NamespacedName, instance)
 	klog.Info("Reconciling:", request.NamespacedName, " with Get err:", err)
+
 	if err != nil {
 		if errors.IsNotFound(err) {
 			// Object not found, return.  Created objects are automatically garbage collected.
@@ -116,6 +126,7 @@ func (r *ReconcileDeployable) Reconcile(request reconcile.Request) (reconcile.Re
 		}
 		// Error reading the object - requeue the request.
 		klog.V(10).Info("Reconciling - Errored.", request.NamespacedName, " with Get err:", err)
+
 		return reconcile.Result{}, err
 	}
 

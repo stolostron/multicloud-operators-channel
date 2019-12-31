@@ -1,6 +1,16 @@
-// Licensed Materials - Property of IBM
-// (c) Copyright IBM Corporation 2016, 2019. All Rights Reserved.
-// US Government Users Restricted Rights - Use, duplication or disclosure restricted by GSA ADP  Schedule Contract with IBM Corp.
+// Copyright 2019 The Kubernetes Authors.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
 
 package utils
 
@@ -66,6 +76,7 @@ func (d DeployableObject) isEmpty() bool {
 	if d.Name == "" && d.GenerateName == "" && len(d.Content) == 0 {
 		return true
 	}
+
 	return false
 }
 
@@ -75,14 +86,16 @@ func (p *credentialProvider) Retrieve() (aws.Credentials, error) {
 		SecretAccessKey: p.SecretAccessKey,
 		AccessKeyID:     p.AccessKeyID,
 	}
+
 	return awscred, nil
 }
 
 // InitObjectStoreConnection connect to object store
 func (h *AWSHandler) InitObjectStoreConnection(endpoint, accessKeyID, secretAccessKey string) error {
-
 	klog.Info("Preparing S3 settings")
+
 	cfg, err := external.LoadDefaultAWSConfig()
+
 	if err != nil {
 		klog.Error("Failed to load aws config. error: ", err)
 		return err
@@ -97,6 +110,7 @@ func (h *AWSHandler) InitObjectStoreConnection(endpoint, accessKeyID, secretAcce
 				URL: endpoint,
 			}, nil
 		}
+
 		return defaultResolver.ResolveEndpoint(service, region)
 	}
 
@@ -151,15 +165,16 @@ func (h *AWSHandler) Exists(bucket string) error {
 
 // List all objects in bucket
 func (h *AWSHandler) List(bucket string) ([]string, error) {
-
 	klog.V(10).Info("List S3 Objects ", bucket)
 
 	req := h.Client.ListObjectsRequest(&s3.ListObjectsInput{Bucket: &bucket})
 	p := s3.NewListObjectsPaginator(req)
 
 	var keys []string
+
 	for p.Next(context.TODO()) {
 		page := p.CurrentPage()
+
 		for _, obj := range page.Contents {
 			keys = append(keys, *obj.Key)
 		}
@@ -185,6 +200,7 @@ func (h *AWSHandler) Get(bucket, name string) (DeployableObject, error) {
 	})
 
 	resp, err := req.Send(context.Background())
+
 	if err != nil {
 		klog.Error("Failed to send Get request. error: ", err)
 		return dplObj, err
@@ -203,6 +219,7 @@ func (h *AWSHandler) Get(bucket, name string) (DeployableObject, error) {
 	dplObj.GenerateName = generateName
 	dplObj.Content = body
 	dplObj.Version = version
+
 	klog.V(10).Info("Get Success: \n", string(body))
 
 	return dplObj, nil
@@ -237,7 +254,6 @@ func (h *AWSHandler) Put(bucket string, dplObj DeployableObject) error {
 
 // Delete delete existing object
 func (h *AWSHandler) Delete(bucket, name string) error {
-
 	req := h.Client.DeleteObjectRequest(&s3.DeleteObjectInput{
 		Bucket: &bucket,
 		Key:    &name,

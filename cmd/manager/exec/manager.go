@@ -163,6 +163,7 @@ func RunManager() {
 
 	// Setup Scheme for all resources
 	klog.Info("setting up scheme")
+
 	if err := apis.AddToScheme(mgr.GetScheme()); err != nil {
 		klog.Error(err, "unable add APIs to scheme")
 		os.Exit(1)
@@ -182,12 +183,14 @@ func RunManager() {
 
 	// Setup all Controllers
 	klog.Info("Setting up controller")
+
 	if err := controller.AddToManager(mgr, recorder, chdesc, hsync, gsync); err != nil {
 		klog.Error(err, "unable to register controllers to the manager")
 		os.Exit(1)
 	}
 
 	klog.Info("setting up webhooks")
+
 	if err := webhook.AddToManager(mgr); err != nil {
 		klog.Error(err, "unable to register webhooks to the manager")
 		os.Exit(1)

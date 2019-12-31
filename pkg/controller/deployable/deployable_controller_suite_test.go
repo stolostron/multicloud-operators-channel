@@ -1,6 +1,16 @@
-// Licensed Materials - Property of IBM
-// (c) Copyright IBM Corporation 2016, 2019. All Rights Reserved.
-// US Government Users Restricted Rights - Use, duplication or disclosure restricted by GSA ADP  Schedule Contract with IBM Corp.
+// Copyright 2019 The Kubernetes Authors.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
 
 package deployable
 
@@ -12,12 +22,13 @@ import (
 	"testing"
 
 	"github.com/onsi/gomega"
-	"github.com/IBM/multicloud-operators-channel/pkg/apis"
 	"k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/client-go/rest"
 	"sigs.k8s.io/controller-runtime/pkg/envtest"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
+
+	"github.com/IBM/multicloud-operators-channel/pkg/apis"
 )
 
 var cfg *rest.Config
@@ -26,6 +37,7 @@ func TestMain(m *testing.M) {
 	t := &envtest.Environment{
 		CRDDirectoryPaths: []string{filepath.Join("..", "..", "..", "config", "crds")},
 	}
+
 	apis.AddToScheme(scheme.Scheme)
 
 	var err error
@@ -34,6 +46,7 @@ func TestMain(m *testing.M) {
 	}
 
 	code := m.Run()
+
 	t.Stop()
 	os.Exit(code)
 }
@@ -47,6 +60,7 @@ func SetupTestReconcile(inner reconcile.Reconciler) (reconcile.Reconciler, chan 
 		requests <- req
 		return result, err
 	})
+
 	return fn, requests
 }
 
@@ -59,5 +73,6 @@ func StartTestManager(mgr manager.Manager, g *gomega.GomegaWithT) (chan struct{}
 		defer wg.Done()
 		g.Expect(mgr.Start(stop)).NotTo(gomega.HaveOccurred())
 	}()
+
 	return stop, wg
 }

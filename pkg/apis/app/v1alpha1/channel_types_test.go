@@ -37,6 +37,7 @@ func TestStorageChannel(t *testing.T) {
 
 	// Test Create
 	fetched := &Channel{}
+
 	g.Expect(c.Create(context.TODO(), created)).NotTo(gomega.HaveOccurred())
 
 	g.Expect(c.Get(context.TODO(), key, fetched)).NotTo(gomega.HaveOccurred())
