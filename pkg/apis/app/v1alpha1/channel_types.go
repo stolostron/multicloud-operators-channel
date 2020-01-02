@@ -82,11 +82,10 @@ type ChannelStatus struct {
 // +kubebuilder:printcolumn:name="Age",type="date",JSONPath=".metadata.creationTimestamp"
 // +kubebuilder:resource:scope=Namespaced
 type Channel struct {
-	metav1.TypeMeta   `json:",inline"`
+	Status            ChannelStatus `json:"status,omitempty"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
-
-	Spec   ChannelSpec   `json:"spec,omitempty"`
-	Status ChannelStatus `json:"status,omitempty"`
+	Spec              ChannelSpec `json:"spec,omitempty"`
+	metav1.TypeMeta   `json:",inline"`
 }
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object

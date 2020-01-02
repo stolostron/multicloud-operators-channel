@@ -137,7 +137,6 @@ func (r *ReconcileDeployable) appendEvent(rootInstance *appv1alpha1.Channel, dpl
 
 // Reconcile reads that state of the cluster for a Channel object and makes changes based on the state read
 // and what is in the Channel.Spec
-// TODO(user): Modify this Reconcile function to implement your Controller logic.  The scaffolding writes
 // a Deployment as an example
 // Automatically generate RBAC rules to allow the Controller to read and write Deployments
 // +kubebuilder:rbac:groups=apps,resources=deployments,verbs=get;list;watch;create;update;patch;delete
@@ -222,11 +221,20 @@ func (r *ReconcileDeployable) Reconcile(request reconcile.Request) (reconcile.Re
 		}
 	}
 
+	r.handleOrphanDeployable(dplmap)
+
+	return reconcile.Result{}, err
+}
+
+func (r *ReconcileDeployable) handleOrphanDeployable(dplmap map[string]*dplv1alpha1.Deployable) {
+	if dplmap == nil {
+		return
+	}
 	//If the dpl changes its channel, delete all other children of the dpl who were propagated to other channels before.
 	for chstr, dpl := range dplmap {
 		klog.Info("deleting deployable ", dpl.Namespace, "/", dpl.Name, " from channel ", chstr)
 
-		err = r.Client.Delete(context.TODO(), dpl)
+		err := r.Client.Delete(context.TODO(), dpl)
 		if err != nil {
 			klog.Errorf("Failed to delete %v due to %v ", dpl.Name, err)
 		}
@@ -256,8 +264,6 @@ func (r *ReconcileDeployable) Reconcile(request reconcile.Request) (reconcile.Re
 			}
 		}
 	}
-
-	return reconcile.Result{}, err
 }
 
 func (r *ReconcileDeployable) propagateDeployableToChannel(deployable *dplv1alpha1.Deployable,

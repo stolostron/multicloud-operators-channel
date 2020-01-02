@@ -18,6 +18,7 @@ import (
 	"context"
 	"encoding/json"
 	"io/ioutil"
+	"os"
 	"path/filepath"
 	"strings"
 	"time"
@@ -26,6 +27,7 @@ import (
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/rest"
+	"k8s.io/helm/pkg/repo"
 
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/wait"
@@ -132,6 +134,66 @@ func (sync *ChannelSynchronizer) syncChannelsWithGitRepo() {
 	}
 }
 
+func (sync *ChannelSynchronizer) processYamlFile(chn *chnv1alpha1.Channel, files []os.FileInfo, dir string) {
+	for _, f := range files {
+		// If YAML or YML,
+		if f.Mode().IsRegular() {
+			if strings.EqualFold(filepath.Ext(f.Name()), ".yml") || strings.EqualFold(filepath.Ext(f.Name()), ".yaml") {
+				// check it it is Kubernetes resource
+				klog.V(10).Info("scanning file ", f.Name())
+				file, _ := ioutil.ReadFile(filepath.Join(dir, f.Name()))
+				t := kubeResource{}
+
+				err := yaml.Unmarshal(file, &t)
+				if err != nil {
+					klog.Info("Failed to unmarshal Kubernetes resource, err:", err)
+					break
+				}
+
+				if t.APIVersion == "" || t.Kind == "" {
+					klog.V(10).Info("Not a Kubernetes resource")
+				} else {
+					klog.V(10).Info("Kubernetes resource of kind ", t.Kind, " Creating a deployable.")
+
+					obj := &unstructured.Unstructured{}
+
+					err = yaml.Unmarshal(file, &obj)
+					if err != nil {
+						klog.Info("Failed to unmarshal Kubernetes resource, err:", err)
+						break
+					}
+
+					dpl := &dplv1alpha1.Deployable{}
+					dpl.Name = strings.ToLower(chn.GetName() + "-" + t.Kind + "-deployable")
+					dpl.Namespace = chn.GetNamespace()
+
+					err = controllerutil.SetControllerReference(chn, dpl, sync.Scheme)
+					if err != nil {
+						klog.Info("Failed to set controller reference, err:", err)
+						break
+					}
+
+					dplanno := make(map[string]string)
+					dplanno[dplv1alpha1.AnnotationExternalSource] = f.Name()
+					dplanno[dplv1alpha1.AnnotationLocal] = "false"
+					dplanno[dplv1alpha1.AnnotationDeployableVersion] = t.APIVersion
+					dpl.SetAnnotations(dplanno)
+					dpl.Spec.Template = &runtime.RawExtension{}
+					dpl.Spec.Template.Raw, err = json.Marshal(obj)
+					if err != nil {
+						klog.Info("Failed to marshal helm CR to template, err:", err)
+						break
+					}
+					err = sync.kubeClient.Create(context.TODO(), dpl)
+					if err != nil {
+						klog.Info("Failed to create helmrelease deployable, err:", err)
+					}
+				}
+			}
+		}
+	}
+}
+
 func (sync *ChannelSynchronizer) syncChannel(chn *chnv1alpha1.Channel) {
 	if chn == nil {
 		return
@@ -154,63 +216,7 @@ func (sync *ChannelSynchronizer) syncChannel(chn *chnv1alpha1.Channel) {
 			klog.Error("Failed to list files in directory ", dir, err.Error())
 		}
 
-		for _, f := range files {
-			// If YAML or YML,
-			if f.Mode().IsRegular() {
-				if strings.EqualFold(filepath.Ext(f.Name()), ".yml") || strings.EqualFold(filepath.Ext(f.Name()), ".yaml") {
-					// check it it is Kubernetes resource
-					klog.V(10).Info("scanning file ", f.Name())
-					file, _ := ioutil.ReadFile(filepath.Join(dir, f.Name()))
-					t := kubeResource{}
-
-					err = yaml.Unmarshal(file, &t)
-					if err != nil {
-						klog.Info("Failed to unmarshal Kubernetes resource, err:", err)
-						break
-					}
-
-					if t.APIVersion == "" || t.Kind == "" {
-						klog.V(10).Info("Not a Kubernetes resource")
-					} else {
-						klog.V(10).Info("Kubernetes resource of kind ", t.Kind, " Creating a deployable.")
-
-						obj := &unstructured.Unstructured{}
-
-						err = yaml.Unmarshal(file, &obj)
-						if err != nil {
-							klog.Info("Failed to unmarshal Kubernetes resource, err:", err)
-							break
-						}
-
-						dpl := &dplv1alpha1.Deployable{}
-						dpl.Name = strings.ToLower(chn.GetName() + "-" + t.Kind + "-deployable")
-						dpl.Namespace = chn.GetNamespace()
-
-						err = controllerutil.SetControllerReference(chn, dpl, sync.Scheme)
-						if err != nil {
-							klog.Info("Failed to set controller reference, err:", err)
-							break
-						}
-
-						dplanno := make(map[string]string)
-						dplanno[dplv1alpha1.AnnotationExternalSource] = f.Name()
-						dplanno[dplv1alpha1.AnnotationLocal] = "false"
-						dplanno[dplv1alpha1.AnnotationDeployableVersion] = t.APIVersion
-						dpl.SetAnnotations(dplanno)
-						dpl.Spec.Template = &runtime.RawExtension{}
-						dpl.Spec.Template.Raw, err = json.Marshal(obj)
-						if err != nil {
-							klog.Info("Failed to marshal helm CR to template, err:", err)
-							break
-						}
-						err = sync.kubeClient.Create(context.TODO(), dpl)
-						if err != nil {
-							klog.Info("Failed to create helmrelease deployable, err:", err)
-						}
-					}
-				}
-			}
-		}
+		sync.processYamlFile(chn, files, dir)
 	}
 
 	// chartname, chartversion, exists
@@ -244,7 +250,7 @@ func (sync *ChannelSynchronizer) syncChannel(chn *chnv1alpha1.Channel) {
 
 	for _, dpl := range dpllist.Items {
 		klog.V(10).Info("synching dpl ", dpl.Name)
-		//obj := &unstructured.Unstructured{}
+
 		obj := &helmTemplate{}
 		err := json.Unmarshal(dpl.Spec.Template.Raw, obj)
 
@@ -294,7 +300,7 @@ func (sync *ChannelSynchronizer) syncChannel(chn *chnv1alpha1.Channel) {
 			}
 			if crepo != chn.Spec.PathName {
 				klog.Info("path changed ")
-				//crepo = chn.Spec.PathName
+				//here might need to do a better code review to see if `crepo = chn.Spec.PathName` is needed
 				err = sync.kubeClient.Update(context.TODO(), &dpl)
 				if err != nil {
 					klog.Error("Failed to update deployable in helm repo channel:", dpl.Name, " to ", chn.Spec.PathName)
@@ -303,6 +309,11 @@ func (sync *ChannelSynchronizer) syncChannel(chn *chnv1alpha1.Channel) {
 		}
 	}
 
+	sync.processGeneralMap(idx, chn, majorversion, generalmap)
+}
+
+func (sync *ChannelSynchronizer) processGeneralMap(idx *repo.IndexFile, chn *chnv1alpha1.Channel,
+	majorversion map[string]string, generalmap map[string]map[string]bool) {
 	for k, charts := range generalmap {
 		mv := majorversion[k]
 		obj := &unstructured.Unstructured{}
@@ -341,7 +352,7 @@ func (sync *ChannelSynchronizer) syncChannel(chn *chnv1alpha1.Channel) {
 			dpl.Name = chn.GetName() + "-" + obj.GetName() + "-" + mv
 			dpl.Namespace = chn.GetNamespace()
 
-			err = controllerutil.SetControllerReference(chn, dpl, sync.Scheme)
+			err := controllerutil.SetControllerReference(chn, dpl, sync.Scheme)
 			if err != nil {
 				klog.Info("Failed to set controller reference, err:", err)
 				break

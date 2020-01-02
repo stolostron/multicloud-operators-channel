@@ -160,7 +160,6 @@ type ReconcileChannel struct {
 
 // Reconcile reads that state of the cluster for a Channel object and makes changes based on the state read
 // and what is in the Channel.Spec
-// TODO(user): Modify this Reconcile function to implement your Controller logic.  The scaffolding writes
 // a Deployment as an example
 // Automatically generate RBAC rules to allow the Controller to read and write Deployments
 // +kubebuilder:rbac:groups=apps,resources=deployments,verbs=get;list;watch;create;update;patch;delete
@@ -244,6 +243,15 @@ func (r *ReconcileChannel) Reconcile(request reconcile.Request) (reconcile.Resul
 		r.syncSecrectAnnotation(instance, request.NamespacedName)
 	}
 
+	r.updateConfigMap(instance)
+
+	//sync the channel to the serving-channel annotation in all involved ConfigMaps.
+	r.syncConfigAnnotation(instance, request.NamespacedName)
+
+	return reconcile.Result{}, nil
+}
+
+func (r *ReconcileChannel) updateConfigMap(instance *appv1alpha1.Channel) {
 	if instance.Spec.ConfigMapRef != nil && instance.Spec.ConfigMapRef.Name > "" {
 		configName := instance.Spec.ConfigMapRef.Name
 		configNamespace := instance.Spec.ConfigMapRef.Namespace
@@ -255,7 +263,7 @@ func (r *ReconcileChannel) Reconcile(request reconcile.Request) (reconcile.Resul
 		configInstance := &corev1.ConfigMap{}
 		configKey := types.NamespacedName{Name: configName, Namespace: configNamespace}
 
-		err = r.Get(context.TODO(), configKey, configInstance)
+		err := r.Get(context.TODO(), configKey, configInstance)
 		if err == nil {
 			localLabels := configInstance.GetLabels()
 
@@ -271,10 +279,6 @@ func (r *ReconcileChannel) Reconcile(request reconcile.Request) (reconcile.Resul
 			klog.Infof("Set label serving-channel to configMap object: %#v, error: %#v", *configInstance, err)
 		}
 	}
-	//sync the channel to the serving-channel annotation in all involved ConfigMaps.
-	r.syncConfigAnnotation(instance, request.NamespacedName)
-
-	return reconcile.Result{}, nil
 }
 
 func (r *ReconcileChannel) syncSecrectAnnotation(channel *appv1alpha1.Channel, channelKey types.NamespacedName) {
@@ -407,41 +411,9 @@ func (r *ReconcileChannel) validateClusterRBAC(instance *appv1alpha1.Channel) er
 
 	role := &rbac.Role{}
 
-	err := r.Get(context.TODO(), types.NamespacedName{Name: instance.Name, Namespace: instance.Namespace}, role)
+	err := r.setupRole(instance, role)
 	if err != nil {
-		if errors.IsNotFound(err) {
-			role.Name = instance.Name
-			role.Namespace = instance.Namespace
-			role.Rules = clusterRules
-
-			err = controllerutil.SetControllerReference(instance, role, r.scheme)
-			if err != nil {
-				klog.Error("Failed to set controller reference, err:", err)
-				return err
-			}
-
-			err = r.Create(context.TODO(), role)
-			if err != nil {
-				return err
-			}
-		} else {
-			return err
-		}
-	} else {
-		if !reflect.DeepEqual(role.Rules, clusterRules) {
-			role.Rules = clusterRules
-
-			err = controllerutil.SetControllerReference(instance, role, r.scheme)
-			if err != nil {
-				klog.Error("Failed to set controller reference, err:", err)
-				return err
-			}
-
-			err = r.Update(context.TODO(), role)
-			if err != nil {
-				return err
-			}
-		}
+		return err
 	}
 
 	rolebinding := &rbac.RoleBinding{}
@@ -511,4 +483,45 @@ func (r *ReconcileChannel) validateClusterRBAC(instance *appv1alpha1.Channel) er
 	}
 
 	return err
+}
+
+func (r *ReconcileChannel) setupRole(instance *appv1alpha1.Channel, role *rbac.Role) error {
+	err := r.Get(context.TODO(), types.NamespacedName{Name: instance.Name, Namespace: instance.Namespace}, role)
+	if err != nil {
+		if errors.IsNotFound(err) {
+			role.Name = instance.Name
+			role.Namespace = instance.Namespace
+			role.Rules = clusterRules
+
+			err = controllerutil.SetControllerReference(instance, role, r.scheme)
+			if err != nil {
+				klog.Error("Failed to set controller reference, err:", err)
+				return err
+			}
+
+			err = r.Create(context.TODO(), role)
+			if err != nil {
+				return err
+			}
+		} else {
+			return err
+		}
+	} else {
+		if !reflect.DeepEqual(role.Rules, clusterRules) {
+			role.Rules = clusterRules
+
+			err = controllerutil.SetControllerReference(instance, role, r.scheme)
+			if err != nil {
+				klog.Error("Failed to set controller reference, err:", err)
+				return err
+			}
+
+			err = r.Update(context.TODO(), role)
+			if err != nil {
+				return err
+			}
+		}
+	}
+
+	return nil
 }

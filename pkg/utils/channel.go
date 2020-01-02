@@ -114,10 +114,10 @@ func UpdateServingChannel(servingChannel string, channelKey string, action strin
 	newChannelList := ""
 	for newch := range newChannelMap {
 		if newChannelList > "" {
-			newChannelList = newChannelList + ","
+			newChannelList += ","
 		}
 
-		newChannelList = newChannelList + newch
+		newChannelList += newch
 	}
 
 	return newChannelList

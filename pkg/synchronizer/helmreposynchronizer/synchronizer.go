@@ -142,52 +142,7 @@ func (sync *ChannelSynchronizer) syncChannel(chn *chnv1alpha1.Channel) {
 	}
 
 	for _, dpl := range dpllist.Items {
-		klog.V(10).Info("synching dpl ", dpl.Name)
-
-		obj := &unstructured.Unstructured{}
-		err := json.Unmarshal(dpl.Spec.Template.Raw, obj)
-
-		if err != nil {
-			klog.Warning("Processing local deployable with error template:", dpl, err)
-			continue
-		}
-
-		if obj.GetKind() != utils.HelmCRKind || obj.GetAPIVersion() != utils.HelmCRAPIVersion {
-			klog.Info("Skipping non helm chart deployable:", obj.GetKind(), ".", obj.GetAPIVersion())
-			continue
-		}
-
-		specMap := obj.Object["spec"].(map[string]interface{})
-		cname := specMap[utils.HelmCRChartName].(string)
-		cver := specMap[utils.HelmCRVersion].(string)
-
-		keep := false
-		chmap := generalmap[cname]
-
-		if cname != "" || cver != "" {
-			if chmap != nil {
-				if _, ok := chmap[cver]; ok {
-					keep = true
-				}
-			}
-		}
-
-		if !keep {
-			err = sync.kubeClient.Delete(context.TODO(), &dpl)
-			if err != nil {
-				klog.Error("Failed to delete deployable in helm repo channel:", dpl.Name, " to ", chn.Spec.PathName)
-			}
-		} else {
-			chmap[cver] = true
-			crepo := specMap[utils.HelmCRRepoURL].(string)
-			if crepo != chn.Spec.PathName {
-				specMap[utils.HelmCRRepoURL] = chn.Spec.PathName
-				err = sync.kubeClient.Update(context.TODO(), &dpl)
-				if err != nil {
-					klog.Error("Failed to update deployable in helm repo channel:", dpl.Name, " to ", chn.Spec.PathName)
-				}
-			}
-		}
+		sync.processDeployable(chn, dpl, generalmap)
 	}
 
 	for k, charts := range generalmap {
@@ -237,6 +192,56 @@ func (sync *ChannelSynchronizer) syncChannel(chn *chnv1alpha1.Channel) {
 			}
 
 			klog.Info("creating dpl ", k)
+		}
+	}
+}
+
+func (sync *ChannelSynchronizer) processDeployable(chn *chnv1alpha1.Channel,
+	dpl dplv1alpha1.Deployable, generalmap map[string]map[string]bool) {
+	klog.V(10).Info("synching dpl ", dpl.Name)
+
+	obj := &unstructured.Unstructured{}
+	err := json.Unmarshal(dpl.Spec.Template.Raw, obj)
+
+	if err != nil {
+		klog.Warning("Processing local deployable with error template:", dpl, err)
+		return
+	}
+
+	if obj.GetKind() != utils.HelmCRKind || obj.GetAPIVersion() != utils.HelmCRAPIVersion {
+		klog.Info("Skipping non helm chart deployable:", obj.GetKind(), ".", obj.GetAPIVersion())
+		return
+	}
+
+	specMap := obj.Object["spec"].(map[string]interface{})
+	cname := specMap[utils.HelmCRChartName].(string)
+	cver := specMap[utils.HelmCRVersion].(string)
+
+	keep := false
+	chmap := generalmap[cname]
+
+	if cname != "" || cver != "" {
+		if chmap != nil {
+			if _, ok := chmap[cver]; ok {
+				keep = true
+			}
+		}
+	}
+
+	if !keep {
+		err = sync.kubeClient.Delete(context.TODO(), &dpl)
+		if err != nil {
+			klog.Error("Failed to delete deployable in helm repo channel:", dpl.Name, " to ", chn.Spec.PathName)
+		}
+	} else {
+		chmap[cver] = true
+		crepo := specMap[utils.HelmCRRepoURL].(string)
+		if crepo != chn.Spec.PathName {
+			specMap[utils.HelmCRRepoURL] = chn.Spec.PathName
+			err = sync.kubeClient.Update(context.TODO(), &dpl)
+			if err != nil {
+				klog.Error("Failed to update deployable in helm repo channel:", dpl.Name, " to ", chn.Spec.PathName)
+			}
 		}
 	}
 }

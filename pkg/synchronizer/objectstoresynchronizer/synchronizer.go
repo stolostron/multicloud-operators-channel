@@ -97,6 +97,7 @@ func (sync *ChannelSynchronizer) syncWithObjectStore() error {
 	err := sync.syncChannelsWithObjStore()
 	if err != nil {
 		klog.Error(err, "Sync - Failed to sync Channels With ObjectStore")
+		return err
 	}
 
 	return nil
@@ -127,19 +128,19 @@ func (sync *ChannelSynchronizer) syncChannel(chn *chnv1alpha1.Channel) error {
 	err := sync.ChannelDescriptor.ValidateChannel(chn, sync.kubeClient)
 	if err != nil {
 		klog.Info("Sync - Failed to validate channel ", chn.Name, " err:", err)
-		return nil
+		return err
 	}
 
 	chndesc, ok := sync.ChannelDescriptor.Get(chn.Name)
 	if !ok {
 		klog.Info("Sync - Failed to get channel description for ", chn.Name)
-		return nil
+		return err
 	}
 
 	objnames, err := chndesc.ObjectStore.List(chndesc.Bucket)
 	if err != nil {
 		klog.Info("Sync - Failed to list objects in bucket ", chndesc.Bucket, " channel ", chndesc.Channel.Name, " err:", err)
-		return nil
+		return err
 	}
 
 	tplmap := make(map[string]*unstructured.Unstructured)
@@ -167,7 +168,7 @@ func (sync *ChannelSynchronizer) syncChannel(chn *chnv1alpha1.Channel) error {
 
 	if err != nil {
 		klog.Error("Sync - Failed to list all deployable", " err:", err)
-		return nil
+		return err
 	}
 
 	for _, dpl := range dpllist.Items {

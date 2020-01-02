@@ -15,18 +15,14 @@
 package utils
 
 import (
-	//"github.com/google/go-github/github"
-	//"golang.org/x/oauth2"
 	"gopkg.in/src-d/go-git.v4"
 	"gopkg.in/src-d/go-git.v4/plumbing"
 	githttp "gopkg.in/src-d/go-git.v4/plumbing/transport/http"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/klog"
 
-	//"io/ioutil"
-	"os"
-	//"k8s.io/helm/pkg/proto/hapi/chart"
 	"context"
+	"os"
 	"path/filepath"
 	"strings"
 
@@ -147,11 +143,9 @@ func generateIndexYAML(repoRoot string) (*repo.IndexFile, map[string]string, err
 						chartDirs[path+"/"] = path + "/"
 						currentChartDir = path + "/"
 					}
-				} else {
-					if !strings.HasPrefix(path, currentChartDir) && !strings.HasPrefix(path, repoRoot+"/.git") {
-						klog.V(10).Info("This is not a helm chart directory. ", path)
-						resourceDirs[path+"/"] = path + "/"
-					}
+				} else if !strings.HasPrefix(path, currentChartDir) && !strings.HasPrefix(path, repoRoot+"/.git") {
+					klog.V(10).Info("This is not a helm chart directory. ", path)
+					resourceDirs[path+"/"] = path + "/"
 				}
 			}
 			return nil

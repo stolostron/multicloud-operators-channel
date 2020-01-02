@@ -35,8 +35,8 @@ func TestGenerateChannelMap(t *testing.T) {
 	want := map[string]*appv1alpha1.Channel{chName: fetched}
 
 	// test cases
-	g.Expect((*got[chName]).Spec).To(gomega.Equal((*want[chName]).Spec))
-	g.Expect((*got[chName]).ObjectMeta).To(gomega.Equal((*want[chName]).ObjectMeta))
+	g.Expect(got[chName].Spec).To(gomega.Equal(want[chName].Spec))
+	g.Expect(got[chName].ObjectMeta).To(gomega.Equal(want[chName].ObjectMeta))
 }
 
 func TestLocateChannel(t *testing.T) {

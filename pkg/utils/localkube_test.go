@@ -87,8 +87,6 @@ func TestMain(m *testing.M) {
 		log.Fatal(err)
 	}
 
-	// mgr, _ := manager.New(cfg, manager.Options{Scheme: s})
-	// c = mgr.GetClient()
 	if c, err = client.New(cfg, client.Options{Scheme: s}); err != nil {
 		log.Fatal(err)
 	}

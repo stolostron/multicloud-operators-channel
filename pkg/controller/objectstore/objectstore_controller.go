@@ -107,9 +107,8 @@ type ReconcileDeployable struct {
 
 // Reconcile reads that state of the cluster for a Deployable object and makes changes based on the state read
 // and what is in the Deployable.Spec
-// TODO(user): Modify this Reconcile function to implement your Controller logic.  The scaffolding writes
-// a Deployment as an example
-// Automatically generate RBAC rules to allow the Controller to read and write Deployments
+
+// a Deployment as an example Automatically generate RBAC rules to allow the Controller to read and write Deployments
 // +kubebuilder:rbac:groups=app.ibm.com,resources=deployables,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups=app.ibm.com,resources=deployables/status,verbs=get;update;patch
 func (r *ReconcileDeployable) Reconcile(request reconcile.Request) (reconcile.Result, error) {
@@ -122,7 +121,6 @@ func (r *ReconcileDeployable) Reconcile(request reconcile.Request) (reconcile.Re
 		if errors.IsNotFound(err) {
 			// Object not found, return.  Created objects are automatically garbage collected.
 			// For additional cleanup logic use finalizers.
-
 			_, err = r.deleteDeployableInObjectStore(request.NamespacedName)
 			if err != nil {
 				klog.Errorf("Failed to delete deployable %v  error %v", request.NamespacedName, err)

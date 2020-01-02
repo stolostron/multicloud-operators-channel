@@ -49,19 +49,21 @@ var (
 	HelmCRGitRepoChartPath = "chartPath"
 )
 
-func decideHTTPClient(repoURL string) (*http.Client, error) {
+func decideHTTPClient(repoURL string) *http.Client {
+	klog.V(5).Info(repoURL)
+
 	tlsConfig := &tls.Config{InsecureSkipVerify: true}
 	transport := &http.Transport{TLSClientConfig: tlsConfig}
 	client := &http.Client{Transport: transport}
 
-	return client, nil
+	return client
 }
 
 func buildRepoURL(repoURL string) string {
 	validURL := repoURL
 
 	if validURL[len(repoURL)-1:] != "/" {
-		validURL = validURL + "/"
+		validURL += "/"
 	}
 
 	return validURL + "index.yaml"
@@ -71,11 +73,7 @@ func buildRepoURL(repoURL string) string {
 func GetHelmRepoIndex(channelPathName string) (*repo.IndexFile, error) {
 	repoURL := buildRepoURL(channelPathName)
 
-	client, err := decideHTTPClient(repoURL)
-	if err != nil {
-		klog.Error(err, "Failed to decide http protocol ", repoURL)
-		return nil, err
-	}
+	client := decideHTTPClient(repoURL)
 
 	resp, err := client.Get(repoURL)
 	if err != nil {

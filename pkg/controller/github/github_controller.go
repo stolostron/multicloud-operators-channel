@@ -84,7 +84,6 @@ type ReconcileChannel struct {
 
 // Reconcile reads that state of the cluster for a Deployable object and makes changes based on the state read
 // and what is in the Deployable.Spec
-// TODO(user): Modify this Reconcile function to implement your Controller logic.  The scaffolding writes
 // a Deployment as an example
 // Automatically generate RBAC rules to allow the Controller to read and write Deployments
 // +kubebuilder:rbac:groups=app.ibm.com,resources=deployables,verbs=get;list;watch;create;update;patch;delete
@@ -94,8 +93,8 @@ func (r *ReconcileChannel) Reconcile(request reconcile.Request) (reconcile.Resul
 	instance := &chnv1alpha1.Channel{}
 	err := r.KubeClient.Get(context.TODO(), request.NamespacedName, instance)
 	klog.Info("Reconciling channel:", request.NamespacedName, " with Get err:", err)
-	if err != nil {
 
+	if err != nil {
 		if errors.IsNotFound(err) {
 			// Object not found, return.  Created objects are automatically garbage collected.
 			// For additional cleanup logic use finalizers.
