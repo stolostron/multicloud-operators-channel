@@ -192,7 +192,7 @@ func (r *ReconcileDeployable) getChannelForNamespace(namespace string) (*chnv1al
 
 	dplchn := dplchnlist.Items[0].DeepCopy()
 
-	if strings.ToLower(string(dplchn.Spec.Type)) != chnv1alpha1.ChannelTypeObjectBucket {
+	if !strings.EqualFold(string(dplchn.Spec.Type), chnv1alpha1.ChannelTypeObjectBucket) {
 		return nil, nil
 	}
 
@@ -286,6 +286,7 @@ func (r *ReconcileDeployable) syncChannel(dplchn *chnv1alpha1.Channel) error {
 			if err != nil {
 				klog.Error("Failed to delete ", chndesc.Bucket, "/", name, " err:", err)
 			}
+
 			continue
 		}
 

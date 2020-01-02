@@ -49,7 +49,9 @@ import (
 
 // Add creates a new Channel Controller and adds it to the Manager with default RBAC. The Manager will set fields on the Controller
 // and Start it when the Manager is Started.
-func Add(mgr manager.Manager, recorder record.EventRecorder, channelDescriptor *utils.ChannelDescriptor, sync *helmsync.ChannelSynchronizer, gsync *gitsync.ChannelSynchronizer) error {
+func Add(mgr manager.Manager, recorder record.EventRecorder,
+	channelDescriptor *utils.ChannelDescriptor, sync *helmsync.ChannelSynchronizer,
+	gsync *gitsync.ChannelSynchronizer) error {
 	return add(mgr, newReconciler(mgr, recorder))
 }
 
@@ -223,6 +225,7 @@ func (r *ReconcileDeployable) Reconcile(request reconcile.Request) (reconcile.Re
 	//If the dpl changes its channel, delete all other children of the dpl who were propagated to other channels before.
 	for chstr, dpl := range dplmap {
 		klog.Info("deleting deployable ", dpl.Namespace, "/", dpl.Name, " from channel ", chstr)
+
 		err = r.Client.Delete(context.TODO(), dpl)
 		if err != nil {
 			klog.Errorf("Failed to delete %v due to %v ", dpl.Name, err)
@@ -257,7 +260,8 @@ func (r *ReconcileDeployable) Reconcile(request reconcile.Request) (reconcile.Re
 	return reconcile.Result{}, err
 }
 
-func (r *ReconcileDeployable) propagateDeployableToChannel(deployable *dplv1alpha1.Deployable, dplmap map[string]*dplv1alpha1.Deployable, channel *appv1alpha1.Channel) error {
+func (r *ReconcileDeployable) propagateDeployableToChannel(deployable *dplv1alpha1.Deployable,
+	dplmap map[string]*dplv1alpha1.Deployable, channel *appv1alpha1.Channel) error {
 	if klog.V(10) {
 		fnName := dplutils.GetFnName()
 		klog.Infof("Entering: %v()", fnName)
@@ -318,7 +322,9 @@ func (r *ReconcileDeployable) propagateDeployableToChannel(deployable *dplv1alph
 		return err
 	}
 
-	if reflect.DeepEqual(exdpl.GetAnnotations(), chdpl.GetAnnotations()) && reflect.DeepEqual(exdpl.GetLabels(), chdpl.GetLabels()) && reflect.DeepEqual(exdpl.Spec, chdpl.Spec) {
+	if reflect.DeepEqual(exdpl.GetAnnotations(), chdpl.GetAnnotations()) &&
+		reflect.DeepEqual(exdpl.GetLabels(), chdpl.GetLabels()) &&
+		reflect.DeepEqual(exdpl.Spec, chdpl.Spec) {
 		klog.Info("No changes to existing deployable in channel ", *exdpl)
 	} else {
 		exdpl.SetLabels(chdpl.GetLabels())

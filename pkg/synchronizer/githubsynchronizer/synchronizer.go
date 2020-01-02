@@ -157,7 +157,7 @@ func (sync *ChannelSynchronizer) syncChannel(chn *chnv1alpha1.Channel) {
 		for _, f := range files {
 			// If YAML or YML,
 			if f.Mode().IsRegular() {
-				if strings.ToLower(filepath.Ext(f.Name())) == ".yml" || strings.ToLower(filepath.Ext(f.Name())) == ".yaml" {
+				if strings.EqualFold(filepath.Ext(f.Name()), ".yml") || strings.EqualFold(filepath.Ext(f.Name()), ".yaml") {
 					// check it it is Kubernetes resource
 					klog.V(10).Info("scanning file ", f.Name())
 					file, _ := ioutil.ReadFile(filepath.Join(dir, f.Name()))
@@ -287,7 +287,7 @@ func (sync *ChannelSynchronizer) syncChannel(chn *chnv1alpha1.Channel) {
 		} else {
 			chmap[cver] = true
 			var crepo string
-			if strings.ToLower(string(chn.Spec.Type)) == chnv1alpha1.ChannelTypeGitHub {
+			if strings.EqualFold(string(chn.Spec.Type), chnv1alpha1.ChannelTypeGitHub) {
 				crepo = obj.Spec.Source.GitHub.URLs[0]
 			} else {
 				crepo = obj.Spec.Source.HelmRepo.URLs[0]
@@ -320,7 +320,7 @@ func (sync *ChannelSynchronizer) syncChannel(chn *chnv1alpha1.Channel) {
 
 		src := &source{}
 
-		if strings.ToLower(string(chn.Spec.Type)) == chnv1alpha1.ChannelTypeGitHub {
+		if strings.EqualFold(string(chn.Spec.Type), chnv1alpha1.ChannelTypeGitHub) {
 			src.Type = chnv1alpha1.ChannelTypeGitHub
 			src.GitHub = sourceurls
 			chartVersion, _ := idx.Get(k, mv)

@@ -42,7 +42,9 @@ import (
 
 // Add creates a new Deployable Controller and adds it to the Manager with default RBAC. The Manager will set fields on the Controller
 // and Start it when the Manager is Started.
-func Add(mgr manager.Manager, recorder record.EventRecorder, channelDescriptor *utils.ChannelDescriptor, sync *helmsync.ChannelSynchronizer, gsync *gitsync.ChannelSynchronizer) error {
+func Add(mgr manager.Manager, recorder record.EventRecorder,
+	channelDescriptor *utils.ChannelDescriptor, sync *helmsync.ChannelSynchronizer,
+	gsync *gitsync.ChannelSynchronizer) error {
 	return add(mgr, newReconciler(mgr, sync))
 }
 
@@ -105,7 +107,7 @@ func (r *ReconcileChannel) Reconcile(request reconcile.Request) (reconcile.Resul
 		return reconcile.Result{}, err
 	}
 
-	if strings.ToLower(string(instance.Spec.Type)) != chnv1alpha1.ChannelTypeHelmRepo {
+	if !strings.EqualFold(string(instance.Spec.Type), chnv1alpha1.ChannelTypeHelmRepo) {
 		klog.V(10).Info("Ignoring type ", instance.Spec.Type)
 		return reconcile.Result{}, nil
 	}

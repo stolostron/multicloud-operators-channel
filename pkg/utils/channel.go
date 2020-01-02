@@ -48,6 +48,7 @@ func GenerateChannelMap(cl client.Client) (map[string]*appv1alpha1.Channel, erro
 	for _, ch := range chlist.Items {
 		klog.V(10).Infof("Channel namespacedname: %v/%v,  type: %v, sourceNamespaces: %v, gates: %#v",
 			ch.Namespace, ch.Name, ch.Spec.Type, ch.Spec.SourceNamespaces, ch.Spec.Gates)
+
 		chmap[ch.Name] = ch.DeepCopy()
 	}
 

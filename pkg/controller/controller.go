@@ -27,7 +27,9 @@ import (
 var AddToManagerFuncs []func(manager.Manager, record.EventRecorder, *utils.ChannelDescriptor, *helmsync.ChannelSynchronizer, *gitsync.ChannelSynchronizer) error
 
 // AddToManager adds all Controllers to the Manager
-func AddToManager(m manager.Manager, recorder record.EventRecorder, chdesc *utils.ChannelDescriptor, sync *helmsync.ChannelSynchronizer, gsync *gitsync.ChannelSynchronizer) error {
+func AddToManager(m manager.Manager, recorder record.EventRecorder,
+	chdesc *utils.ChannelDescriptor, sync *helmsync.ChannelSynchronizer,
+	gsync *gitsync.ChannelSynchronizer) error {
 	for _, f := range AddToManagerFuncs {
 		if err := f(m, recorder, chdesc, sync, gsync); err != nil {
 			return err

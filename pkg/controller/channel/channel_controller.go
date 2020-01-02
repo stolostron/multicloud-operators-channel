@@ -58,6 +58,7 @@ var (
 		},
 	}
 
+	//DeployableAnnotation is used to indicate a resource as a logic deployable
 	DeployableAnnotation = "app.ibm.com/deployables"
 )
 
@@ -68,7 +69,9 @@ var (
 
 // Add creates a new Channel Controller and adds it to the Manager with default RBAC. The Manager will set fields on the Controller
 // and Start it when the Manager is Started.
-func Add(mgr manager.Manager, recorder record.EventRecorder, channelDescriptor *utils.ChannelDescriptor, sync *helmsync.ChannelSynchronizer, gsync *gitsync.ChannelSynchronizer) error {
+func Add(mgr manager.Manager, recorder record.EventRecorder,
+	channelDescriptor *utils.ChannelDescriptor, sync *helmsync.ChannelSynchronizer,
+	gsync *gitsync.ChannelSynchronizer) error {
 	return add(mgr, newReconciler(mgr, recorder))
 }
 
@@ -194,7 +197,7 @@ func (r *ReconcileChannel) Reconcile(request reconcile.Request) (reconcile.Resul
 		return reconcile.Result{}, err
 	}
 
-	if (strings.ToLower(string(instance.Spec.Type)) == appv1alpha1.ChannelTypeNamespace) && (instance.Spec.PathName != instance.GetNamespace()) {
+	if (strings.EqualFold(string(instance.Spec.Type), appv1alpha1.ChannelTypeNamespace)) && (instance.Spec.PathName != instance.GetNamespace()) {
 		instance.Spec.PathName = instance.GetNamespace()
 
 		err := r.Update(context.TODO(), instance)
@@ -481,9 +484,15 @@ func (r *ReconcileChannel) validateClusterRBAC(instance *appv1alpha1.Channel) er
 				klog.Error("Failed to set controller reference, err:", err)
 				return err
 			}
+
 			rolebinding.RoleRef = roleref
 			rolebinding.Subjects = subjects
+
 			err = r.Create(context.TODO(), rolebinding)
+			if err != nil {
+				klog.Error("Failed to create rolebinding, err:", err)
+				return err
+			}
 		} else {
 			return err
 		}

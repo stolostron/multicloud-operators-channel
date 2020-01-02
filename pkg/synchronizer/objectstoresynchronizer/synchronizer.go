@@ -113,7 +113,7 @@ func (sync *ChannelSynchronizer) syncChannelsWithObjStore() error {
 
 	for _, ch := range chlist.Items {
 		// Syncying objectbucket channel types only
-		if strings.ToLower(string(ch.Spec.Type)) != chnv1alpha1.ChannelTypeObjectBucket {
+		if !strings.EqualFold(string(ch.Spec.Type), chnv1alpha1.ChannelTypeObjectBucket) {
 			continue
 		}
 
