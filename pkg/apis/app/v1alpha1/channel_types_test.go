@@ -32,7 +32,11 @@ func TestStorageChannel(t *testing.T) {
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "foo",
 			Namespace: "default",
-		}}
+		},
+		Spec: ChannelSpec{
+			Type: "namespace",
+		},
+	}
 	g := gomega.NewGomegaWithT(t)
 
 	// Test Create

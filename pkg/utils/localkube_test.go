@@ -68,13 +68,11 @@ var chObj = &appv1alpha1.Channel{
 func TestMain(m *testing.M) {
 	log.Printf("Enter TestMain\n")
 
-	channelCrdPath := filepath.Join("..", "..", "config", "crds")
-	dplCrdPath := filepath.Join("..", "..", "vendor", "github.ibm.com", "IBMMulticloudPlatform", "deployable", "config", "crds")
-
 	testEnv := &envtest.Environment{
 		CRDDirectoryPaths: []string{
-			channelCrdPath, dplCrdPath},
+			filepath.Join("..", "..", "deploy", "crds")},
 	}
+
 	s := scheme.Scheme
 
 	apis.AddToScheme(s)

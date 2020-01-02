@@ -37,8 +37,7 @@ var cfg *rest.Config
 func TestMain(m *testing.M) {
 	t := &envtest.Environment{
 		CRDDirectoryPaths: []string{
-			filepath.Join("..", "..", "..", "vendor", "github.ibm.com", "IBMMulticloudPlatform", "deployable", "config", "crds"),
-			filepath.Join("..", "..", "..", "vendor", "github.ibm.com", "IBMMulticloudPlatform", "channel", "config", "crds"),
+			filepath.Join("..", "..", "..", "deploy", "crds"),
 		},
 	}
 
