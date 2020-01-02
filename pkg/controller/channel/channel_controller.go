@@ -82,6 +82,7 @@ func add(mgr manager.Manager, r reconcile.Reconciler) error {
 	if klog.V(10) {
 		fnName := dplutils.GetFnName()
 		klog.Infof("Entering: %v()", fnName)
+
 		defer klog.Infof("Exiting: %v()", fnName)
 	}
 	// Create a new controller
@@ -114,6 +115,7 @@ func (mapper *clusterMapper) Map(obj handler.MapObject) []reconcile.Request {
 	if klog.V(10) {
 		fnName := dplutils.GetFnName()
 		klog.Infof("Entering: %v()", fnName)
+
 		defer klog.Infof("Exiting: %v()", fnName)
 	}
 
@@ -137,6 +139,7 @@ func (mapper *clusterMapper) Map(obj handler.MapObject) []reconcile.Request {
 			Name:      pl.GetName(),
 			Namespace: pl.GetNamespace(),
 		}
+
 		requests = append(requests, reconcile.Request{NamespacedName: objkey})
 	}
 
@@ -165,6 +168,7 @@ func (r *ReconcileChannel) Reconcile(request reconcile.Request) (reconcile.Resul
 	if klog.V(10) {
 		fnName := dplutils.GetFnName()
 		klog.Infof("Entering: %v()", fnName)
+
 		defer klog.Infof("Exiting: %v()", fnName)
 	}
 	// Fetch the Channel instance
@@ -172,12 +176,12 @@ func (r *ReconcileChannel) Reconcile(request reconcile.Request) (reconcile.Resul
 	klog.Info("Reconciling:", request.NamespacedName)
 
 	instance := &appv1alpha1.Channel{}
+
 	err := r.Get(context.TODO(), request.NamespacedName, instance)
 	if err != nil {
 		if errors.IsNotFound(err) {
 			// Object not found, return.  Created objects are automatically garbage collected.
 			// For additional cleanup logic use finalizers.
-
 			//sync the channel to the serving-channel annotation in all involved secrets - remove channel
 			r.syncSecrectAnnotation(nil, request.NamespacedName)
 
@@ -192,6 +196,7 @@ func (r *ReconcileChannel) Reconcile(request reconcile.Request) (reconcile.Resul
 
 	if (strings.ToLower(string(instance.Spec.Type)) == appv1alpha1.ChannelTypeNamespace) && (instance.Spec.PathName != instance.GetNamespace()) {
 		instance.Spec.PathName = instance.GetNamespace()
+
 		err := r.Update(context.TODO(), instance)
 		if err != nil {
 			klog.Infof("Can't update the pathName field due to %v", err)
@@ -210,6 +215,7 @@ func (r *ReconcileChannel) Reconcile(request reconcile.Request) (reconcile.Resul
 	// If the channel has relative secret and configMap, annotate the channel info in the secret and configMap
 	if instance.Spec.SecretRef != nil && instance.Spec.SecretRef.Name > "" {
 		secretName := instance.Spec.SecretRef.Name
+
 		secretNamespace := instance.Spec.SecretRef.Namespace
 		if secretNamespace == "" {
 			secretNamespace = instance.Namespace
@@ -217,6 +223,7 @@ func (r *ReconcileChannel) Reconcile(request reconcile.Request) (reconcile.Resul
 
 		secrectInstance := &corev1.Secret{}
 		secetKey := types.NamespacedName{Name: secretName, Namespace: secretNamespace}
+
 		err = r.Get(context.TODO(), secetKey, secrectInstance)
 		if err == nil {
 			localLabels := secrectInstance.GetLabels()
@@ -244,9 +251,11 @@ func (r *ReconcileChannel) Reconcile(request reconcile.Request) (reconcile.Resul
 
 		configInstance := &corev1.ConfigMap{}
 		configKey := types.NamespacedName{Name: configName, Namespace: configNamespace}
+
 		err = r.Get(context.TODO(), configKey, configInstance)
 		if err == nil {
 			localLabels := configInstance.GetLabels()
+
 			if localLabels == nil {
 				localLabels = make(map[string]string)
 			}
@@ -269,6 +278,7 @@ func (r *ReconcileChannel) syncSecrectAnnotation(channel *appv1alpha1.Channel, c
 	if klog.V(10) {
 		fnName := dplutils.GetFnName()
 		klog.Infof("Entering: %v()", fnName)
+
 		defer klog.Infof("Exiting: %v()", fnName)
 	}
 
@@ -281,6 +291,7 @@ func (r *ReconcileChannel) syncSecrectAnnotation(channel *appv1alpha1.Channel, c
 	labelSelector := &metav1.LabelSelector{
 		MatchLabels: secLabel,
 	}
+
 	clSelector, err := dplutils.ConvertLabels(labelSelector)
 	if err != nil {
 		klog.Error("Failed to set label selector for secret objects. err: ", err)
@@ -330,6 +341,7 @@ func (r *ReconcileChannel) syncConfigAnnotation(channel *appv1alpha1.Channel, ch
 	if klog.V(10) {
 		fnName := dplutils.GetFnName()
 		klog.Infof("Entering: %v()", fnName)
+
 		defer klog.Infof("Exiting: %v()", fnName)
 	}
 
@@ -342,6 +354,7 @@ func (r *ReconcileChannel) syncConfigAnnotation(channel *appv1alpha1.Channel, ch
 	labelSelector := &metav1.LabelSelector{
 		MatchLabels: configLabel,
 	}
+
 	clSelector, err := dplutils.ConvertLabels(labelSelector)
 	if err != nil {
 		klog.Error("Failed to set label selector for configMap objects. err: ", err)
@@ -385,17 +398,25 @@ func (r *ReconcileChannel) validateClusterRBAC(instance *appv1alpha1.Channel) er
 	if klog.V(10) {
 		fnName := dplutils.GetFnName()
 		klog.Infof("Entering: %v()", fnName)
+
 		defer klog.Infof("Exiting: %v()", fnName)
 	}
 
 	role := &rbac.Role{}
+
 	err := r.Get(context.TODO(), types.NamespacedName{Name: instance.Name, Namespace: instance.Namespace}, role)
 	if err != nil {
 		if errors.IsNotFound(err) {
 			role.Name = instance.Name
 			role.Namespace = instance.Namespace
 			role.Rules = clusterRules
-			controllerutil.SetControllerReference(instance, role, r.scheme)
+
+			err = controllerutil.SetControllerReference(instance, role, r.scheme)
+			if err != nil {
+				klog.Error("Failed to set controller reference, err:", err)
+				return err
+			}
+
 			err = r.Create(context.TODO(), role)
 			if err != nil {
 				return err
@@ -406,7 +427,13 @@ func (r *ReconcileChannel) validateClusterRBAC(instance *appv1alpha1.Channel) er
 	} else {
 		if !reflect.DeepEqual(role.Rules, clusterRules) {
 			role.Rules = clusterRules
-			controllerutil.SetControllerReference(instance, role, r.scheme)
+
+			err = controllerutil.SetControllerReference(instance, role, r.scheme)
+			if err != nil {
+				klog.Error("Failed to set controller reference, err:", err)
+				return err
+			}
+
 			err = r.Update(context.TODO(), role)
 			if err != nil {
 				return err
@@ -419,6 +446,7 @@ func (r *ReconcileChannel) validateClusterRBAC(instance *appv1alpha1.Channel) er
 	var subjects []rbac.Subject
 
 	cllist := &clusterv1alpha1.ClusterList{}
+
 	err = r.List(context.TODO(), cllist, &client.ListOptions{})
 	if err != nil {
 		if errors.IsNotFound(err) {
@@ -427,6 +455,7 @@ func (r *ReconcileChannel) validateClusterRBAC(instance *appv1alpha1.Channel) er
 
 		return err
 	}
+
 	for _, cl := range cllist.Items {
 		subjects = append(subjects, rbac.Subject{
 			APIGroup: "rbac.authorization.k8s.io",
@@ -446,7 +475,12 @@ func (r *ReconcileChannel) validateClusterRBAC(instance *appv1alpha1.Channel) er
 		if errors.IsNotFound(err) {
 			rolebinding.Name = instance.Name
 			rolebinding.Namespace = instance.Namespace
-			controllerutil.SetControllerReference(instance, rolebinding, r.scheme)
+
+			err = controllerutil.SetControllerReference(instance, rolebinding, r.scheme)
+			if err != nil {
+				klog.Error("Failed to set controller reference, err:", err)
+				return err
+			}
 			rolebinding.RoleRef = roleref
 			rolebinding.Subjects = subjects
 			err = r.Create(context.TODO(), rolebinding)
@@ -455,7 +489,12 @@ func (r *ReconcileChannel) validateClusterRBAC(instance *appv1alpha1.Channel) er
 		}
 	} else {
 		if !reflect.DeepEqual(subjects, rolebinding.Subjects) || !reflect.DeepEqual(rolebinding.RoleRef, roleref) {
-			controllerutil.SetControllerReference(instance, rolebinding, r.scheme)
+			err = controllerutil.SetControllerReference(instance, rolebinding, r.scheme)
+			if err != nil {
+				klog.Error("Failed to set controller reference, err:", err)
+				return err
+			}
+
 			rolebinding.RoleRef = roleref
 			rolebinding.Subjects = subjects
 			err = r.Update(context.TODO(), rolebinding)

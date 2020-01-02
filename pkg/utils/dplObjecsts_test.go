@@ -76,6 +76,7 @@ func InitObjQueue() {
 		if dpl.name == dplNode || dpl.name == dplOrphan {
 			TestDpls[dpl.name] = t
 		}
+
 		ObjTobeCreated = append(ObjTobeCreated, DplGenerator(dpl))
 	}
 }

@@ -68,8 +68,6 @@ func listDplObj(cl client.Client) {
 	}
 
 	log.Printf("In total %v dpl is found", len(dpllist.Items))
-
-	return
 }
 
 func assertDpls(expect Expected, cname string, pdpls *dplv1alpha1.Deployable, dpls *dplv1alpha1.Deployable, err error) bool {

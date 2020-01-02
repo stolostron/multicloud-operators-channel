@@ -57,6 +57,7 @@ func TestReconcile(t *testing.T) {
 
 	//create events handler on hub cluster. All the deployable events will be written to the root deploable on hub cluster.
 	hubClientSet, err := kubernetes.NewForConfig(cfg)
+	g.Expect(err).NotTo(gomega.HaveOccurred())
 
 	eventBroadcaster := record.NewBroadcaster()
 	eventBroadcaster.StartLogging(klog.Infof)

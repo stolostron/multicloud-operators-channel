@@ -42,7 +42,9 @@ import (
 
 // Add creates a new Deployable Controller and adds it to the Manager with default RBAC. The Manager will set fields on the Controller
 // and Start it when the Manager is Started.
-func Add(mgr manager.Manager, recorder record.EventRecorder, channelDescriptor *utils.ChannelDescriptor, sync *helmsync.ChannelSynchronizer, gsync *gitsync.ChannelSynchronizer) error {
+func Add(mgr manager.Manager, recorder record.EventRecorder,
+	channelDescriptor *utils.ChannelDescriptor, sync *helmsync.ChannelSynchronizer,
+	gsync *gitsync.ChannelSynchronizer) error {
 	return add(mgr, newReconciler(mgr, channelDescriptor))
 }
 
@@ -60,6 +62,7 @@ type channelMapper struct {
 
 func (mapper *channelMapper) Map(obj handler.MapObject) []reconcile.Request {
 	dpllist := &appv1alpha1.DeployableList{}
+
 	err := mapper.List(context.TODO(), dpllist, &client.ListOptions{Namespace: obj.Meta.GetNamespace()})
 	if err != nil {
 		klog.Error("Failed to list all deployable: ", err)
@@ -120,7 +123,10 @@ func (r *ReconcileDeployable) Reconcile(request reconcile.Request) (reconcile.Re
 			// Object not found, return.  Created objects are automatically garbage collected.
 			// For additional cleanup logic use finalizers.
 
-			r.deleteDeployableInObjectStore(request.NamespacedName)
+			_, err = r.deleteDeployableInObjectStore(request.NamespacedName)
+			if err != nil {
+				klog.Errorf("Failed to delete deployable %v  error %v", request.NamespacedName, err)
+			}
 
 			return reconcile.Result{}, nil
 		}

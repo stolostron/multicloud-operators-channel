@@ -65,6 +65,7 @@ func TestReconcile(t *testing.T) {
 
 	c = mgr.GetClient()
 	chdesc, err := utils.CreateChannelDescriptor()
+	g.Expect(err).NotTo(gomega.HaveOccurred())
 
 	recFn, requests := SetupTestReconcile(newReconciler(mgr, chdesc))
 	g.Expect(add(mgr, recFn)).NotTo(gomega.HaveOccurred())
@@ -97,8 +98,7 @@ func TestReconcile(t *testing.T) {
 	_, err = clientset.CoreV1().Namespaces().Create(nsobj)
 	g.Expect(err).NotTo(gomega.HaveOccurred())
 
-	nsobjFetched := &v1.Namespace{}
-	nsobjFetched, err = clientset.CoreV1().Namespaces().Get(channelNamespace, metav1.GetOptions{})
+	nsobjFetched, err := clientset.CoreV1().Namespaces().Get(channelNamespace, metav1.GetOptions{})
 	g.Expect(err).NotTo(gomega.HaveOccurred())
 	klog.V(10).Infof("nameSpace created : %+v", nsobjFetched)
 

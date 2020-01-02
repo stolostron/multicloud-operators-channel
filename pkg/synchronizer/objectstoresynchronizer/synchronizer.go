@@ -77,7 +77,7 @@ func (sync *ChannelSynchronizer) Start(s <-chan struct{}) error {
 	sync.Signal = s
 
 	go wait.Until(func() {
-		sync.syncWithObjectStore()
+		_ = sync.syncWithObjectStore()
 	}, time.Duration(sync.SyncInterval)*time.Second, sync.Signal)
 
 	<-sync.Signal
@@ -117,7 +117,7 @@ func (sync *ChannelSynchronizer) syncChannelsWithObjStore() error {
 			continue
 		}
 
-		sync.syncChannel(&ch)
+		_ = sync.syncChannel(&ch)
 	}
 
 	return nil

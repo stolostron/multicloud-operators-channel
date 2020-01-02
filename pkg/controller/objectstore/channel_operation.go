@@ -60,6 +60,7 @@ func (r *ReconcileDeployable) deleteDeployableInObjectStore(request types.Namesp
 	}
 
 	objtpl := &unstructured.Unstructured{}
+
 	err = yaml.Unmarshal(dplObj.Content, objtpl)
 	if err != nil {
 		klog.Error("Failed to unmashall ", chndesc.Bucket, "/", request.Name, " err:", err)
@@ -88,7 +89,7 @@ func (r *ReconcileDeployable) deleteDeployableInObjectStore(request types.Namesp
 // ReconcileForChannel populate object store with channel when turned on
 func (r *ReconcileDeployable) reconcileForChannel(deployable *appv1alpha1.Deployable) (reconcile.Result, error) {
 	dplchn, err := r.getChannelForNamespace(deployable.Namespace)
-	if dplchn == nil {
+	if dplchn == nil || err != nil {
 		return reconcile.Result{}, nil
 	}
 
@@ -119,6 +120,7 @@ func (r *ReconcileDeployable) reconcileForChannel(deployable *appv1alpha1.Deploy
 	// Only reconcile templates that are not created by objectstore synchronizer
 	// meaning AnnotationExternalSource is not set in their template
 	annotations := deployable.GetAnnotations()
+
 	tplannotations := template.GetAnnotations()
 	if tplannotations == nil {
 		tplannotations = make(map[string]string)
@@ -141,6 +143,7 @@ func (r *ReconcileDeployable) reconcileForChannel(deployable *appv1alpha1.Deploy
 		if tpllbls == nil {
 			tpllbls = make(map[string]string)
 		}
+
 		for k, v := range labels {
 			tpllbls[k] = v
 		}
@@ -175,6 +178,7 @@ func (r *ReconcileDeployable) reconcileForChannel(deployable *appv1alpha1.Deploy
 
 func (r *ReconcileDeployable) getChannelForNamespace(namespace string) (*chnv1alpha1.Channel, error) {
 	dplchnlist := &chnv1alpha1.ChannelList{}
+
 	err := r.KubeClient.List(context.TODO(), dplchnlist, &client.ListOptions{Namespace: namespace})
 	if err != nil {
 		klog.Info("Failed to find channel info in namespace ", namespace, " with error:", err)
@@ -199,6 +203,7 @@ func (r *ReconcileDeployable) validateChannel(dplchn *chnv1alpha1.Channel) error
 	_, ok := r.ChannelDescriptor.Get(dplchn.Name)
 	if !ok {
 		klog.Info("Syncing channel ", dplchn.Name)
+
 		err := r.syncChannel(dplchn)
 		if err != nil {
 			klog.Info("Failed to sync channel ", dplchn.Name, " err:", err)
@@ -231,6 +236,7 @@ func (r *ReconcileDeployable) syncChannel(dplchn *chnv1alpha1.Channel) error {
 	}
 
 	dpllist := &appv1alpha1.DeployableList{}
+
 	err = r.KubeClient.List(context.TODO(), dpllist, &client.ListOptions{Namespace: dplchn.GetNamespace()})
 	if err != nil {
 		klog.Error("Failed to list all deployable ")
@@ -256,6 +262,7 @@ func (r *ReconcileDeployable) syncChannel(dplchn *chnv1alpha1.Channel) error {
 		}
 
 		objtpl := &unstructured.Unstructured{}
+
 		err = yaml.Unmarshal(dplObj.Content, objtpl)
 		if err != nil {
 			klog.Error("Failed to unmashall ", chndesc.Bucket, "/", name, " err:", err)
@@ -275,13 +282,17 @@ func (r *ReconcileDeployable) syncChannel(dplchn *chnv1alpha1.Channel) error {
 
 		// Delete templates that don't exist in the channel namespace anymore
 		if _, ok := chndplmap[name]; !ok {
-			chndesc.ObjectStore.Delete(chndesc.Bucket, name)
+			err = chndesc.ObjectStore.Delete(chndesc.Bucket, name)
+			if err != nil {
+				klog.Error("Failed to delete ", chndesc.Bucket, "/", name, " err:", err)
+			}
 			continue
 		}
 
 		// Update templates if they are updated in the channel namespace
-		dpl := chndplmap[name]
 		dpltpl := &unstructured.Unstructured{}
+
+		dpl := chndplmap[name]
 		if dpl.Spec.Template == nil {
 			klog.Warning("Processing deployable without template:", dpl)
 			continue
@@ -299,6 +310,7 @@ func (r *ReconcileDeployable) syncChannel(dplchn *chnv1alpha1.Channel) error {
 		if dpltplannotations == nil {
 			dpltplannotations = make(map[string]string)
 		}
+
 		for k, v := range dpl.GetAnnotations() {
 			dpltplannotations[k] = v
 		}
@@ -314,6 +326,7 @@ func (r *ReconcileDeployable) syncChannel(dplchn *chnv1alpha1.Channel) error {
 			if tpllbls == nil {
 				tpllbls = make(map[string]string)
 			}
+
 			for k, v := range labels {
 				tpllbls[k] = v
 			}
@@ -330,6 +343,7 @@ func (r *ReconcileDeployable) syncChannel(dplchn *chnv1alpha1.Channel) error {
 
 			dplObj.Content = dplb
 			dplObj.Version = dpltplannotations[appv1alpha1.AnnotationDeployableVersion]
+
 			err = chndesc.ObjectStore.Put(chndesc.Bucket, dplObj)
 			if err != nil {
 				klog.Error("Failed to Put", chndesc.Bucket, "/", name, " err:", err)

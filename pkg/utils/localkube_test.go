@@ -92,6 +92,7 @@ func TestMain(m *testing.M) {
 	if c, err = client.New(cfg, client.Options{Scheme: s}); err != nil {
 		log.Fatal(err)
 	}
+
 	ObjTobeCreated = append(ObjTobeCreated, chObj)
 
 	InitObjQueue()

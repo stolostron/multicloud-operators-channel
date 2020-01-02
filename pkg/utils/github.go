@@ -75,8 +75,17 @@ func CloneGitRepo(chn *chnv1alpha1.Channel, kubeClient client.Client) (*repo.Ind
 		username := ""
 		password := ""
 
-		yaml.Unmarshal(secret.Data[UserID], &username)
-		yaml.Unmarshal(secret.Data[Password], &password)
+		err = yaml.Unmarshal(secret.Data[UserID], &username)
+		if err != nil {
+			klog.Error(err, "Unable to unable to unmarshal secret.")
+			return nil, nil, err
+		}
+
+		err = yaml.Unmarshal(secret.Data[Password], &password)
+		if err != nil {
+			klog.Error(err, "unable to unable to unmarshal secret.")
+			return nil, nil, err
+		}
 
 		options.Auth = &githttp.BasicAuth{
 			Username: username,
@@ -86,9 +95,17 @@ func CloneGitRepo(chn *chnv1alpha1.Channel, kubeClient client.Client) (*repo.Ind
 
 	repoRoot := filepath.Join(os.TempDir(), chn.Namespace, chn.Name)
 	if _, err := os.Stat(repoRoot); os.IsNotExist(err) {
-		os.MkdirAll(repoRoot, os.ModePerm)
+		err := os.MkdirAll(repoRoot, os.ModePerm)
+		if err != nil {
+			klog.Error(err, "unable to unable to unmarshal secret.")
+			return nil, nil, err
+		}
 	} else {
-		os.RemoveAll(repoRoot)
+		err := os.RemoveAll(repoRoot)
+		if err != nil {
+			klog.Error(err, "unable to unable to unmarshal secret.")
+			return nil, nil, err
+		}
 	}
 
 	klog.V(10).Info("Cloning ", chn.Spec.PathName, " into ", repoRoot)

@@ -135,14 +135,17 @@ func ValidateDeployableToChannel(deployable *dplv1alpha1.Deployable, channel *ap
 
 // FindDeployableForChannelsInMap check all deployables in certain namespace delete all has the channel set the given channel namespace
 // channelnsMap is a set(), which is used to check up if the dpl is within a channel or not
-func FindDeployableForChannelsInMap(cl client.Client, deployable *dplv1alpha1.Deployable, channelnsMap map[string]string) (*dplv1alpha1.Deployable, map[string]*dplv1alpha1.Deployable, error) {
+func FindDeployableForChannelsInMap(cl client.Client, deployable *dplv1alpha1.Deployable,
+	channelnsMap map[string]string) (*dplv1alpha1.Deployable,
+	map[string]*dplv1alpha1.Deployable, error) {
 	if klog.V(10) {
 		fnName := dplutils.GetFnName()
 		klog.Infof("Entering: %v()", fnName)
 
 		defer klog.Infof("Exiting: %v()", fnName)
 	}
-	if channelnsMap == nil || len(channelnsMap) == 0 {
+
+	if len(channelnsMap) == 0 {
 		return nil, nil, nil
 	}
 
@@ -196,7 +199,9 @@ func FindDeployableForChannelsInMap(cl client.Client, deployable *dplv1alpha1.De
 	}
 
 	if parent != nil {
-		klog.V(10).Infof("deployable: %#v/%#v, parent: %#v/%#v, dplmap: %#v", deployable.GetNamespace(), deployable.GetName(), parent.GetNamespace(), parent.GetName(), dplmapStr)
+		klog.V(10).Infof("deployable: %#v/%#v, parent: %#v/%#v, dplmap: %#v",
+			deployable.GetNamespace(), deployable.GetName(), parent.GetNamespace(),
+			parent.GetName(), dplmapStr)
 	} else {
 		klog.V(10).Infof("deployable: %#v/%#v, parent: %#v, dplmap: %#v", deployable.GetNamespace(), deployable.GetName(), parent, dplmapStr)
 	}

@@ -66,10 +66,12 @@ func (mapper *channelMapper) Map(obj handler.MapObject) []reconcile.Request {
 	if klog.V(10) {
 		fnName := dplutils.GetFnName()
 		klog.Infof("Entering: %v()", fnName)
+
 		defer klog.Infof("Exiting: %v()", fnName)
 	}
 
 	dpllist := &dplv1alpha1.DeployableList{}
+
 	err := mapper.List(context.TODO(), dpllist, &client.ListOptions{})
 	if err != nil {
 		klog.Error("Failed to list all deployable ")
@@ -145,6 +147,7 @@ func (r *ReconcileDeployable) Reconcile(request reconcile.Request) (reconcile.Re
 	if klog.V(10) {
 		fnName := dplutils.GetFnName()
 		klog.Infof("Entering: %v()", fnName)
+
 		defer klog.Infof("Exiting: %v()", fnName)
 	}
 
@@ -210,23 +213,31 @@ func (r *ReconcileDeployable) Reconcile(request reconcile.Request) (reconcile.Re
 		}
 
 		for _, ch := range channelmap {
-			r.propagateDeployableToChannel(instance, dplmap, ch)
+			err = r.propagateDeployableToChannel(instance, dplmap, ch)
+			if err != nil {
+				klog.Errorf("Failed to propagate %v To Channel due to %v ", instance, err)
+			}
 		}
 	}
 
 	//If the dpl changes its channel, delete all other children of the dpl who were propagated to other channels before.
 	for chstr, dpl := range dplmap {
 		klog.Info("deleting deployable ", dpl.Namespace, "/", dpl.Name, " from channel ", chstr)
-		r.Client.Delete(context.TODO(), dpl)
+		err = r.Client.Delete(context.TODO(), dpl)
+		if err != nil {
+			klog.Errorf("Failed to delete %v due to %v ", dpl.Name, err)
+		}
 
 		//record events
 		dplkey := types.NamespacedName{Name: dpl.GetName(), Namespace: dpl.GetNamespace()}
 		addtionalMsg := "Depolyable " + dplkey.String() + " removed from the channel"
 
 		dplchannel := &appv1alpha1.Channel{}
+
 		parsedstr := strings.Split(chstr, "/")
 		if len(parsedstr) != 2 {
 			klog.Info("invalid channel namespacedName: ", chstr)
+
 			continue
 		}
 
@@ -236,7 +247,10 @@ func (r *ReconcileDeployable) Reconcile(request reconcile.Request) (reconcile.Re
 		if error1 != nil {
 			klog.V(5).Infof("Channel %#v not found, unable to record events to it. ", chkey)
 		} else {
-			r.appendEvent(dplchannel, dplkey, err, "Delete", addtionalMsg)
+			err = r.appendEvent(dplchannel, dplkey, err, "Delete", addtionalMsg)
+			if err != nil {
+				klog.Errorf("Failed to record event %v due to %v ", dplkey, err)
+			}
 		}
 	}
 
@@ -295,7 +309,11 @@ func (r *ReconcileDeployable) propagateDeployableToChannel(deployable *dplv1alph
 		//record events
 		dplkey := types.NamespacedName{Name: chdpl.GetName(), Namespace: chdpl.GetNamespace()}
 		addtionalMsg := "Depolyable " + dplkey.String() + " created in the channel"
-		r.appendEvent(channel, dplkey, err, "Deploy", addtionalMsg)
+
+		err = r.appendEvent(channel, dplkey, err, "Deploy", addtionalMsg)
+		if err != nil {
+			klog.Errorf("Failed to record event %v due to %v ", dplkey, err)
+		}
 
 		return err
 	}
@@ -312,7 +330,11 @@ func (r *ReconcileDeployable) propagateDeployableToChannel(deployable *dplv1alph
 		//record events
 		dplkey := types.NamespacedName{Name: exdpl.GetName(), Namespace: exdpl.GetNamespace()}
 		addtionalMsg := "Depolyable " + dplkey.String() + " updated in the channel"
-		r.appendEvent(channel, dplkey, err, "Deploy", addtionalMsg)
+
+		err = r.appendEvent(channel, dplkey, err, "Deploy", addtionalMsg)
+		if err != nil {
+			klog.Errorf("Failed to record event %v due to %v ", dplkey, err)
+		}
 	}
 
 	delete(dplmap, chkey)

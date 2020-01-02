@@ -96,8 +96,6 @@ func (sync *ChannelSynchronizer) syncChannelsWithHelmRepo() {
 		klog.V(5).Info("synching channel ", ch.Name)
 		sync.syncChannel(ch)
 	}
-
-	return
 }
 
 func (sync *ChannelSynchronizer) syncChannel(chn *chnv1alpha1.Channel) {
@@ -159,8 +157,7 @@ func (sync *ChannelSynchronizer) syncChannel(chn *chnv1alpha1.Channel) {
 			continue
 		}
 
-		var specMap map[string]interface{}
-		specMap = obj.Object["spec"].(map[string]interface{})
+		specMap := obj.Object["spec"].(map[string]interface{})
 		cname := specMap[utils.HelmCRChartName].(string)
 		cver := specMap[utils.HelmCRVersion].(string)
 
@@ -176,7 +173,10 @@ func (sync *ChannelSynchronizer) syncChannel(chn *chnv1alpha1.Channel) {
 		}
 
 		if !keep {
-			sync.kubeClient.Delete(context.TODO(), &dpl)
+			err = sync.kubeClient.Delete(context.TODO(), &dpl)
+			if err != nil {
+				klog.Error("Failed to delete deployable in helm repo channel:", dpl.Name, " to ", chn.Spec.PathName)
+			}
 		} else {
 			chmap[cver] = true
 			crepo := specMap[utils.HelmCRRepoURL].(string)
@@ -209,7 +209,12 @@ func (sync *ChannelSynchronizer) syncChannel(chn *chnv1alpha1.Channel) {
 			dpl := &dplv1alpha1.Deployable{}
 			dpl.Name = chn.GetName() + "-" + obj.GetName() + "-" + mv
 			dpl.Namespace = chn.GetNamespace()
-			controllerutil.SetControllerReference(chn, dpl, sync.Scheme)
+
+			err = controllerutil.SetControllerReference(chn, dpl, sync.Scheme)
+			if err != nil {
+				klog.Info("Failed to set controller reference err:", err)
+				break
+			}
 
 			dplanno := make(map[string]string)
 			dplanno[dplv1alpha1.AnnotationExternalSource] = k
@@ -234,6 +239,4 @@ func (sync *ChannelSynchronizer) syncChannel(chn *chnv1alpha1.Channel) {
 			klog.Info("creating dpl ", k)
 		}
 	}
-
-	return
 }

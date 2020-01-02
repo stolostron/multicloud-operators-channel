@@ -120,8 +120,17 @@ func (desc *ChannelDescriptor) initChannelDescription(chn *chnv1alpha1.Channel, 
 			return err
 		}
 
-		yaml.Unmarshal(secret.Data[SecretMapKeyAccessKeyID], &accessKeyID)
-		yaml.Unmarshal(secret.Data[SecretMapKeySecretAccessKey], &secretAccessKey)
+		err = yaml.Unmarshal(secret.Data[SecretMapKeyAccessKeyID], &accessKeyID)
+		if err != nil {
+			klog.Error(err, "Unable to unmarshal secret")
+			return err
+		}
+
+		err = yaml.Unmarshal(secret.Data[SecretMapKeySecretAccessKey], &secretAccessKey)
+		if err != nil {
+			klog.Error(err, "Unable to unmarshal secret")
+			return err
+		}
 	}
 
 	if err := awshandler.InitObjectStoreConnection(endpoint, accessKeyID, secretAccessKey); err != nil {

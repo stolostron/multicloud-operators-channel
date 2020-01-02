@@ -130,8 +130,6 @@ func (sync *ChannelSynchronizer) syncChannelsWithGitRepo() {
 		klog.V(10).Info("synching channel ", ch.Name)
 		sync.syncChannel(ch)
 	}
-
-	return
 }
 
 func (sync *ChannelSynchronizer) syncChannel(chn *chnv1alpha1.Channel) {
@@ -164,7 +162,12 @@ func (sync *ChannelSynchronizer) syncChannel(chn *chnv1alpha1.Channel) {
 					klog.V(10).Info("scanning file ", f.Name())
 					file, _ := ioutil.ReadFile(filepath.Join(dir, f.Name()))
 					t := kubeResource{}
-					err = yaml.Unmarshal([]byte(file), &t)
+
+					err = yaml.Unmarshal(file, &t)
+					if err != nil {
+						klog.Info("Failed to unmarshal Kubernetes resource, err:", err)
+						break
+					}
 
 					if t.APIVersion == "" || t.Kind == "" {
 						klog.V(10).Info("Not a Kubernetes resource")
@@ -172,8 +175,8 @@ func (sync *ChannelSynchronizer) syncChannel(chn *chnv1alpha1.Channel) {
 						klog.V(10).Info("Kubernetes resource of kind ", t.Kind, " Creating a deployable.")
 
 						obj := &unstructured.Unstructured{}
-						err = yaml.Unmarshal([]byte(file), &obj)
 
+						err = yaml.Unmarshal(file, &obj)
 						if err != nil {
 							klog.Info("Failed to unmarshal Kubernetes resource, err:", err)
 							break
@@ -182,7 +185,13 @@ func (sync *ChannelSynchronizer) syncChannel(chn *chnv1alpha1.Channel) {
 						dpl := &dplv1alpha1.Deployable{}
 						dpl.Name = strings.ToLower(chn.GetName() + "-" + t.Kind + "-deployable")
 						dpl.Namespace = chn.GetNamespace()
-						controllerutil.SetControllerReference(chn, dpl, sync.Scheme)
+
+						err = controllerutil.SetControllerReference(chn, dpl, sync.Scheme)
+						if err != nil {
+							klog.Info("Failed to set controller reference, err:", err)
+							break
+						}
+
 						dplanno := make(map[string]string)
 						dplanno[dplv1alpha1.AnnotationExternalSource] = f.Name()
 						dplanno[dplv1alpha1.AnnotationLocal] = "false"
@@ -269,7 +278,12 @@ func (sync *ChannelSynchronizer) syncChannel(chn *chnv1alpha1.Channel) {
 
 		if !keep {
 			klog.Info("deleting it ", cname, cver)
-			sync.kubeClient.Delete(context.TODO(), &dpl)
+
+			err = sync.kubeClient.Delete(context.TODO(), &dpl)
+			if err != nil {
+				klog.Errorf("Failed to delete deployable %v, due to  err: %v", dpl.Name, err)
+				break
+			}
 		} else {
 			chmap[cver] = true
 			var crepo string
@@ -280,7 +294,7 @@ func (sync *ChannelSynchronizer) syncChannel(chn *chnv1alpha1.Channel) {
 			}
 			if crepo != chn.Spec.PathName {
 				klog.Info("path changed ")
-				crepo = chn.Spec.PathName
+				//crepo = chn.Spec.PathName
 				err = sync.kubeClient.Update(context.TODO(), &dpl)
 				if err != nil {
 					klog.Error("Failed to update deployable in helm repo channel:", dpl.Name, " to ", chn.Spec.PathName)
@@ -326,7 +340,12 @@ func (sync *ChannelSynchronizer) syncChannel(chn *chnv1alpha1.Channel) {
 			dpl := &dplv1alpha1.Deployable{}
 			dpl.Name = chn.GetName() + "-" + obj.GetName() + "-" + mv
 			dpl.Namespace = chn.GetNamespace()
-			controllerutil.SetControllerReference(chn, dpl, sync.Scheme)
+
+			err = controllerutil.SetControllerReference(chn, dpl, sync.Scheme)
+			if err != nil {
+				klog.Info("Failed to set controller reference, err:", err)
+				break
+			}
 
 			dplanno := make(map[string]string)
 			dplanno[dplv1alpha1.AnnotationExternalSource] = k
@@ -350,6 +369,4 @@ func (sync *ChannelSynchronizer) syncChannel(chn *chnv1alpha1.Channel) {
 			klog.Info("creating deployable ", k)
 		}
 	}
-
-	return
 }

@@ -56,7 +56,7 @@ func TestReconcile(t *testing.T) {
 	c = mgr.GetClient()
 
 	//create events handler on hub cluster. All the deployable events will be written to the root deploable on hub cluster.
-	hubClientSet, err := kubernetes.NewForConfig(cfg)
+	hubClientSet, _ := kubernetes.NewForConfig(cfg)
 
 	eventBroadcaster := record.NewBroadcaster()
 	eventBroadcaster.StartLogging(klog.Infof)
