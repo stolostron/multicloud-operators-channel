@@ -17,25 +17,25 @@ package main
 import (
 
 	// Import all Kubernetes client auth plugins (e.g. Azure, GCP, OIDC, etc.)
+
+	"flag"
+
 	_ "k8s.io/client-go/plugin/pkg/client/auth"
 
 	"github.com/spf13/pflag"
-
-	"k8s.io/apiserver/pkg/util/flag"
-	"k8s.io/apiserver/pkg/util/logs"
+	"k8s.io/klog"
 
 	"github.com/IBM/multicloud-operators-channel/cmd/manager/exec"
 )
 
 func main() {
 	exec.ProcessFlags()
+	klog.InitFlags(nil)
 
-	flag.InitFlags()
-	logs.InitLogs()
-
-	defer logs.FlushLogs()
-
+	pflag.CommandLine.AddGoFlagSet(flag.CommandLine)
 	pflag.Parse()
+
+	defer klog.Flush()
 
 	exec.RunManager()
 }
