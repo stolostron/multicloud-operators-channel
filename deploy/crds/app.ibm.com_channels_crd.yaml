@@ -42,7 +42,7 @@ spec:
         spec:
           description: ChannelSpec defines the desired state of Channel
           properties:
-            configMapRef:
+            configRef:
               description: ObjectReference contains enough information to let you
                 inspect or modify the referred object.
               properties:
@@ -136,7 +136,7 @@ spec:
                 name:
                   type: string
               type: object
-            pathName:
+            pathname:
               type: string
             secretRef:
               description: ObjectReference contains enough information to let you
@@ -193,7 +193,7 @@ spec:
               - github
               type: string
           required:
-          - pathName
+          - pathname
           - type
           type: object
         status:

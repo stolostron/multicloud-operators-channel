@@ -183,7 +183,7 @@ func schema_pkg_apis_app_v1alpha1_ChannelSpec(ref common.ReferenceCallback) comm
 							Format:      "",
 						},
 					},
-					"pathName": {
+					"pathname": {
 						SchemaProps: spec.SchemaProps{
 							Type:   []string{"string"},
 							Format: "",
@@ -194,7 +194,7 @@ func schema_pkg_apis_app_v1alpha1_ChannelSpec(ref common.ReferenceCallback) comm
 							Ref: ref("k8s.io/api/core/v1.ObjectReference"),
 						},
 					},
-					"configMapRef": {
+					"configRef": {
 						SchemaProps: spec.SchemaProps{
 							Ref: ref("k8s.io/api/core/v1.ObjectReference"),
 						},
@@ -223,7 +223,7 @@ func schema_pkg_apis_app_v1alpha1_ChannelSpec(ref common.ReferenceCallback) comm
 						},
 					},
 				},
-				Required: []string{"type", "pathName"},
+				Required: []string{"type", "pathname"},
 			},
 		},
 		Dependencies: []string{
