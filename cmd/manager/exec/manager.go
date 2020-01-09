@@ -39,7 +39,6 @@ import (
 	typedcorev1 "k8s.io/client-go/kubernetes/typed/core/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client/config"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
-	"sigs.k8s.io/controller-runtime/pkg/manager/signals"
 
 	"k8s.io/klog"
 
@@ -224,7 +223,7 @@ func RunManager(sig <-chan struct{}) {
 	klog.Info("Starting the Cmd.")
 
 	// Start the Cmd
-	if err := mgr.Start(signals.SetupSignalHandler()); err != nil {
+	if err := mgr.Start(sig); err != nil {
 		klog.Error(err, "Manager exited non-zero")
 		os.Exit(exitCode)
 	}
