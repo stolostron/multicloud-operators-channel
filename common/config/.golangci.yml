@@ -38,6 +38,7 @@ linters:
     - scopelint
     - funlen
     - bodyclose
+    - gomnd
   fast: false
 
 linters-settings:
