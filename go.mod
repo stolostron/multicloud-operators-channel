@@ -3,15 +3,23 @@ module github.com/IBM/multicloud-operators-channel
 go 1.13
 
 require (
+	github.com/IBM/multicloud-operators-deployable v0.0.0-20191121134707-a429faaac3b4
+	github.com/IBM/multicloud-operators-placementrule v0.0.0-20191106021205-80eeda99597f
+	github.com/aws/aws-sdk-go-v2 v0.18.0
+	github.com/ghodss/yaml v1.0.1-0.20180820084758-c7ce16629ff4
 	github.com/go-openapi/spec v0.19.0
 	github.com/onsi/gomega v1.5.0
 	github.com/operator-framework/operator-sdk v0.12.0
 	github.com/prometheus/common v0.4.1
 	github.com/spf13/pflag v1.0.3
 	golang.org/x/net v0.0.0-20190812203447-cdfb69ac37fc
+	gopkg.in/src-d/go-git.v4 v4.13.1
+	gopkg.in/yaml.v2 v2.2.2
 	k8s.io/api v0.0.0
 	k8s.io/apimachinery v0.0.0
 	k8s.io/client-go v11.0.0+incompatible
+	k8s.io/cluster-registry v0.0.6
+	k8s.io/helm v2.15.0+incompatible
 	k8s.io/klog v0.3.3
 	k8s.io/kube-openapi v0.0.0-20190918143330-0270cf2f1c1d
 	sigs.k8s.io/controller-runtime v0.3.0
@@ -40,3 +48,5 @@ replace (
 	k8s.io/metrics => k8s.io/metrics v0.0.0-20190918202012-3c1ca76f5bda
 	k8s.io/sample-apiserver => k8s.io/sample-apiserver v0.0.0-20190918201353-5cc279503896
 )
+
+replace golang.org/x/net => github.com/golang/net v0.0.0-20191209160850-c0dbc17a3553

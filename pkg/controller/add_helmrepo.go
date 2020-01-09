@@ -12,30 +12,13 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package main
+package controller
 
 import (
-	"flag"
-
-	// Import all Kubernetes client auth plugins (e.g. Azure, GCP, OIDC, etc.)
-	_ "k8s.io/client-go/plugin/pkg/client/auth"
-	"sigs.k8s.io/controller-runtime/pkg/manager/signals"
-
-	"github.com/spf13/pflag"
-	"k8s.io/klog"
-
-	"github.com/IBM/multicloud-operators-channel/cmd/manager/exec"
+	"github.com/IBM/multicloud-operators-channel/pkg/controller/helmrepo"
 )
 
-func main() {
-	exec.ProcessFlags()
-
-	klog.InitFlags(nil)
-
-	pflag.CommandLine.AddGoFlagSet(flag.CommandLine)
-	pflag.Parse()
-
-	defer klog.Flush()
-
-	exec.RunManager(signals.SetupSignalHandler())
+func init() {
+	// AddToManagerFuncs is a list of functions to create controllers and add them to a manager.
+	AddToManagerFuncs = append(AddToManagerFuncs, helmrepo.Add)
 }

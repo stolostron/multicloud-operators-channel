@@ -20,9 +20,11 @@ import (
 	"os"
 	"runtime"
 
+	"k8s.io/client-go/kubernetes"
 	// Import all Kubernetes client auth plugins (e.g. Azure, GCP, OIDC, etc.)
 	_ "k8s.io/client-go/plugin/pkg/client/auth"
 	"k8s.io/client-go/rest"
+	"k8s.io/client-go/tools/record"
 
 	"github.com/prometheus/common/log"
 
@@ -34,14 +36,20 @@ import (
 	sdkVersion "github.com/operator-framework/operator-sdk/version"
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
+	typedcorev1 "k8s.io/client-go/kubernetes/typed/core/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client/config"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
-	"sigs.k8s.io/controller-runtime/pkg/manager/signals"
 
 	"k8s.io/klog"
 
 	"github.com/IBM/multicloud-operators-channel/pkg/apis"
 	"github.com/IBM/multicloud-operators-channel/pkg/controller"
+	"github.com/IBM/multicloud-operators-channel/pkg/utils"
+	"github.com/IBM/multicloud-operators-channel/pkg/webhook"
+
+	gitsync "github.com/IBM/multicloud-operators-channel/pkg/synchronizer/githubsynchronizer"
+	helmsync "github.com/IBM/multicloud-operators-channel/pkg/synchronizer/helmreposynchronizer"
+	objsync "github.com/IBM/multicloud-operators-channel/pkg/synchronizer/objectstoresynchronizer"
 )
 
 // Change below variables to serve metrics on different host or port.
@@ -51,28 +59,30 @@ var (
 	operatorMetricsPort int32 = 8686
 )
 
+var exitCode = 1
+
 func printVersion() {
 	klog.Info(fmt.Sprintf("Go Version: %s", runtime.Version()))
 	klog.Info(fmt.Sprintf("Go OS/Arch: %s/%s", runtime.GOOS, runtime.GOARCH))
 	klog.Info(fmt.Sprintf("Version of operator-sdk: %v", sdkVersion.Version))
 }
 
-func RunManager() {
+func RunManager(sig <-chan struct{}) {
 	printVersion()
 
 	// Get a config to talk to the apiserver
 	cfg, err := config.GetConfig()
 	if err != nil {
 		klog.Error(err, "")
-		os.Exit(1)
+		os.Exit(exitCode)
 	}
 
 	ctx := context.TODO()
 	// Become the leader before proceeding
-	err = leader.Become(ctx, "multicloud-operators-deployable-lock")
+	err = leader.Become(ctx, "multicloud-operators-channel-lock")
 	if err != nil {
 		klog.Error(err, "")
-		os.Exit(1)
+		os.Exit(exitCode)
 	}
 
 	// Create a new Cmd to provide shared dependencies and start components
@@ -82,21 +92,93 @@ func RunManager() {
 	})
 	if err != nil {
 		klog.Error(err, "")
-		os.Exit(1)
+		os.Exit(exitCode)
+	}
+
+	// Create channel descriptor
+	chdesc, err := utils.CreateChannelDescriptor()
+	if err != nil {
+		klog.Error("unable to create channel descriptor.", err)
+		os.Exit(exitCode)
+	}
+
+	// Create channel synchronizer
+	osync, err := objsync.CreateSynchronizer(cfg, chdesc, options.SyncInterval)
+
+	if err != nil {
+		klog.Error("unable to create object-store syncrhonizer on destination cluster.", err)
+		os.Exit(exitCode)
+	}
+
+	err = mgr.Add(osync)
+	if err != nil {
+		klog.Error("Failed to register synchronizer.", err)
+		os.Exit(exitCode)
+	}
+
+	// Create channel synchronizer for helm repo
+	hsync, err := helmsync.CreateSynchronizer(cfg, mgr.GetScheme(), options.SyncInterval)
+
+	if err != nil {
+		klog.Error("unable to create helo-repo syncrhonizer on destination cluster.", err)
+		os.Exit(exitCode)
+	}
+
+	err = mgr.Add(hsync)
+	if err != nil {
+		klog.Error("Failed to register synchronizer.", err)
+		os.Exit(exitCode)
+	}
+
+	// Create channel synchronizer for github
+	gsync, err := gitsync.CreateSynchronizer(cfg, mgr.GetScheme(), options.SyncInterval)
+
+	if err != nil {
+		klog.Error("unable to create github syncrhonizer on destination cluster.", err)
+		os.Exit(exitCode)
+	}
+
+	err = mgr.Add(gsync)
+	if err != nil {
+		klog.Error("Failed to register synchronizer.", err)
+		os.Exit(exitCode)
 	}
 
 	klog.Info("Registering Components.")
 
 	// Setup Scheme for all resources
+	klog.Info("setting up scheme")
+
 	if err := apis.AddToScheme(mgr.GetScheme()); err != nil {
-		klog.Error(err, "")
-		os.Exit(1)
+		klog.Error(err, "unable add APIs to scheme")
+		os.Exit(exitCode)
 	}
 
+	//create channel events handler on hub cluster.
+	hubClientSet, err := kubernetes.NewForConfig(cfg)
+	if err != nil {
+		klog.Error("Failed to get hub cluster clientset. err: ", err)
+		os.Exit(exitCode)
+	}
+
+	eventBroadcaster := record.NewBroadcaster()
+	eventBroadcaster.StartLogging(klog.Infof)
+	eventBroadcaster.StartRecordingToSink(&typedcorev1.EventSinkImpl{Interface: hubClientSet.CoreV1().Events("")})
+	recorder := eventBroadcaster.NewRecorder(mgr.GetScheme(), v1.EventSource{Component: "channel"})
+
 	// Setup all Controllers
-	if err := controller.AddToManager(mgr); err != nil {
-		klog.Error(err, "")
-		os.Exit(1)
+	klog.Info("Setting up controller")
+
+	if err := controller.AddToManager(mgr, recorder, chdesc, hsync, gsync); err != nil {
+		klog.Error(err, "unable to register controllers to the manager")
+		os.Exit(exitCode)
+	}
+
+	klog.Info("setting up webhooks")
+
+	if err := webhook.AddToManager(mgr); err != nil {
+		klog.Error(err, "unable to register webhooks to the manager")
+		os.Exit(exitCode)
 	}
 
 	if err = serveCRMetrics(cfg); err != nil {
@@ -141,9 +223,9 @@ func RunManager() {
 	klog.Info("Starting the Cmd.")
 
 	// Start the Cmd
-	if err := mgr.Start(signals.SetupSignalHandler()); err != nil {
+	if err := mgr.Start(sig); err != nil {
 		klog.Error(err, "Manager exited non-zero")
-		os.Exit(1)
+		os.Exit(exitCode)
 	}
 }
 

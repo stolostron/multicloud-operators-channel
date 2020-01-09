@@ -16,11 +16,13 @@ package v1alpha1
 
 import (
 	"testing"
+	"time"
 
 	"github.com/onsi/gomega"
 	"golang.org/x/net/context"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
+	"sigs.k8s.io/controller-runtime/pkg/manager"
 )
 
 func TestStorageChannel(t *testing.T) {
@@ -34,26 +36,45 @@ func TestStorageChannel(t *testing.T) {
 			Namespace: "default",
 		},
 		Spec: ChannelSpec{
-			Type: "Namespace",
+			Type: "namespace",
 		},
 	}
 	g := gomega.NewGomegaWithT(t)
 
+	// Setup the Manager and Controller.  Wrap the Controller Reconcile function so it writes each request to a
+	// channel when it is finished.
+	mgr, err := manager.New(cfg, manager.Options{MetricsBindAddress: "0"})
+	g.Expect(err).NotTo(gomega.HaveOccurred())
+
+	c = mgr.GetClient()
+
+	g.Expect(c.Create(context.TODO(), created)).NotTo(gomega.HaveOccurred())
+
+	stopMgr, mgrStopped := StartTestManager(mgr, g)
+
+	defer func() {
+		close(stopMgr)
+		mgrStopped.Wait()
+	}()
 	// Test Create
 	fetched := &Channel{}
 
-	g.Expect(c.Create(context.TODO(), created)).NotTo(gomega.HaveOccurred())
+	time.Sleep(time.Second * 1)
 	g.Expect(c.Get(context.TODO(), key, fetched)).NotTo(gomega.HaveOccurred())
-	g.Expect(fetched).To(gomega.Equal(created))
+	// doing so to avoid the TypeMeta comparison,since the fetched one won't have this field
+	g.Expect(fetched.ObjectMeta).To(gomega.Equal(created.ObjectMeta))
+	g.Expect(fetched.Spec).To(gomega.Equal(created.Spec))
 
 	// Test Updating the Labels
 	updated := fetched.DeepCopy()
 	updated.Labels = map[string]string{"hello": "world"}
 	g.Expect(c.Update(context.TODO(), updated)).NotTo(gomega.HaveOccurred())
 
+	time.Sleep(time.Second * 1)
 	g.Expect(c.Get(context.TODO(), key, fetched)).NotTo(gomega.HaveOccurred())
-	g.Expect(fetched).To(gomega.Equal(updated))
-
+	g.Expect(fetched.GetUID()).To(gomega.Equal(updated.GetUID()))
+	g.Expect(fetched.Spec).To(gomega.Equal(updated.Spec))
+	g.Expect(fetched.GetLabels()).To(gomega.Equal(updated.Labels))
 	// Test Delete
 	g.Expect(c.Delete(context.TODO(), fetched)).NotTo(gomega.HaveOccurred())
 	g.Expect(c.Get(context.TODO(), key, fetched)).To(gomega.HaveOccurred())
