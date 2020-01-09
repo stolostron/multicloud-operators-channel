@@ -29,7 +29,7 @@ var expectedRequest = reconcile.Request{NamespacedName: types.NamespacedName{Nam
 
 const timeout = time.Second * 5
 
-func TestReconcile(t *testing.T) {
+func TestGitHubReconcile(t *testing.T) {
 	t.Log("this print is used to passing lint while the test cases is not built yet")
 	t.Log(timeout, c, expectedRequest)
 }

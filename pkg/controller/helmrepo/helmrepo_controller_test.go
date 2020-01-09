@@ -20,34 +20,43 @@ import (
 
 	"github.com/onsi/gomega"
 	"golang.org/x/net/context"
-	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
+	appv1alpha1 "github.com/IBM/multicloud-operators-channel/pkg/apis/app/v1alpha1"
 	synchronizer "github.com/IBM/multicloud-operators-channel/pkg/synchronizer/helmreposynchronizer"
-	appv1alpha1 "github.com/IBM/multicloud-operators-deployable/pkg/apis/app/v1alpha1"
 )
 
 var c client.Client
 
-var expectedRequest = reconcile.Request{NamespacedName: types.NamespacedName{Name: "foo", Namespace: "default"}}
+var targetNamespace = "default"
 
-const timeout = time.Second * 5
+var targetChannelName = "foo"
 
-func TestReconcile(t *testing.T) {
+var targetChannelType = appv1alpha1.ChannelType("Namespace")
+
+var expectedRequest = reconcile.Request{
+	NamespacedName: types.NamespacedName{
+		Name: targetChannelName, Namespace: targetNamespace}}
+
+const timeout = time.Second * 10
+
+func TestHelmRepoReconcile(t *testing.T) {
 	g := gomega.NewGomegaWithT(t)
 
-	// Create new Deployable instance
-	instance := &appv1alpha1.Deployable{ObjectMeta: metav1.ObjectMeta{Name: "foo", Namespace: "default"}}
-	clname := "testcl"
-	clnamespace := "testcln"
-	cluster := types.NamespacedName{Name: clname, Namespace: clnamespace}
-	annotations := make(map[string]string)
-	annotations[appv1alpha1.AnnotationManagedCluster] = cluster.String()
-	instance.SetAnnotations(annotations)
+	// Create new channelInstance
+	channelInstance := &appv1alpha1.Channel{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      targetChannelName,
+			Namespace: targetNamespace},
+		Spec: appv1alpha1.ChannelSpec{
+			Type:     targetChannelType,
+			PathName: targetNamespace,
+		},
+	}
 
 	// Setup the Manager and Controller.  Wrap the Controller Reconcile function so it writes each request to a
 	// channel when it is finished.
@@ -67,18 +76,10 @@ func TestReconcile(t *testing.T) {
 		mgrStopped.Wait()
 	}()
 
-	// Create the Deployable object and expect the Reconcile and Deployment to be created
-	err = c.Create(context.TODO(), instance)
-	// The instance object may not be a valid object because it might be missing some required fields.
-	// Please modify the instance object by adding required fields and then remove the following if statement.
-	if apierrors.IsInvalid(err) {
-		t.Logf("failed to create object, got an invalid object error: %v", err)
-		return
-	}
+	// Create the Channel  object and expect the Reconcile
+	g.Expect(c.Create(context.TODO(), channelInstance)).NotTo(gomega.HaveOccurred())
 
-	g.Expect(err).NotTo(gomega.HaveOccurred())
-
-	defer c.Delete(context.TODO(), instance)
+	defer c.Delete(context.TODO(), channelInstance)
 
 	g.Eventually(requests, timeout).Should(gomega.Receive(gomega.Equal(expectedRequest)))
 }

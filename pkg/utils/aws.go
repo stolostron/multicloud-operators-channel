@@ -26,6 +26,8 @@ import (
 	"k8s.io/klog"
 )
 
+var debugLevel = klog.Level(10)
+
 // ObjectStore interface
 type ObjectStore interface {
 	InitObjectStoreConnection(endpoint, accessKeyID, secretAccessKey string) error
@@ -165,7 +167,7 @@ func (h *AWSHandler) Exists(bucket string) error {
 
 // List all objects in bucket
 func (h *AWSHandler) List(bucket string) ([]string, error) {
-	klog.V(10).Info("List S3 Objects ", bucket)
+	klog.V(debugLevel).Info("List S3 Objects ", bucket)
 
 	req := h.Client.ListObjectsRequest(&s3.ListObjectsInput{Bucket: &bucket})
 	p := s3.NewListObjectsPaginator(req)
@@ -185,7 +187,7 @@ func (h *AWSHandler) List(bucket string) ([]string, error) {
 		return nil, err
 	}
 
-	klog.V(10).Info("List S3 Objects result ", keys)
+	klog.V(debugLevel).Info("List S3 Objects result ", keys)
 
 	return keys, nil
 }
@@ -220,7 +222,7 @@ func (h *AWSHandler) Get(bucket, name string) (DeployableObject, error) {
 	dplObj.Content = body
 	dplObj.Version = version
 
-	klog.V(10).Info("Get Success: \n", string(body))
+	klog.V(debugLevel).Info("Get Success: \n", string(body))
 
 	return dplObj, nil
 }
@@ -228,7 +230,7 @@ func (h *AWSHandler) Get(bucket, name string) (DeployableObject, error) {
 // Put create new object
 func (h *AWSHandler) Put(bucket string, dplObj DeployableObject) error {
 	if dplObj.isEmpty() {
-		klog.V(10).Infof("got an empty deployableObject to put to object store")
+		klog.V(debugLevel).Infof("got an empty deployableObject to put to object store")
 		return nil
 	}
 
@@ -247,7 +249,7 @@ func (h *AWSHandler) Put(bucket string, dplObj DeployableObject) error {
 		return err
 	}
 
-	klog.V(10).Info("Put Success", resp)
+	klog.V(debugLevel).Info("Put Success", resp)
 
 	return nil
 }
@@ -265,7 +267,7 @@ func (h *AWSHandler) Delete(bucket, name string) error {
 		return err
 	}
 
-	klog.V(10).Info("Delete Success", resp)
+	klog.V(debugLevel).Info("Delete Success", resp)
 
 	return nil
 }

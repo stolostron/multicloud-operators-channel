@@ -29,7 +29,7 @@ import (
 
 // GenerateChannelMap finds all channels and build map with key of channel name
 func GenerateChannelMap(cl client.Client) (map[string]*appv1alpha1.Channel, error) {
-	if klog.V(10) {
+	if klog.V(debugLevel) {
 		fnName := dplutils.GetFnName()
 		klog.Infof("Entering: %v()", fnName)
 
@@ -46,7 +46,7 @@ func GenerateChannelMap(cl client.Client) (map[string]*appv1alpha1.Channel, erro
 	chmap := make(map[string]*appv1alpha1.Channel)
 
 	for _, ch := range chlist.Items {
-		klog.V(10).Infof("Channel namespacedname: %v/%v,  type: %v, sourceNamespaces: %v, gates: %#v",
+		klog.V(debugLevel).Infof("Channel namespacedname: %v/%v,  type: %v, sourceNamespaces: %v, gates: %#v",
 			ch.Namespace, ch.Name, ch.Spec.Type, ch.Spec.SourceNamespaces, ch.Spec.Gates)
 
 		chmap[ch.Name] = ch.DeepCopy()
@@ -57,7 +57,7 @@ func GenerateChannelMap(cl client.Client) (map[string]*appv1alpha1.Channel, erro
 
 // LocateChannel finds channel by name
 func LocateChannel(cl client.Client, name string) (*appv1alpha1.Channel, error) {
-	if klog.V(10) {
+	if klog.V(debugLevel) {
 		fnName := dplutils.GetFnName()
 		klog.Infof("Entering: %v()", fnName)
 
@@ -82,7 +82,7 @@ func LocateChannel(cl client.Client, name string) (*appv1alpha1.Channel, error) 
 
 // UpdateServingChannel add/remove the given channel to the current serving channel
 func UpdateServingChannel(servingChannel string, channelKey string, action string) string {
-	if klog.V(10) {
+	if klog.V(debugLevel) {
 		fnName := dplutils.GetFnName()
 		klog.Infof("Entering: %v()", fnName)
 

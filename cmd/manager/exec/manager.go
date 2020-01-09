@@ -51,8 +51,6 @@ import (
 	gitsync "github.com/IBM/multicloud-operators-channel/pkg/synchronizer/githubsynchronizer"
 	helmsync "github.com/IBM/multicloud-operators-channel/pkg/synchronizer/helmreposynchronizer"
 	objsync "github.com/IBM/multicloud-operators-channel/pkg/synchronizer/objectstoresynchronizer"
-
-	dplutils "github.com/IBM/multicloud-operators-deployable/pkg/utils"
 )
 
 // Change below variables to serve metrics on different host or port.
@@ -62,42 +60,30 @@ var (
 	operatorMetricsPort int32 = 8686
 )
 
+var exitCode = 1
+
 func printVersion() {
 	klog.Info(fmt.Sprintf("Go Version: %s", runtime.Version()))
 	klog.Info(fmt.Sprintf("Go OS/Arch: %s/%s", runtime.GOOS, runtime.GOARCH))
 	klog.Info(fmt.Sprintf("Version of operator-sdk: %v", sdkVersion.Version))
 }
 
-func RunManager() {
+func RunManager(sig <-chan struct{}) {
 	printVersion()
 
 	// Get a config to talk to the apiserver
 	cfg, err := config.GetConfig()
 	if err != nil {
 		klog.Error(err, "")
-		os.Exit(1)
+		os.Exit(exitCode)
 	}
 
 	ctx := context.TODO()
 	// Become the leader before proceeding
-	err = leader.Become(ctx, "multicloud-operators-deployable-lock")
+	err = leader.Become(ctx, "multicloud-operators-channel-lock")
 	if err != nil {
 		klog.Error(err, "")
-		os.Exit(1)
-	}
-
-	// Register Channel CRD into hub kubernetes cluster
-	err = dplutils.CheckAndInstallCRD(cfg, options.CRDPathName)
-	if err != nil {
-		klog.Error("unable to install channel crd in hub.", err)
-		os.Exit(1)
-	}
-
-	// Register deployable and channel CRDs into hub kubernetes cluster
-	err = dplutils.CheckAndInstallCRD(cfg, options.DeployableCRDPathName)
-	if err != nil {
-		klog.Error("unable to install deployable crd in hub.", err)
-		os.Exit(1)
+		os.Exit(exitCode)
 	}
 
 	// Create a new Cmd to provide shared dependencies and start components
@@ -107,14 +93,14 @@ func RunManager() {
 	})
 	if err != nil {
 		klog.Error(err, "")
-		os.Exit(1)
+		os.Exit(exitCode)
 	}
 
 	// Create channel descriptor
 	chdesc, err := utils.CreateChannelDescriptor()
 	if err != nil {
 		klog.Error("unable to create channel descriptor.", err)
-		os.Exit(1)
+		os.Exit(exitCode)
 	}
 
 	// Create channel synchronizer
@@ -122,13 +108,13 @@ func RunManager() {
 
 	if err != nil {
 		klog.Error("unable to create object-store syncrhonizer on destination cluster.", err)
-		os.Exit(1)
+		os.Exit(exitCode)
 	}
 
 	err = mgr.Add(osync)
 	if err != nil {
 		klog.Error("Failed to register synchronizer.", err)
-		os.Exit(1)
+		os.Exit(exitCode)
 	}
 
 	// Create channel synchronizer for helm repo
@@ -136,13 +122,13 @@ func RunManager() {
 
 	if err != nil {
 		klog.Error("unable to create helo-repo syncrhonizer on destination cluster.", err)
-		os.Exit(1)
+		os.Exit(exitCode)
 	}
 
 	err = mgr.Add(hsync)
 	if err != nil {
 		klog.Error("Failed to register synchronizer.", err)
-		os.Exit(1)
+		os.Exit(exitCode)
 	}
 
 	// Create channel synchronizer for github
@@ -150,13 +136,13 @@ func RunManager() {
 
 	if err != nil {
 		klog.Error("unable to create github syncrhonizer on destination cluster.", err)
-		os.Exit(1)
+		os.Exit(exitCode)
 	}
 
 	err = mgr.Add(gsync)
 	if err != nil {
 		klog.Error("Failed to register synchronizer.", err)
-		os.Exit(1)
+		os.Exit(exitCode)
 	}
 
 	klog.Info("Registering Components.")
@@ -166,14 +152,14 @@ func RunManager() {
 
 	if err := apis.AddToScheme(mgr.GetScheme()); err != nil {
 		klog.Error(err, "unable add APIs to scheme")
-		os.Exit(1)
+		os.Exit(exitCode)
 	}
 
 	//create channel events handler on hub cluster.
 	hubClientSet, err := kubernetes.NewForConfig(cfg)
 	if err != nil {
 		klog.Error("Failed to get hub cluster clientset. err: ", err)
-		os.Exit(1)
+		os.Exit(exitCode)
 	}
 
 	eventBroadcaster := record.NewBroadcaster()
@@ -186,14 +172,14 @@ func RunManager() {
 
 	if err := controller.AddToManager(mgr, recorder, chdesc, hsync, gsync); err != nil {
 		klog.Error(err, "unable to register controllers to the manager")
-		os.Exit(1)
+		os.Exit(exitCode)
 	}
 
 	klog.Info("setting up webhooks")
 
 	if err := webhook.AddToManager(mgr); err != nil {
 		klog.Error(err, "unable to register webhooks to the manager")
-		os.Exit(1)
+		os.Exit(exitCode)
 	}
 
 	if err = serveCRMetrics(cfg); err != nil {
@@ -240,7 +226,7 @@ func RunManager() {
 	// Start the Cmd
 	if err := mgr.Start(signals.SetupSignalHandler()); err != nil {
 		klog.Error(err, "Manager exited non-zero")
-		os.Exit(1)
+		os.Exit(exitCode)
 	}
 }
 

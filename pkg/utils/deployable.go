@@ -28,7 +28,7 @@ import (
 
 // ValidateDeployableInChannel check if a deployable rightfully in channel
 func ValidateDeployableInChannel(deployable *dplv1alpha1.Deployable, channel *appv1alpha1.Channel) bool {
-	if klog.V(10) {
+	if klog.V(debugLevel) {
 		fnName := dplutils.GetFnName()
 		klog.Infof("Entering: %v()", fnName)
 
@@ -76,9 +76,10 @@ func ValidateDeployableInChannel(deployable *dplv1alpha1.Deployable, channel *ap
 // b.1 if channel's namespace source is the same as dpl
 // // b.1.1 if gate and dpl annotation has a match then promote
 // // b.1.1 dpl doesn't have annotation, then fail
+
 // ValidateDeployableToChannel check if a deployable can be promoted to channel
 func ValidateDeployableToChannel(deployable *dplv1alpha1.Deployable, channel *appv1alpha1.Channel) bool {
-	if klog.V(10) {
+	if klog.V(debugLevel) {
 		fnName := dplutils.GetFnName()
 		klog.Infof("Entering: %v()", fnName)
 
@@ -138,7 +139,7 @@ func ValidateDeployableToChannel(deployable *dplv1alpha1.Deployable, channel *ap
 func FindDeployableForChannelsInMap(cl client.Client, deployable *dplv1alpha1.Deployable,
 	channelnsMap map[string]string) (*dplv1alpha1.Deployable,
 	map[string]*dplv1alpha1.Deployable, error) {
-	if klog.V(10) {
+	if klog.V(debugLevel) {
 		fnName := dplutils.GetFnName()
 		klog.Infof("Entering: %v()", fnName)
 
@@ -181,12 +182,12 @@ func FindDeployableForChannelsInMap(cl client.Client, deployable *dplv1alpha1.De
 			parent = dpl.DeepCopy()
 		}
 
-		klog.V(10).Infof("parent dpl: %v, checking dpl: %v", deployable.GetName(), dpl.GetGenerateName())
+		klog.V(debugLevel).Infof("parent dpl: %v, checking dpl: %v", deployable.GetName(), dpl.GetGenerateName())
 
 		if dpl.GetGenerateName() == parentDplGen && channelnsMap[dpl.Namespace] != "" {
 			dplanno := dpl.GetAnnotations()
 			if dplanno != nil && dplanno[appv1alpha1.KeyChannelSource] == dplkey.String() {
-				klog.V(10).Infof("adding dpl: %v to children dpl map", dplkey.String())
+				klog.V(debugLevel).Infof("adding dpl: %v to children dpl map", dplkey.String())
 
 				dplmap[dplanno[appv1alpha1.KeyChannel]] = dpl.DeepCopy()
 			}
@@ -199,11 +200,11 @@ func FindDeployableForChannelsInMap(cl client.Client, deployable *dplv1alpha1.De
 	}
 
 	if parent != nil {
-		klog.V(10).Infof("deployable: %#v/%#v, parent: %#v/%#v, dplmap: %#v",
+		klog.V(debugLevel).Infof("deployable: %#v/%#v, parent: %#v/%#v, dplmap: %#v",
 			deployable.GetNamespace(), deployable.GetName(), parent.GetNamespace(),
 			parent.GetName(), dplmapStr)
 	} else {
-		klog.V(10).Infof("deployable: %#v/%#v, parent: %#v, dplmap: %#v", deployable.GetNamespace(), deployable.GetName(), parent, dplmapStr)
+		klog.V(debugLevel).Infof("deployable: %#v/%#v, parent: %#v, dplmap: %#v", deployable.GetNamespace(), deployable.GetName(), parent, dplmapStr)
 	}
 
 	return parent, dplmap, nil
@@ -211,7 +212,7 @@ func FindDeployableForChannelsInMap(cl client.Client, deployable *dplv1alpha1.De
 
 // CleanupDeployables check all deployables in certain namespace delete all has the channel set the given channel name
 func CleanupDeployables(cl client.Client, channel types.NamespacedName) error {
-	if klog.V(10) {
+	if klog.V(debugLevel) {
 		fnName := dplutils.GetFnName()
 		klog.Infof("Entering: %v()", fnName)
 
@@ -241,7 +242,7 @@ func CleanupDeployables(cl client.Client, channel types.NamespacedName) error {
 
 // GenerateDeployableForChannel generate a copy of deployable for channel with label, annotation, template and channel info
 func GenerateDeployableForChannel(deployable *dplv1alpha1.Deployable, channel types.NamespacedName) (*dplv1alpha1.Deployable, error) {
-	if klog.V(10) {
+	if klog.V(debugLevel) {
 		fnName := dplutils.GetFnName()
 		klog.Infof("Entering: %v()", fnName)
 
@@ -304,7 +305,7 @@ func GenerateDeployableForChannel(deployable *dplv1alpha1.Deployable, channel ty
 
 //DplGenerateNameStr  will generate a string for the dpl generate name
 func DplGenerateNameStr(deployable *dplv1alpha1.Deployable) string {
-	if klog.V(10) {
+	if klog.V(debugLevel) {
 		fnName := dplutils.GetFnName()
 		klog.Infof("Entering: %v()", fnName)
 

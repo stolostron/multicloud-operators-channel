@@ -41,6 +41,8 @@ import (
 	deputils "github.com/IBM/multicloud-operators-deployable/pkg/utils"
 )
 
+var debugLevel = klog.Level(10)
+
 // ChannelSynchronizer syncs github channels with github repository
 type ChannelSynchronizer struct {
 	Scheme       *runtime.Scheme
@@ -129,7 +131,7 @@ func (sync *ChannelSynchronizer) syncChannelsWithGitRepo() {
 	}
 
 	for _, ch := range sync.ChannelMap {
-		klog.V(10).Info("synching channel ", ch.Name)
+		klog.V(debugLevel).Info("synching channel ", ch.Name)
 		sync.syncChannel(ch)
 	}
 }
@@ -140,7 +142,7 @@ func (sync *ChannelSynchronizer) processYamlFile(chn *chnv1alpha1.Channel, files
 		if f.Mode().IsRegular() {
 			if strings.EqualFold(filepath.Ext(f.Name()), ".yml") || strings.EqualFold(filepath.Ext(f.Name()), ".yaml") {
 				// check it it is Kubernetes resource
-				klog.V(10).Info("scanning file ", f.Name())
+				klog.V(debugLevel).Info("scanning file ", f.Name())
 				file, _ := ioutil.ReadFile(filepath.Join(dir, f.Name()))
 				t := kubeResource{}
 
@@ -151,9 +153,9 @@ func (sync *ChannelSynchronizer) processYamlFile(chn *chnv1alpha1.Channel, files
 				}
 
 				if t.APIVersion == "" || t.Kind == "" {
-					klog.V(10).Info("Not a Kubernetes resource")
+					klog.V(debugLevel).Info("Not a Kubernetes resource")
 				} else {
-					klog.V(10).Info("Kubernetes resource of kind ", t.Kind, " Creating a deployable.")
+					klog.V(debugLevel).Info("Kubernetes resource of kind ", t.Kind, " Creating a deployable.")
 
 					obj := &unstructured.Unstructured{}
 
@@ -206,8 +208,8 @@ func (sync *ChannelSynchronizer) syncChannel(chn *chnv1alpha1.Channel) {
 		return
 	}
 
-	klog.V(10).Info("There are ", len(idx.Entries), " entries in the index.yaml")
-	klog.V(10).Info("There are ", len(resourceDirs), " non-helm directories.")
+	klog.V(debugLevel).Info("There are ", len(idx.Entries), " entries in the index.yaml")
+	klog.V(debugLevel).Info("There are ", len(resourceDirs), " non-helm directories.")
 
 	// sync kube resource deployables
 	for _, dir := range resourceDirs {
@@ -224,12 +226,12 @@ func (sync *ChannelSynchronizer) syncChannel(chn *chnv1alpha1.Channel) {
 	majorversion := make(map[string]string)        // chartname, chartversion
 
 	for k, cv := range idx.Entries {
-		klog.V(10).Info("Key: ", k)
+		klog.V(debugLevel).Info("Key: ", k)
 
 		chartmap := make(map[string]bool)
 
 		for _, chart := range cv {
-			klog.V(10).Info("Chart:", chart.Name, " Version:", chart.Version)
+			klog.V(debugLevel).Info("Chart:", chart.Name, " Version:", chart.Version)
 
 			chartmap[chart.Version] = false
 		}
@@ -249,7 +251,7 @@ func (sync *ChannelSynchronizer) syncChannel(chn *chnv1alpha1.Channel) {
 	}
 
 	for _, dpl := range dpllist.Items {
-		klog.V(10).Info("synching dpl ", dpl.Name)
+		klog.V(debugLevel).Info("synching dpl ", dpl.Name)
 
 		obj := &helmTemplate{}
 		err := json.Unmarshal(dpl.Spec.Template.Raw, obj)

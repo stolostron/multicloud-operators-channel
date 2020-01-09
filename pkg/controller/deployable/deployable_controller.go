@@ -42,6 +42,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/source"
 )
 
+var debugLevel = klog.Level(10)
+
 /**
 * USER ACTION REQUIRED: This is a scaffold file intended for the user to modify with their own Controller
 * business logic.  Delete these comments after modifying this file.*
@@ -65,7 +67,7 @@ type channelMapper struct {
 }
 
 func (mapper *channelMapper) Map(obj handler.MapObject) []reconcile.Request {
-	if klog.V(10) {
+	if klog.V(debugLevel) {
 		fnName := dplutils.GetFnName()
 		klog.Infof("Entering: %v()", fnName)
 
@@ -117,7 +119,7 @@ type ReconcileDeployable struct {
 
 func (r *ReconcileDeployable) appendEvent(rootInstance *appv1alpha1.Channel, dplkey types.NamespacedName, derror error, reason, addtionalMsg string) error {
 	phost := types.NamespacedName{Namespace: rootInstance.GetNamespace(), Name: rootInstance.GetName()}
-	klog.V(10).Info("Promoted deployable: ", dplkey, ", channel: ", phost, ", message: ", addtionalMsg)
+	klog.V(debugLevel).Info("Promoted deployable: ", dplkey, ", channel: ", phost, ", message: ", addtionalMsg)
 
 	eventType := ""
 	evnetMsg := ""
@@ -145,7 +147,7 @@ func (r *ReconcileDeployable) appendEvent(rootInstance *appv1alpha1.Channel, dpl
 // +kubebuilder:rbac:groups=app.ibm.com,resources=channels/status,verbs=get;update;patch
 func (r *ReconcileDeployable) Reconcile(request reconcile.Request) (reconcile.Result, error) {
 	// Fetch the Channel instance
-	if klog.V(10) {
+	if klog.V(debugLevel) {
 		fnName := dplutils.GetFnName()
 		klog.Infof("Entering: %v()", fnName)
 
@@ -161,7 +163,7 @@ func (r *ReconcileDeployable) Reconcile(request reconcile.Request) (reconcile.Re
 		if errors.IsNotFound(err) {
 			// Object not found, return.  Created objects are automatically garbage collected.
 			// For additional cleanup logic use finalizers.
-			klog.V(10).Info(err)
+			klog.V(debugLevel).Info(err)
 			return reconcile.Result{}, nil
 		}
 		// Error reading the object - requeue the request.
@@ -189,12 +191,12 @@ func (r *ReconcileDeployable) Reconcile(request reconcile.Request) (reconcile.Re
 		return reconcile.Result{}, nil
 	}
 
-	klog.V(10).Infof("Dpl Map, before deletion: %#v", dplmap)
+	klog.V(debugLevel).Infof("Dpl Map, before deletion: %#v", dplmap)
 
 	if len(instance.GetFinalizers()) == 0 {
 		annotations := instance.Annotations
 		if channelnsMap[instance.Namespace] != "" && annotations != nil && annotations[appv1alpha1.KeyChannelSource] != "" && parent == nil {
-			klog.V(10).Infof("Delete instance: The parent of the instance not found: %#v, %#v", annotations[appv1alpha1.KeyChannelSource], instance)
+			klog.V(debugLevel).Infof("Delete instance: The parent of the instance not found: %#v, %#v", annotations[appv1alpha1.KeyChannelSource], instance)
 			return reconcile.Result{}, r.Client.Delete(context.TODO(), instance)
 		}
 
@@ -268,7 +270,7 @@ func (r *ReconcileDeployable) handleOrphanDeployable(dplmap map[string]*dplv1alp
 
 func (r *ReconcileDeployable) propagateDeployableToChannel(deployable *dplv1alpha1.Deployable,
 	dplmap map[string]*dplv1alpha1.Deployable, channel *appv1alpha1.Channel) error {
-	if klog.V(10) {
+	if klog.V(debugLevel) {
 		fnName := dplutils.GetFnName()
 		klog.Infof("Entering: %v()", fnName)
 
@@ -278,7 +280,7 @@ func (r *ReconcileDeployable) propagateDeployableToChannel(deployable *dplv1alph
 	chkey := types.NamespacedName{Name: channel.Name, Namespace: channel.Namespace}.String()
 
 	if deployable.Namespace == channel.Namespace {
-		klog.V(10).Infof("The deployable: %#v exists in channel: %#v.", deployable.GetName(), channel.GetName())
+		klog.V(debugLevel).Infof("The deployable: %#v exists in channel: %#v.", deployable.GetName(), channel.GetName())
 
 		delete(dplmap, chkey)
 
@@ -301,7 +303,7 @@ func (r *ReconcileDeployable) propagateDeployableToChannel(deployable *dplv1alph
 	// // b.1.1 if gate and dpl annotation has a match then promote
 	// // b.1.1 dpl doesn't have annotation, then fail
 	if !utils.ValidateDeployableToChannel(deployable, channel) {
-		klog.V(10).Infof("The deployable %#v can't be promoted to channel %#v.", deployable.GetName(), channel.GetName())
+		klog.V(debugLevel).Infof("The deployable %#v can't be promoted to channel %#v.", deployable.GetName(), channel.GetName())
 		return nil
 	}
 

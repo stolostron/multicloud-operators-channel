@@ -59,7 +59,7 @@ func TestMain(m *testing.M) {
 //	return fn, requests
 //}
 //
-//// StartTestManager adds recFn
+// StartTestManager adds recFn
 //func StartTestManager(mgr manager.Manager, g *gomega.GomegaWithT) (chan struct{}, *sync.WaitGroup) {
 //	stop := make(chan struct{})
 //	wg := &sync.WaitGroup{}

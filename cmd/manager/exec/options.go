@@ -19,18 +19,14 @@ import (
 
 // ChannelCMDOptions for command line flag parsing
 type ChannelCMDOptions struct {
-	MetricsAddr           string
-	CRDPathName           string
-	DeployableCRDPathName string
-	SyncInterval          int
-	LeaderElect           bool
+	MetricsAddr  string
+	SyncInterval int
+	LeaderElect  bool
 }
 
 var options = ChannelCMDOptions{
-	MetricsAddr:           "",
-	SyncInterval:          60,
-	CRDPathName:           "/usr/local/etc/channel/crds/app_v1alpha1_channel.yaml",
-	DeployableCRDPathName: "/usr/local/etc/deployable/crds/app_v1alpha1_deployable.yaml",
+	MetricsAddr:  "",
+	SyncInterval: 60,
 }
 
 // ProcessFlags parses command line parameters into options
@@ -45,31 +41,10 @@ func ProcessFlags() {
 		"The address the metric endpoint binds to.",
 	)
 
-	flag.StringVar(
-		&options.DeployableCRDPathName,
-		"deployable-crd-pathname",
-		options.DeployableCRDPathName,
-		"The pathname of deployable crd file",
-	)
-
-	flag.StringVar(
-		&options.CRDPathName,
-		"channel-crd-pathname",
-		options.CRDPathName,
-		"The pathname of channel crd file",
-	)
-
 	flag.IntVar(
 		&options.SyncInterval,
 		"sync-interval",
 		options.SyncInterval,
 		"Setting up the cache sync time.",
-	)
-
-	flag.BoolVar(
-		&options.LeaderElect,
-		"leader-elect",
-		false,
-		"Enable a leader client to gain leadership before executing the main loop",
 	)
 }

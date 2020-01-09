@@ -62,6 +62,8 @@ var (
 	DeployableAnnotation = "app.ibm.com/deployables"
 )
 
+var debugLevel = klog.Level(10)
+
 /**
 * USER ACTION REQUIRED: This is a scaffold file intended for the user to modify with their own Controller
 * business logic.  Delete these comments after modifying this file.*
@@ -82,7 +84,7 @@ func newReconciler(mgr manager.Manager, recorder record.EventRecorder) reconcile
 
 // add adds a new Controller to mgr with r as the reconcile.Reconciler
 func add(mgr manager.Manager, r reconcile.Reconciler) error {
-	if klog.V(10) {
+	if klog.V(debugLevel) {
 		fnName := dplutils.GetFnName()
 		klog.Infof("Entering: %v()", fnName)
 
@@ -115,7 +117,7 @@ type clusterMapper struct {
 
 // Map triggers all placements
 func (mapper *clusterMapper) Map(obj handler.MapObject) []reconcile.Request {
-	if klog.V(10) {
+	if klog.V(debugLevel) {
 		fnName := dplutils.GetFnName()
 		klog.Infof("Entering: %v()", fnName)
 
@@ -167,7 +169,7 @@ type ReconcileChannel struct {
 // +kubebuilder:rbac:groups=app.ibm.com,resources=channels,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups=app.ibm.com,resources=channels/status,verbs=get;update;patch
 func (r *ReconcileChannel) Reconcile(request reconcile.Request) (reconcile.Result, error) {
-	if klog.V(10) {
+	if klog.V(debugLevel) {
 		fnName := dplutils.GetFnName()
 		klog.Infof("Entering: %v()", fnName)
 
@@ -282,7 +284,7 @@ func (r *ReconcileChannel) updateConfigMap(instance *appv1alpha1.Channel) {
 }
 
 func (r *ReconcileChannel) syncSecrectAnnotation(channel *appv1alpha1.Channel, channelKey types.NamespacedName) {
-	if klog.V(10) {
+	if klog.V(debugLevel) {
 		fnName := dplutils.GetFnName()
 		klog.Infof("Entering: %v()", fnName)
 
@@ -345,7 +347,7 @@ func (r *ReconcileChannel) syncSecrectAnnotation(channel *appv1alpha1.Channel, c
 }
 
 func (r *ReconcileChannel) syncConfigAnnotation(channel *appv1alpha1.Channel, channelKey types.NamespacedName) {
-	if klog.V(10) {
+	if klog.V(debugLevel) {
 		fnName := dplutils.GetFnName()
 		klog.Infof("Entering: %v()", fnName)
 
@@ -402,7 +404,7 @@ func (r *ReconcileChannel) syncConfigAnnotation(channel *appv1alpha1.Channel, ch
 }
 
 func (r *ReconcileChannel) validateClusterRBAC(instance *appv1alpha1.Channel) error {
-	if klog.V(10) {
+	if klog.V(debugLevel) {
 		fnName := dplutils.GetFnName()
 		klog.Infof("Entering: %v()", fnName)
 
