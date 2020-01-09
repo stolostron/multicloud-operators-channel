@@ -127,8 +127,7 @@ func generateIndexYAML(repoRoot string) (*repo.IndexFile, map[string]string, err
 	// In the cloned git repo root, also find all non-helm-chart directories
 	resourceDirs := make(map[string]string)
 
-	var currentChartDir string
-	currentChartDir = "NONE"
+	currentChartDir := "NONE"
 	err := filepath.Walk(repoRoot,
 		func(path string, info os.FileInfo, err error) error {
 			if err != nil {
