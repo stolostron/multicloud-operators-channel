@@ -16,7 +16,7 @@ spec:
       containers:
         - name: multicloud-operators-channel
           # Replace this with the built image name
-          image: REPLACE_IMAGE
+          image: quay.io/multicloudlab/multicloud-operators-channel
           command:
           - multicloud-operators-channel
           imagePullPolicy: Always
