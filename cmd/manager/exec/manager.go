@@ -59,7 +59,7 @@ var (
 	operatorMetricsPort int32 = 8686
 )
 
-var exitCode = 1
+const exitCode = 1
 
 func printVersion() {
 	klog.Info(fmt.Sprintf("Go Version: %s", runtime.Version()))
@@ -67,6 +67,7 @@ func printVersion() {
 	klog.Info(fmt.Sprintf("Version of operator-sdk: %v", sdkVersion.Version))
 }
 
+//RunManager initial controller, synchronizer and start manager
 func RunManager(sig <-chan struct{}) {
 	printVersion()
 

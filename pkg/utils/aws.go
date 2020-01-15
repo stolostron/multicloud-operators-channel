@@ -26,7 +26,7 @@ import (
 	"k8s.io/klog"
 )
 
-var debugLevel = klog.Level(10)
+const debugLevel = klog.Level(10)
 
 // ObjectStore interface
 type ObjectStore interface {
