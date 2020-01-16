@@ -17,8 +17,11 @@ package objectstore
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"reflect"
 	"strings"
+
+	"github.com/pkg/errors"
 
 	"github.com/ghodss/yaml"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
@@ -90,31 +93,29 @@ func (r *ReconcileDeployable) deleteDeployableInObjectStore(request types.Namesp
 func (r *ReconcileDeployable) reconcileForChannel(deployable *appv1alpha1.Deployable) (reconcile.Result, error) {
 	dplchn, err := r.getChannelForNamespace(deployable.Namespace)
 	if dplchn == nil || err != nil {
-		return reconcile.Result{}, nil
+		return reconcile.Result{}, errors.Wrap(err, "failed to find channel deployables")
 	}
 
 	err = r.validateChannel(dplchn)
 	if err != nil {
-		return reconcile.Result{}, nil
+		return reconcile.Result{}, err
 	}
 
 	chndesc, ok := r.ChannelDescriptor.Get(dplchn.Name)
 	if !ok {
-		klog.Info("Failed to get channel description for ", dplchn.Name)
-		return reconcile.Result{}, nil
+		return reconcile.Result{}, errors.New("failed to get deployable from object bucket")
 	}
 
 	template := &unstructured.Unstructured{}
 
 	if deployable.Spec.Template == nil {
 		klog.Warning("Processing deployable without template:", deployable)
-		return reconcile.Result{}, nil
+		return reconcile.Result{}, errors.New(fmt.Sprintf("skip deployables with empty template %v", deployable))
 	}
 
 	err = json.Unmarshal(deployable.Spec.Template.Raw, template)
 	if err != nil {
-		klog.Error("Failed to unmarshal template with error: ", err, " with ", string(deployable.Spec.Template.Raw))
-		return reconcile.Result{}, err
+		return reconcile.Result{}, errors.Wrap(err, fmt.Sprintf("failed to unmarshal template %v", deployable.Spec.Template.Raw))
 	}
 
 	// Only reconcile templates that are not created by objectstore synchronizer
@@ -125,7 +126,7 @@ func (r *ReconcileDeployable) reconcileForChannel(deployable *appv1alpha1.Deploy
 	if tplannotations == nil {
 		tplannotations = make(map[string]string)
 	} else if _, ok := tplannotations[appv1alpha1.AnnotationExternalSource]; ok {
-		return reconcile.Result{}, nil
+		return reconcile.Result{}, errors.New("skip external deployable")
 	}
 	// carry deployable annotations
 	for k, v := range annotations {
@@ -154,7 +155,7 @@ func (r *ReconcileDeployable) reconcileForChannel(deployable *appv1alpha1.Deploy
 	tplb, err := yaml.Marshal(template)
 	if err != nil {
 		klog.V(10).Info("YAML marshall ", template, "error:", err)
-		return reconcile.Result{}, err
+		return reconcile.Result{}, errors.Wrap(err, "yaml marshall failed")
 	}
 
 	var dplGenerateName string
@@ -171,9 +172,11 @@ func (r *ReconcileDeployable) reconcileForChannel(deployable *appv1alpha1.Deploy
 		Content:      tplb,
 		Version:      annotations[appv1alpha1.AnnotationDeployableVersion],
 	}
-	err = chndesc.ObjectStore.Put(chndesc.Bucket, dplObj)
+	if err := chndesc.ObjectStore.Put(chndesc.Bucket, dplObj); err != nil {
+		return reconcile.Result{}, errors.Wrap(err, "failed to put to object bucket")
+	}
 
-	return reconcile.Result{}, err
+	return reconcile.Result{}, nil
 }
 
 func (r *ReconcileDeployable) getChannelForNamespace(namespace string) (*chnv1alpha1.Channel, error) {
@@ -181,19 +184,17 @@ func (r *ReconcileDeployable) getChannelForNamespace(namespace string) (*chnv1al
 
 	err := r.KubeClient.List(context.TODO(), dplchnlist, &client.ListOptions{Namespace: namespace})
 	if err != nil {
-		klog.Info("Failed to find channel info in namespace ", namespace, " with error:", err)
-		return nil, err
+		return nil, errors.Wrap(err, fmt.Sprintf("failed to find deployable from %v", namespace))
 	}
 
 	if len(dplchnlist.Items) != 1 {
-		klog.V(10).Info("Incorrect channel setting for namespace:", namespace, " items:", dplchnlist.Items, " It might be ok if it is not a channel namespace")
-		return nil, err
+		return nil, errors.Wrap(err, fmt.Sprintf("incorrect channel setting %v namespace, itmes %v", namespace, dplchnlist.Items))
 	}
 
 	dplchn := dplchnlist.Items[0].DeepCopy()
 
 	if !strings.EqualFold(string(dplchn.Spec.Type), chnv1alpha1.ChannelTypeObjectBucket) {
-		return nil, nil
+		return nil, errors.New("wrong channel type")
 	}
 
 	return dplchn, nil
@@ -206,14 +207,12 @@ func (r *ReconcileDeployable) validateChannel(dplchn *chnv1alpha1.Channel) error
 
 		err := r.syncChannel(dplchn)
 		if err != nil {
-			klog.Info("Failed to sync channel ", dplchn.Name, " err:", err)
-			return err
+			return errors.Wrap(err, fmt.Sprintf("Failed to sync channel %v", dplchn.Name))
 		}
 	} else {
 		err := r.ChannelDescriptor.ValidateChannel(dplchn, r.KubeClient)
 		if err != nil {
-			klog.Info("Failed to validate channel ", dplchn.Name, " err:", err)
-			return err
+			return errors.Wrap(err, fmt.Sprintf("Failed to validate channel %v", dplchn.Name))
 		}
 	}
 
@@ -225,22 +224,19 @@ func (r *ReconcileDeployable) validateChannel(dplchn *chnv1alpha1.Channel) error
 func (r *ReconcileDeployable) syncChannel(dplchn *chnv1alpha1.Channel) error {
 	err := r.ChannelDescriptor.ValidateChannel(dplchn, r.KubeClient)
 	if err != nil {
-		klog.Info("Failed to validate channel ", dplchn.Name, " err:", err)
-		return err
+		return errors.Wrap(err, fmt.Sprintf("failed to validate channel %v", dplchn.Name))
 	}
 
 	chndesc, ok := r.ChannelDescriptor.Get(dplchn.Name)
 	if !ok {
-		klog.Info("Failed to get channel description for ", dplchn.Name)
-		return nil
+		return errors.New(fmt.Sprintf("failed to get channel description for %v ", dplchn.Name))
 	}
 
 	dpllist := &appv1alpha1.DeployableList{}
 
 	err = r.KubeClient.List(context.TODO(), dpllist, &client.ListOptions{Namespace: dplchn.GetNamespace()})
 	if err != nil {
-		klog.Error("Failed to list all deployable ")
-		return nil
+		return errors.Wrap(err, "failed to list deployables")
 	}
 
 	chndplmap := make(map[string]*appv1alpha1.Deployable)
@@ -250,8 +246,7 @@ func (r *ReconcileDeployable) syncChannel(dplchn *chnv1alpha1.Channel) error {
 
 	objnames, err := chndesc.List(chndesc.Bucket)
 	if err != nil {
-		klog.Error("Failed to list all objects in bucket ", chndesc.Bucket)
-		return nil
+		return errors.Wrap(err, fmt.Sprintf("failed to list all objects in bucket %v ", chndesc.Bucket))
 	}
 
 	for _, name := range objnames {

@@ -18,14 +18,18 @@ import (
 	stdlog "log"
 	"os"
 	"path/filepath"
+	"sync"
 	"testing"
 
 	"k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/client-go/rest"
 	"sigs.k8s.io/controller-runtime/pkg/envtest"
+	"sigs.k8s.io/controller-runtime/pkg/manager"
+	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	chnv1alpha1 "github.com/IBM/multicloud-operators-channel/pkg/apis/app/v1alpha1"
 	"github.com/IBM/multicloud-operators-deployable/pkg/apis"
+	"github.com/onsi/gomega"
 )
 
 var cfg *rest.Config
@@ -54,28 +58,28 @@ func TestMain(m *testing.M) {
 
 // SetupTestReconcile returns a reconcile.Reconcile implementation that delegates to inner and
 // writes the request to requests after Reconcile is finished.
-//func SetupTestReconcile(inner reconcile.Reconciler) (reconcile.Reconciler, chan reconcile.Request) {
-//	requests := make(chan reconcile.Request)
-//	fn := reconcile.Func(func(req reconcile.Request) (reconcile.Result, error) {
-//		result, err := inner.Reconcile(req)
-//		requests <- req
-//
-//		return result, err
-//	})
-//
-//	return fn, requests
-//}
-//
+func SetupTestReconcile(inner reconcile.Reconciler) (reconcile.Reconciler, chan reconcile.Result) {
+	results := make(chan reconcile.Result)
+	fn := reconcile.Func(func(req reconcile.Request) (reconcile.Result, error) {
+		result, err := inner.Reconcile(req)
+		results <- result
+
+		return result, err
+	})
+
+	return fn, results
+}
+
 //// StartTestManager adds recFn
-//func StartTestManager(mgr manager.Manager, g *gomega.GomegaWithT) (chan struct{}, *sync.WaitGroup) {
-//	stop := make(chan struct{})
-//	wg := &sync.WaitGroup{}
-//	wg.Add(1)
-//
-//	go func() {
-//		defer wg.Done()
-//		g.Expect(mgr.Start(stop)).NotTo(gomega.HaveOccurred())
-//	}()
-//
-//	return stop, wg
-//}
+func StartTestManager(mgr manager.Manager, g *gomega.GomegaWithT) (chan struct{}, *sync.WaitGroup) {
+	stop := make(chan struct{})
+	wg := &sync.WaitGroup{}
+	wg.Add(1)
+
+	go func() {
+		defer wg.Done()
+		g.Expect(mgr.Start(stop)).NotTo(gomega.HaveOccurred())
+	}()
+
+	return stop, wg
+}

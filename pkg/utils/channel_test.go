@@ -21,6 +21,7 @@ import (
 
 	"github.com/google/go-cmp/cmp"
 	"github.com/onsi/gomega"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 
 	appv1alpha1 "github.com/IBM/multicloud-operators-channel/pkg/apis/app/v1alpha1"
@@ -29,10 +30,35 @@ import (
 
 // this is mainly testing if a Channel resource can be created or not
 func TestGenerateChannelMap(t *testing.T) {
+	chName := "qa"
+	chNs := "ch-qa"
+
+	key := types.NamespacedName{
+		Name:      chName,
+		Namespace: chNs,
+	}
+	chObj := &appv1alpha1.Channel{
+		TypeMeta: metav1.TypeMeta{
+			Kind:       "app.ibm.com",
+			APIVersion: "v1alpha1",
+		},
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      chName,
+			Namespace: chNs,
+		},
+		Spec: appv1alpha1.ChannelSpec{
+			Type: appv1alpha1.ChannelType("namespace"),
+		},
+	}
+
 	g := gomega.NewWithT(t)
+	ctx := context.TODO()
+
+	g.Expect(c.Create(ctx, chObj)).NotTo(gomega.HaveOccurred())
+	defer c.Delete(ctx, chObj)
 
 	fetched := &appv1alpha1.Channel{}
-	g.Expect(c.Get(context.TODO(), key, fetched)).NotTo(gomega.HaveOccurred())
+	g.Expect(c.Get(ctx, key, fetched)).NotTo(gomega.HaveOccurred())
 
 	got, _ := utils.GenerateChannelMap(c)
 	want := map[string]*appv1alpha1.Channel{chName: fetched}
@@ -43,7 +69,29 @@ func TestGenerateChannelMap(t *testing.T) {
 }
 
 func TestLocateChannel(t *testing.T) {
+	chName := "qa"
+	chNs := "ch-qa"
+
+	chObj := &appv1alpha1.Channel{
+		TypeMeta: metav1.TypeMeta{
+			Kind:       "app.ibm.com",
+			APIVersion: "v1alpha1",
+		},
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      chName,
+			Namespace: chNs,
+		},
+		Spec: appv1alpha1.ChannelSpec{
+			Type: appv1alpha1.ChannelType("namespace"),
+		},
+	}
+
 	g := gomega.NewWithT(t)
+	ctx := context.TODO()
+
+	g.Expect(c.Create(ctx, chObj)).NotTo(gomega.HaveOccurred())
+	defer c.Delete(ctx, chObj)
+
 	got, err := utils.LocateChannel(c, chName)
 
 	if err != nil {
@@ -64,6 +112,13 @@ func TestLocateChannel(t *testing.T) {
 }
 
 func TestUpdateServingChannel(t *testing.T) {
+	chName := "qa"
+	chNs := "ch-qa"
+
+	key := types.NamespacedName{
+		Name:      chName,
+		Namespace: chNs,
+	}
 	testCases := []struct {
 		desc   string
 		srvCh  string

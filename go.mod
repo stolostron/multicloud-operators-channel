@@ -11,6 +11,7 @@ require (
 	github.com/google/go-cmp v0.3.1
 	github.com/onsi/gomega v1.5.0
 	github.com/operator-framework/operator-sdk v0.12.0
+	github.com/pkg/errors v0.8.1
 	github.com/prometheus/common v0.4.1
 	github.com/spf13/pflag v1.0.3
 	golang.org/x/net v0.0.0-20190812203447-cdfb69ac37fc

@@ -92,9 +92,7 @@ func add(mgr manager.Manager, r reconcile.Reconciler) error {
 	}
 
 	// watch for changes to channel too
-	err = c.Watch(&source.Kind{Type: &chnv1alpha1.Channel{}}, &handler.EnqueueRequestsFromMapFunc{ToRequests: &channelMapper{mgr.GetClient()}})
-
-	return err
+	return c.Watch(&source.Kind{Type: &chnv1alpha1.Channel{}}, &handler.EnqueueRequestsFromMapFunc{ToRequests: &channelMapper{mgr.GetClient()}})
 }
 
 var _ reconcile.Reconciler = &ReconcileDeployable{}
@@ -134,9 +132,10 @@ func (r *ReconcileDeployable) Reconcile(request reconcile.Request) (reconcile.Re
 		return reconcile.Result{}, err
 	}
 
-	_, err = r.reconcileForChannel(instance)
+	req, err := r.reconcileForChannel(instance)
 	if err != nil {
 		klog.Error("Failed to reconcile deployable for channel")
+		return req, err
 	}
 
 	return reconcile.Result{}, err
