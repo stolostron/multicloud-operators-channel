@@ -16,11 +16,12 @@ package utils
 
 import (
 	"context"
-	"errors"
+	"fmt"
 	"reflect"
 	"strings"
 	"sync"
 
+	"github.com/pkg/errors"
 	"gopkg.in/yaml.v2"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/types"
@@ -53,41 +54,84 @@ func CreateChannelDescriptor() (*ChannelDescriptor, error) {
 }
 
 // ValidateChannel validates and makes channel object store connection
-func (desc *ChannelDescriptor) ValidateChannel(chn *chnv1alpha1.Channel, kubeClient client.Client) error {
+func (desc *ChannelDescriptor) ValidateChannel(chn *chnv1alpha1.Channel, kubeClient client.Client, objStoreHandler ...ObjectStore) error {
+	var storageHanler ObjectStore
+
+	if len(objStoreHandler) == 0 {
+		storageHanler = &AWSHandler{}
+	} else {
+		storageHanler = objStoreHandler[0]
+	}
+
 	chndesc, _ := desc.Get(chn.Name)
 
+	accessId, secretAccessKey, err := getCredentialFromKube(chn.Spec.SecretRef, chn.GetNamespace(), kubeClient)
+	if err != nil {
+		klog.Error(err)
+		return err
+	}
 	// Add new channel to the map
 	if chndesc == nil {
-		if err := desc.initChannelDescription(chn, kubeClient); err != nil {
-			klog.Error(err, "Unable to initialize channel ObjectStore description")
+
+		if err := desc.initChannelDescription(chn, accessId, secretAccessKey, storageHanler); err != nil {
+			klog.Error(err, "unable to initialize channel ObjectStore description")
 			return err
 		}
-	} else {
-		// Check whether channel description and its object store connection are still valid
-		err := chndesc.ObjectStore.Exists(chndesc.Bucket)
-		if err != nil || !reflect.DeepEqual(chndesc.Channel, chn) {
-			// remove invalid channel description
-			desc.Delete(chn.Name)
-			klog.Info("Updating ObjectStore description for channel ", chn.Name)
-			if err := desc.initChannelDescription(chn, kubeClient); err != nil {
-				klog.Error(err, "Unable to initialize channel ObjectStore description")
-				return err
-			}
+	}
+	// Check whether channel description and its object store connection are still valid
+	err = chndesc.ObjectStore.Exists(chndesc.Bucket)
+	if err != nil || !reflect.DeepEqual(chndesc.Channel, chn) {
+		// remove invalid channel description
+		desc.Delete(chn.Name)
+		klog.Info("updating ObjectStore description for channel ", chn.Name)
+
+		if err := desc.initChannelDescription(chn, accessId, secretAccessKey, chndesc.ObjectStore); err != nil {
+			klog.Error(err, "Unable to initialize channel ObjectStore description")
+			return err
 		}
 	}
 
 	return nil
 }
 
-func (desc *ChannelDescriptor) initChannelDescription(chn *chnv1alpha1.Channel, kubeClient client.Client) error {
+func getCredentialFromKube(secretRef *corev1.ObjectReference, defaultNs string, kubeClient client.Client) (string, string, error) {
+	if secretRef == nil {
+		return "", "", errors.New("failed to get access info to objectstore due to missing referred secret")
+	}
+	accessKeyID := ""
+	secretAccessKey := ""
+
+	secret := &corev1.Secret{}
+	secns := secretRef.Namespace
+
+	if secns == "" {
+		secns = defaultNs
+	}
+
+	err := kubeClient.Get(context.TODO(), types.NamespacedName{Name: secretRef.Name, Namespace: secns}, secret)
+
+	if err != nil {
+		return "", "", errors.Wrap(err, "unable to get secret")
+	}
+
+	err = yaml.Unmarshal(secret.Data[SecretMapKeyAccessKeyID], &accessKeyID)
+	if err != nil {
+		return "", "", errors.Wrap(err, "unable to unmarshal secret")
+	}
+
+	err = yaml.Unmarshal(secret.Data[SecretMapKeySecretAccessKey], &secretAccessKey)
+	if err != nil {
+		return "", "", errors.Wrap(err, "unable to unmarshal secret")
+	}
+	return accessKeyID, secretAccessKey, nil
+}
+
+func (desc *ChannelDescriptor) initChannelDescription(chn *chnv1alpha1.Channel, accessKeyID, secretAccessKey string, objStoreHandler ObjectStore) error {
 	chndesc := &ChannelDescription{}
 
 	pathName := chn.Spec.PathName
 	if pathName == "" {
-		errmsg := "Empty Pathname in channel " + chn.Name
-		klog.Error(errmsg)
-
-		return errors.New(errmsg)
+		return errors.New(fmt.Sprintf("empty pathname in channel %v", chn.Name))
 	}
 
 	if strings.HasSuffix(pathName, "/") {
@@ -101,49 +145,17 @@ func (desc *ChannelDescriptor) initChannelDescription(chn *chnv1alpha1.Channel, 
 
 	klog.Info("Trying to connect to aws ", endpoint, " | ", chndesc.Bucket)
 
-	awshandler := &AWSHandler{}
-	accessKeyID := ""
-	secretAccessKey := ""
-
-	if chn.Spec.SecretRef != nil {
-		secret := &corev1.Secret{}
-		secns := chn.Spec.SecretRef.Namespace
-
-		if secns == "" {
-			secns = chn.Namespace
-		}
-
-		err := kubeClient.Get(context.TODO(), types.NamespacedName{Name: chn.Spec.SecretRef.Name, Namespace: secns}, secret)
-
-		if err != nil {
-			klog.Error(err, "Unable to get secret")
-			return err
-		}
-
-		err = yaml.Unmarshal(secret.Data[SecretMapKeyAccessKeyID], &accessKeyID)
-		if err != nil {
-			klog.Error(err, "Unable to unmarshal secret")
-			return err
-		}
-
-		err = yaml.Unmarshal(secret.Data[SecretMapKeySecretAccessKey], &secretAccessKey)
-		if err != nil {
-			klog.Error(err, "Unable to unmarshal secret")
-			return err
-		}
-	}
-
-	if err := awshandler.InitObjectStoreConnection(endpoint, accessKeyID, secretAccessKey); err != nil {
-		klog.Error(err, "Unable to initialize object store settings")
+	if err := objStoreHandler.InitObjectStoreConnection(endpoint, accessKeyID, secretAccessKey); err != nil {
+		klog.Error(err, "unable to initialize object store settings")
 		return err
 	}
 	// Check whether the connection is setup successfully
-	if err := awshandler.Exists(chndesc.Bucket); err != nil {
-		klog.Error(err, "Unable to access object store bucket ", chndesc.Bucket, " for channel ", chn.Name)
+	if err := objStoreHandler.Exists(chndesc.Bucket); err != nil {
+		klog.Error(err, "nable to access object store bucket ", chndesc.Bucket, " for channel ", chn.Name)
 		return err
 	}
 
-	chndesc.ObjectStore = awshandler
+	chndesc.ObjectStore = objStoreHandler
 
 	chndesc.Channel = chn.DeepCopy()
 

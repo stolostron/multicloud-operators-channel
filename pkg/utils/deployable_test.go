@@ -26,11 +26,12 @@ import (
 	"k8s.io/klog"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
+	"github.com/google/go-cmp/cmp"
+	"github.com/onsi/gomega"
+
 	appv1alpha1 "github.com/IBM/multicloud-operators-channel/pkg/apis/app/v1alpha1"
 	"github.com/IBM/multicloud-operators-channel/pkg/utils"
 	dplv1alpha1 "github.com/IBM/multicloud-operators-deployable/pkg/apis/app/v1alpha1"
-	"github.com/google/go-cmp/cmp"
-	"github.com/onsi/gomega"
 )
 
 type dplElements struct {

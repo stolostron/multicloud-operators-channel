@@ -27,9 +27,10 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
+	"github.com/onsi/gomega"
+
 	chnv1alpha1 "github.com/IBM/multicloud-operators-channel/pkg/apis/app/v1alpha1"
 	"github.com/IBM/multicloud-operators-deployable/pkg/apis"
-	"github.com/onsi/gomega"
 )
 
 var cfg *rest.Config

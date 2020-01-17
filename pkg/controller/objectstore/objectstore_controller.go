@@ -134,7 +134,7 @@ func (r *ReconcileDeployable) Reconcile(request reconcile.Request) (reconcile.Re
 
 	req, err := r.reconcileForChannel(instance)
 	if err != nil {
-		klog.Error("Failed to reconcile deployable for channel")
+		klog.Errorf("failed to reconcile deployable for channel %v, err %v", request.String(), err)
 		return req, err
 	}
 
