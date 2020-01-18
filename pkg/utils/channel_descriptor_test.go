@@ -38,9 +38,10 @@ func (m *myObjectStore) InitObjectStoreConnection(endpoint, accessKeyID, secretA
 	return nil
 }
 
+//it's odd that we request the storage to be pre-set
 func (m *myObjectStore) Exists(bucket string) error {
 	if _, ok := m.clt[bucket]; !ok {
-		return errors.New(fmt.Sprintf("Failed to access bucket %v", bucket))
+		m.Create(bucket)
 	}
 	return nil
 }
@@ -53,7 +54,7 @@ func (m *myObjectStore) Create(bucket string) error {
 func (m *myObjectStore) List(bucket string) ([]string, error) {
 	keys := []string{}
 
-	for k, _ := range m.clt {
+	for k := range m.clt {
 		keys = append(keys, k)
 	}
 	return keys, nil
@@ -93,6 +94,7 @@ func TestValidateChannel(t *testing.T) {
 	testCh := "objch"
 	testNs := "ch-obj"
 	testSrt := "refered-srt"
+
 	refSecret := &v1.Secret{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      testSrt,
@@ -103,11 +105,12 @@ func TestValidateChannel(t *testing.T) {
 			"secretKey": []byte{},
 		},
 	}
+
 	testCases := []struct {
 		desc       string
 		chn        *chnv1alpha1.Channel
 		kubeClient client.Client
-		storage    myObjectStore
+		myStorage  *myObjectStore
 		wanted     string
 	}{
 		{
@@ -124,6 +127,7 @@ func TestValidateChannel(t *testing.T) {
 			},
 			kubeClient: c,
 			wanted:     "failed to get access info to objectstore due to missing referred secret",
+			myStorage:  nil,
 		},
 		{
 			desc: "channel with referred secret",
@@ -144,6 +148,7 @@ func TestValidateChannel(t *testing.T) {
 			},
 			kubeClient: c,
 			wanted:     fmt.Sprintf("empty pathname in channel %v", testCh),
+			myStorage:  nil,
 		},
 		{
 			desc: "channel with referred secret and correct pathname",
@@ -154,7 +159,7 @@ func TestValidateChannel(t *testing.T) {
 				},
 				Spec: chnv1alpha1.ChannelSpec{
 					Type:     chnv1alpha1.ChannelTypeGitHub,
-					PathName: "https://test.com",
+					PathName: "https://www.google.com/",
 					SecretRef: &v1.ObjectReference{
 						Kind:      "Secret",
 						Name:      testSrt,
@@ -163,13 +168,12 @@ func TestValidateChannel(t *testing.T) {
 				},
 			},
 			kubeClient: c,
-			wanted:     fmt.Sprintf("empty pathname in channel %v", testCh),
+			wanted: "" ,
+			myStorage:  &myObjectStore{},
 		},
 	}
 
 	g := gomega.NewGomegaWithT(t)
-
-	var _ utils.ObjectStore myObjectStore
 
 	g.Expect(c.Create(context.TODO(), refSecret)).NotTo(gomega.HaveOccurred())
 	defer c.Delete(context.TODO(), refSecret)
@@ -177,10 +181,19 @@ func TestValidateChannel(t *testing.T) {
 	for _, tC := range testCases {
 		t.Run(tC.desc, func(t *testing.T) {
 			myChDescriptor, _ := utils.CreateChannelDescriptor()
-			got := myChDescriptor.ValidateChannel(tC.chn, tC.kubeClient, tC.storage)
+			var got error
 
-			fmt.Println(got)
-			if diff := cmp.Diff(errors.Cause(got).Error(), tC.wanted); diff != "" {
+			if tC.myStorage == nil {
+				got = myChDescriptor.ValidateChannel(tC.chn, tC.kubeClient)
+			} else {
+				got = myChDescriptor.ValidateChannel(tC.chn, tC.kubeClient, tC.myStorage)
+			}
+
+			unWrapErr := ""
+			if got != nil {
+				unWrapErr = errors.Cause(got).Error()
+			}
+			if diff := cmp.Diff(unWrapErr, tC.wanted); diff != "" {
 				t.Errorf("(+want, -got)\n%s", diff)
 			}
 		})
