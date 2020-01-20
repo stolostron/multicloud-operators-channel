@@ -16,7 +16,6 @@ package utils_test
 
 import (
 	"context"
-	"fmt"
 	"testing"
 
 	chnv1alpha1 "github.com/IBM/multicloud-operators-channel/pkg/apis/app/v1alpha1"
@@ -30,59 +29,59 @@ import (
 )
 
 type myObjectStore struct {
-	clt map[string]map[string]string
+	Clt map[string]map[string]string
 }
 
 func (m *myObjectStore) InitObjectStoreConnection(endpoint, accessKeyID, secretAccessKey string) error {
-	m.clt = make(map[string]map[string]string)
+	m.Clt = make(map[string]map[string]string)
 	return nil
 }
 
 //it's odd that we request the storage to be pre-set
 func (m *myObjectStore) Exists(bucket string) error {
-	if _, ok := m.clt[bucket]; !ok {
+	if _, ok := m.Clt[bucket]; !ok {
 		m.Create(bucket)
 	}
 	return nil
 }
 
 func (m *myObjectStore) Create(bucket string) error {
-	m.clt[bucket] = make(map[string]string)
+	m.Clt[bucket] = make(map[string]string)
 	return nil
 }
 
 func (m *myObjectStore) List(bucket string) ([]string, error) {
 	keys := []string{}
 
-	for k := range m.clt {
+	for k := range m.Clt {
 		keys = append(keys, k)
 	}
 	return keys, nil
 }
 
 func (m *myObjectStore) Put(bucket string, dplObj utils.DeployableObject) error {
-	m.clt[bucket] = map[string]string{
+	m.Clt[bucket] = map[string]string{
 		"name": dplObj.Name,
 	}
 	return nil
 }
 
 func (m *myObjectStore) Delete(bucket, name string) error {
-	if _, ok := m.clt[bucket]; !ok {
+	if _, ok := m.Clt[bucket]; !ok {
 		return errors.New("empty bucket")
 	}
 
-	delete(m.clt, bucket)
+	delete(m.Clt, bucket)
 
 	return nil
 }
 
 func (m *myObjectStore) Get(bucket, name string) (utils.DeployableObject, error) {
-	if _, ok := m.clt[bucket]; !ok {
+	if _, ok := m.Clt[bucket]; !ok {
 		return utils.DeployableObject{}, errors.New("empty bucket")
 	}
 
-	bucketMap := m.clt[bucket]
+	bucketMap := m.Clt[bucket]
 	dplObj := utils.DeployableObject{
 		Name: bucketMap["name"],
 	}
@@ -94,6 +93,7 @@ func TestValidateChannel(t *testing.T) {
 	testCh := "objch"
 	testNs := "ch-obj"
 	testSrt := "refered-srt"
+	testBucket := "bucket"
 
 	refSecret := &v1.Secret{
 		ObjectMeta: metav1.ObjectMeta{
@@ -111,7 +111,7 @@ func TestValidateChannel(t *testing.T) {
 		chn        *chnv1alpha1.Channel
 		kubeClient client.Client
 		myStorage  *myObjectStore
-		wanted     string
+		wanted     *myObjectStore
 	}{
 		{
 			desc: "channel without referred secret",
@@ -126,7 +126,7 @@ func TestValidateChannel(t *testing.T) {
 				},
 			},
 			kubeClient: c,
-			wanted:     "failed to get access info to objectstore due to missing referred secret",
+			wanted:     nil,
 			myStorage:  nil,
 		},
 		{
@@ -147,11 +147,11 @@ func TestValidateChannel(t *testing.T) {
 				},
 			},
 			kubeClient: c,
-			wanted:     fmt.Sprintf("empty pathname in channel %v", testCh),
+			wanted:     nil,
 			myStorage:  nil,
 		},
 		{
-			desc: "channel with referred secret and correct pathname",
+			desc: "channel with referred secret and correct pathname with empty storage",
 			chn: &chnv1alpha1.Channel{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      testCh,
@@ -159,7 +159,7 @@ func TestValidateChannel(t *testing.T) {
 				},
 				Spec: chnv1alpha1.ChannelSpec{
 					Type:     chnv1alpha1.ChannelTypeGitHub,
-					PathName: "https://www.google.com/",
+					PathName: "https://www.google.com/" + testBucket + "/",
 					SecretRef: &v1.ObjectReference{
 						Kind:      "Secret",
 						Name:      testSrt,
@@ -168,8 +168,16 @@ func TestValidateChannel(t *testing.T) {
 				},
 			},
 			kubeClient: c,
-			wanted: "" ,
-			myStorage:  &myObjectStore{},
+			myStorage: &myObjectStore{
+				Clt: map[string]map[string]string{
+					testBucket: make(map[string]string),
+				},
+			},
+			wanted: &myObjectStore{
+				Clt: map[string]map[string]string{
+					testBucket: map[string]string{},
+				},
+			},
 		},
 	}
 
@@ -181,19 +189,14 @@ func TestValidateChannel(t *testing.T) {
 	for _, tC := range testCases {
 		t.Run(tC.desc, func(t *testing.T) {
 			myChDescriptor, _ := utils.CreateChannelDescriptor()
-			var got error
 
 			if tC.myStorage == nil {
-				got = myChDescriptor.ValidateChannel(tC.chn, tC.kubeClient)
+				_ = myChDescriptor.ValidateChannel(tC.chn, tC.kubeClient)
 			} else {
-				got = myChDescriptor.ValidateChannel(tC.chn, tC.kubeClient, tC.myStorage)
+				_ = myChDescriptor.ValidateChannel(tC.chn, tC.kubeClient, tC.myStorage)
 			}
 
-			unWrapErr := ""
-			if got != nil {
-				unWrapErr = errors.Cause(got).Error()
-			}
-			if diff := cmp.Diff(unWrapErr, tC.wanted); diff != "" {
+			if diff := cmp.Diff(tC.myStorage, tC.wanted); diff != "" {
 				t.Errorf("(+want, -got)\n%s", diff)
 			}
 		})
