@@ -258,20 +258,12 @@ func (r *ReconcileDeployable) syncChannel(dplchn *chnv1alpha1.Channel) error {
 
 		objtpl := &unstructured.Unstructured{}
 
-		err = yaml.Unmarshal(dplObj.Content, objtpl)
-		if err != nil {
-			klog.Error("Failed to unmashall ", chndesc.Bucket, "/", name, " err:", err)
+		if err := yaml.Unmarshal(dplObj.Content, objtpl); err != nil {
+			klog.Error("Failed to get object ", chndesc.Bucket, "/", name, " err:", err)
 			continue
 		}
 
-		// Only sync (delete/update) templates created and uploaded to objectstore by deployables Reconcile
-		// meaning AnnotationHosting must be set in their template
-		tplannotations := objtpl.GetAnnotations()
-		if tplannotations == nil {
-			continue
-		}
-
-		if _, ok := tplannotations[appv1alpha1.AnnotationHosting]; !ok {
+		if !isValidObj(objtpl) {
 			continue
 		}
 
@@ -286,58 +278,23 @@ func (r *ReconcileDeployable) syncChannel(dplchn *chnv1alpha1.Channel) error {
 		}
 
 		// Update templates if they are updated in the channel namespace
-		dpltpl := &unstructured.Unstructured{}
-
 		dpl := chndplmap[name]
-		if dpl.Spec.Template == nil {
-			klog.Warning("Processing deployable without template:", dpl)
-			continue
-		}
 
-		err = json.Unmarshal(dpl.Spec.Template.Raw, dpltpl)
-
+		dpltpl, err := prepareDeployalbeTemplate(dpl)
 		if err != nil {
-			klog.Error("Failed to unmashall ", chndesc.Bucket, "/", name, " err:", err)
 			continue
-		}
-
-		// Update template annotations from deployable annotations
-		dpltplannotations := dpltpl.GetAnnotations()
-		if dpltplannotations == nil {
-			dpltplannotations = make(map[string]string)
-		}
-
-		for k, v := range dpl.GetAnnotations() {
-			dpltplannotations[k] = v
-		}
-
-		hosting := types.NamespacedName{Name: dpl.GetName(), Namespace: dpl.GetNamespace()}.String()
-		dpltplannotations[appv1alpha1.AnnotationHosting] = hosting
-		dpltpl.SetAnnotations(dpltplannotations)
-
-		// Update template labels from deployable labels
-		labels := dpl.GetLabels()
-		if len(labels) > 0 {
-			tpllbls := dpltpl.GetLabels()
-			if tpllbls == nil {
-				tpllbls = make(map[string]string)
-			}
-
-			for k, v := range labels {
-				tpllbls[k] = v
-			}
-
-			dpltpl.SetLabels(tpllbls)
 		}
 
 		if !reflect.DeepEqual(objtpl, dpltpl) {
 			dplb, err := yaml.Marshal(dpltpl)
 			if err != nil {
-				klog.Error("YAML UnMashall ", dpl, " err:", err)
+				klog.Error("YAML unMashall ", dpl, " err:", err)
 				continue
 			}
 
 			dplObj.Content = dplb
+
+			dpltplannotations := dpltpl.GetAnnotations()
 			dplObj.Version = dpltplannotations[appv1alpha1.AnnotationDeployableVersion]
 
 			err = chndesc.ObjectStore.Put(chndesc.Bucket, dplObj)
@@ -348,4 +305,63 @@ func (r *ReconcileDeployable) syncChannel(dplchn *chnv1alpha1.Channel) error {
 	}
 
 	return nil
+}
+
+func isValidObj(objtpl *unstructured.Unstructured) bool {
+	tplannotations := objtpl.GetAnnotations()
+	if tplannotations == nil {
+		return false
+	}
+
+	if _, ok := tplannotations[appv1alpha1.AnnotationHosting]; !ok {
+		return false
+	}
+
+	return true
+}
+
+func prepareDeployalbeTemplate(dpl *appv1alpha1.Deployable) (*unstructured.Unstructured, error) {
+	dpltpl := &unstructured.Unstructured{}
+
+	if dpl.Spec.Template == nil {
+		klog.Warning("Processing deployable without template:", dpl)
+		return dpltpl, errors.New(fmt.Sprintf("processing deployable %v without template", dpl))
+	}
+
+	err := json.Unmarshal(dpl.Spec.Template.Raw, dpltpl)
+
+	if err != nil {
+		return dpltpl, errors.New(fmt.Sprintf("failed to unmashall deployable %v, err: %v", dpl, err))
+	}
+
+	// Update template annotations from deployable annotations
+	dpltplannotations := dpltpl.GetAnnotations()
+	if dpltplannotations == nil {
+		dpltplannotations = make(map[string]string)
+	}
+
+	for k, v := range dpl.GetAnnotations() {
+		dpltplannotations[k] = v
+	}
+
+	hosting := types.NamespacedName{Name: dpl.GetName(), Namespace: dpl.GetNamespace()}.String()
+	dpltplannotations[appv1alpha1.AnnotationHosting] = hosting
+	dpltpl.SetAnnotations(dpltplannotations)
+
+	// Update template labels from deployable labels
+	labels := dpl.GetLabels()
+	if len(labels) > 0 {
+		tpllbls := dpltpl.GetLabels()
+		if tpllbls == nil {
+			tpllbls = make(map[string]string)
+		}
+
+		for k, v := range labels {
+			tpllbls[k] = v
+		}
+
+		dpltpl.SetLabels(tpllbls)
+	}
+
+	return dpltpl, nil
 }

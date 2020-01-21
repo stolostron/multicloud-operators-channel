@@ -70,10 +70,11 @@ const dplChild = "dplchild"
 const dplOrphan = "dplorphan"
 
 // create some pre-define dpl obj to test the relationship
-func initObjQueue(ObjTobeCreated []*dplv1alpha1.Deployable) map[string]*dplv1alpha1.Deployable {
-
+func initObjQueue() ([]*dplv1alpha1.Deployable, map[string]*dplv1alpha1.Deployable) {
 	dplNs := "default"
 	chName := "qa"
+
+	var initObjs []*dplv1alpha1.Deployable
 
 	TestDpls := make(map[string]*dplv1alpha1.Deployable)
 
@@ -91,10 +92,10 @@ func initObjQueue(ObjTobeCreated []*dplv1alpha1.Deployable) map[string]*dplv1alp
 			TestDpls[dpl.name] = t
 		}
 
-		ObjTobeCreated = append(ObjTobeCreated, dplGenerator(dpl))
+		initObjs = append(initObjs, dplGenerator(dpl))
 	}
 
-	return TestDpls
+	return initObjs, TestDpls
 }
 
 func deploybObjects(ctx context.Context, c client.Client, objs []*dplv1alpha1.Deployable) {
@@ -116,14 +117,13 @@ type Expected struct {
 }
 
 func TestFindDeployableForChannelsInMap(t *testing.T) {
-
 	var chName = "qa"
 
-	var initObjs []*dplv1alpha1.Deployable
-	TestDpls := initObjQueue(initObjs)
+	initObjs, TestDpls := initObjQueue()
 
 	ctx := context.TODO()
 	deploybObjects(ctx, c, initObjs)
+
 	defer deleteObjects(ctx, c, initObjs)
 
 	testCases := []struct {
@@ -531,9 +531,11 @@ func TestCleanupDeployables(t *testing.T) {
 	delFuncs := []func(){}
 
 	g := gomega.NewGomegaWithT(t)
+
 	for _, d := range dplList {
 		delFunc, err := GenerateCRsAtLocalKube(c, d)
 		g.Expect(err).NotTo(gomega.HaveOccurred())
+
 		delFuncs = append(delFuncs, delFunc)
 	}
 
@@ -555,13 +557,11 @@ func TestGenerateDeployableForChannel(t *testing.T) {
 	testNamespace := "a-ns"
 	testDplName := "tDpl"
 	testCh := "tCh"
-	//	theAnno := map[string]string{"who": "bear"}
 	theAnnoA := map[string]string{"who": "bear", "what": "beer"}
 	labels := map[string]string{
 		"you": "yes",
 		"who": "no",
 	}
-	//	theAnnoB := map[string]string{"hmm": "eh"}
 
 	chkey := types.NamespacedName{Name: testCh, Namespace: testNamespace}
 
@@ -622,7 +622,6 @@ func TestGenerateDeployableForChannel(t *testing.T) {
 			if diff := cmp.Diff(tC.want, got); diff != "" {
 				t.Errorf("GenerateDeployableForChannel fail (-wantl +got):\n%s", diff)
 			}
-
 		})
 	}
 }

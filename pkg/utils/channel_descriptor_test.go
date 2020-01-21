@@ -18,14 +18,15 @@ import (
 	"context"
 	"testing"
 
-	chnv1alpha1 "github.com/IBM/multicloud-operators-channel/pkg/apis/app/v1alpha1"
-	"github.com/IBM/multicloud-operators-channel/pkg/utils"
 	"github.com/google/go-cmp/cmp"
 	"github.com/onsi/gomega"
 	"github.com/pkg/errors"
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+
+	chnv1alpha1 "github.com/IBM/multicloud-operators-channel/pkg/apis/app/v1alpha1"
+	"github.com/IBM/multicloud-operators-channel/pkg/utils"
 )
 
 type myObjectStore struct {
@@ -42,11 +43,13 @@ func (m *myObjectStore) Exists(bucket string) error {
 	if _, ok := m.Clt[bucket]; !ok {
 		m.Create(bucket)
 	}
+
 	return nil
 }
 
 func (m *myObjectStore) Create(bucket string) error {
 	m.Clt[bucket] = make(map[string]string)
+
 	return nil
 }
 
@@ -56,6 +59,7 @@ func (m *myObjectStore) List(bucket string) ([]string, error) {
 	for k := range m.Clt {
 		keys = append(keys, k)
 	}
+
 	return keys, nil
 }
 
@@ -63,6 +67,7 @@ func (m *myObjectStore) Put(bucket string, dplObj utils.DeployableObject) error 
 	m.Clt[bucket] = map[string]string{
 		"name": dplObj.Name,
 	}
+
 	return nil
 }
 
@@ -92,7 +97,7 @@ func (m *myObjectStore) Get(bucket, name string) (utils.DeployableObject, error)
 func TestValidateChannel(t *testing.T) {
 	testCh := "objch"
 	testNs := "ch-obj"
-	testSrt := "refered-srt"
+	testSrt := "referred-srt"
 	testBucket := "bucket"
 
 	refSecret := &v1.Secret{
@@ -101,8 +106,8 @@ func TestValidateChannel(t *testing.T) {
 			Namespace: testNs,
 		},
 		Data: map[string][]byte{
-			"accessId":  []byte{},
-			"secretKey": []byte{},
+			"accessId":  {},
+			"secretKey": {},
 		},
 	}
 
@@ -175,7 +180,7 @@ func TestValidateChannel(t *testing.T) {
 			},
 			wanted: &myObjectStore{
 				Clt: map[string]map[string]string{
-					testBucket: map[string]string{},
+					testBucket: {},
 				},
 			},
 		},

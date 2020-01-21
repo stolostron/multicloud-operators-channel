@@ -76,6 +76,7 @@ func (desc *ChannelDescriptor) ValidateChannel(chn *chnv1alpha1.Channel, kubeCli
 			klog.Error(err, "unable to initialize channel ObjectStore description")
 			return err
 		}
+
 		return nil
 	}
 	// Check whether channel description and its object store connection are still valid
@@ -98,6 +99,7 @@ func getCredentialFromKube(secretRef *corev1.ObjectReference, defaultNs string, 
 	if secretRef == nil {
 		return "", "", errors.New("failed to get access info to objectstore due to missing referred secret")
 	}
+
 	accessKeyID := ""
 	secretAccessKey := ""
 
@@ -123,6 +125,7 @@ func getCredentialFromKube(secretRef *corev1.ObjectReference, defaultNs string, 
 	if err != nil {
 		return "", "", errors.Wrap(err, "unable to unmarshal secret")
 	}
+
 	return accessKeyID, secretAccessKey, nil
 }
 

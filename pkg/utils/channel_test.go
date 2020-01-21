@@ -183,6 +183,7 @@ func TestUpdateServingChannel(t *testing.T) {
 
 func convertCommaStringToMap(s string) map[string]bool {
 	m := make(map[string]bool)
+
 	if s == "" {
 		return m
 	}

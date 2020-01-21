@@ -17,6 +17,7 @@ package githubsynchronizer
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"io/ioutil"
 	"os"
 	"path/filepath"
@@ -24,6 +25,7 @@ import (
 	"time"
 
 	"github.com/ghodss/yaml"
+	"github.com/pkg/errors"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/rest"
@@ -154,46 +156,50 @@ func (sync *ChannelSynchronizer) processYamlFile(chn *chnv1alpha1.Channel, files
 
 				if t.APIVersion == "" || t.Kind == "" {
 					klog.V(debugLevel).Info("Not a Kubernetes resource")
-				} else {
-					klog.V(debugLevel).Info("Kubernetes resource of kind ", t.Kind, " Creating a deployable.")
-
-					obj := &unstructured.Unstructured{}
-
-					err = yaml.Unmarshal(file, &obj)
-					if err != nil {
-						klog.Info("Failed to unmarshal Kubernetes resource, err:", err)
-						break
-					}
-
-					dpl := &dplv1alpha1.Deployable{}
-					dpl.Name = strings.ToLower(chn.GetName() + "-" + t.Kind + "-deployable")
-					dpl.Namespace = chn.GetNamespace()
-
-					err = controllerutil.SetControllerReference(chn, dpl, sync.Scheme)
-					if err != nil {
-						klog.Info("Failed to set controller reference, err:", err)
-						break
-					}
-
-					dplanno := make(map[string]string)
-					dplanno[dplv1alpha1.AnnotationExternalSource] = f.Name()
-					dplanno[dplv1alpha1.AnnotationLocal] = "false"
-					dplanno[dplv1alpha1.AnnotationDeployableVersion] = t.APIVersion
-					dpl.SetAnnotations(dplanno)
-					dpl.Spec.Template = &runtime.RawExtension{}
-					dpl.Spec.Template.Raw, err = json.Marshal(obj)
-					if err != nil {
-						klog.Info("Failed to marshal helm CR to template, err:", err)
-						break
-					}
-					err = sync.kubeClient.Create(context.TODO(), dpl)
-					if err != nil {
-						klog.Info("Failed to create helmrelease deployable, err:", err)
-					}
+				} else if err := sync.handleSingleDeployable(chn, f, file, t); err != nil {
+					klog.Error(errors.Cause(err).Error())
 				}
 			}
 		}
 	}
+}
+
+func (sync *ChannelSynchronizer) handleSingleDeployable(chn *chnv1alpha1.Channel, fileinfo os.FileInfo, filecontent []byte, t kubeResource) error {
+	klog.V(debugLevel).Info("Kubernetes resource of kind ", t.Kind, " Creating a deployable.")
+
+	obj := &unstructured.Unstructured{}
+
+	if err := yaml.Unmarshal(filecontent, &obj); err != nil {
+		return errors.Wrap(err, "failed to unmarshal Kubernetes resource")
+	}
+
+	dpl := &dplv1alpha1.Deployable{}
+	dpl.Name = strings.ToLower(chn.GetName() + "-" + t.Kind + "-deployable")
+	dpl.Namespace = chn.GetNamespace()
+
+	if err := controllerutil.SetControllerReference(chn, dpl, sync.Scheme); err != nil {
+		return errors.Wrap(err, "failed to set controller reference")
+	}
+
+	dplanno := make(map[string]string)
+	dplanno[dplv1alpha1.AnnotationExternalSource] = fileinfo.Name()
+	dplanno[dplv1alpha1.AnnotationLocal] = "false"
+	dplanno[dplv1alpha1.AnnotationDeployableVersion] = t.APIVersion
+	dpl.SetAnnotations(dplanno)
+	dpl.Spec.Template = &runtime.RawExtension{}
+
+	var err error
+	dpl.Spec.Template.Raw, err = json.Marshal(obj)
+
+	if err != nil {
+		return errors.Wrap(err, "failed to marshal helm CR to template")
+	}
+
+	if err := sync.kubeClient.Create(context.TODO(), dpl); err != nil {
+		return errors.Wrap(err, "failed to create deployable")
+	}
+
+	return nil
 }
 
 func (sync *ChannelSynchronizer) syncChannel(chn *chnv1alpha1.Channel) {
@@ -251,67 +257,68 @@ func (sync *ChannelSynchronizer) syncChannel(chn *chnv1alpha1.Channel) {
 	}
 
 	for _, dpl := range dpllist.Items {
-		klog.V(debugLevel).Info("synching dpl ", dpl.Name)
-
-		obj := &helmTemplate{}
-		err := json.Unmarshal(dpl.Spec.Template.Raw, obj)
-
-		if err != nil {
-			klog.Warning("Processing local deployable with error template:", dpl, err)
-
-			continue
-		}
-
-		if obj.Kind != utils.HelmCRKind || obj.APIVersion != utils.HelmCRAPIVersion {
-			klog.Info("Skipping non helm chart deployable:", obj.Kind, ".", obj.APIVersion)
-
-			continue
-		}
-
-		cname := obj.Spec.ChartName
-		cver := obj.Spec.Version
-
-		keep := false
-		chmap := generalmap[cname]
-
-		if cname != "" || cver != "" {
-			if chmap != nil {
-				if _, ok := chmap[cver]; ok {
-					klog.Info("keeping it ", cname, cver)
-
-					keep = true
-				}
-			}
-		}
-
-		if !keep {
-			klog.Info("deleting it ", cname, cver)
-
-			err = sync.kubeClient.Delete(context.TODO(), &dpl)
-			if err != nil {
-				klog.Errorf("Failed to delete deployable %v, due to  err: %v", dpl.Name, err)
-				break
-			}
-		} else {
-			chmap[cver] = true
-			var crepo string
-			if strings.EqualFold(string(chn.Spec.Type), chnv1alpha1.ChannelTypeGitHub) {
-				crepo = obj.Spec.Source.GitHub.URLs[0]
-			} else {
-				crepo = obj.Spec.Source.HelmRepo.URLs[0]
-			}
-			if crepo != chn.Spec.PathName {
-				klog.Info("path changed ")
-				//here might need to do a better code review to see if `crepo = chn.Spec.PathName` is needed
-				err = sync.kubeClient.Update(context.TODO(), &dpl)
-				if err != nil {
-					klog.Error("Failed to update deployable in helm repo channel:", dpl.Name, " to ", chn.Spec.PathName)
-				}
-			}
+		if err := sync.handleDeployable(dpl, chn, generalmap); err != nil {
+			klog.Errorf(errors.Cause(err).Error())
 		}
 	}
 
 	sync.processGeneralMap(idx, chn, majorversion, generalmap)
+}
+
+func (sync *ChannelSynchronizer) handleDeployable(dpl dplv1alpha1.Deployable, chn *chnv1alpha1.Channel, generalmap map[string]map[string]bool) error {
+	klog.V(debugLevel).Infof("synching dpl %v", dpl.Name)
+
+	obj := &helmTemplate{}
+
+	if err := json.Unmarshal(dpl.Spec.Template.Raw, obj); err != nil {
+		return errors.New(fmt.Sprintf("failed to unmarshal deployable %v with err %v", dpl, err))
+	}
+
+	if obj.Kind != utils.HelmCRKind || obj.APIVersion != utils.HelmCRAPIVersion {
+		return errors.New(fmt.Sprintf("Skipping non helm chart deployable %v.%v", obj.Kind, obj.APIVersion))
+	}
+
+	cname := obj.Spec.ChartName
+	cver := obj.Spec.Version
+
+	keep := false
+	chmap := generalmap[cname]
+
+	if cname != "" || cver != "" {
+		if chmap != nil {
+			if _, ok := chmap[cver]; ok {
+				klog.Info("keeping it ", cname, cver)
+
+				keep = true
+			}
+		}
+	}
+
+	if !keep {
+		klog.Info("deleting it ", cname, cver)
+
+		if err := sync.kubeClient.Delete(context.TODO(), &dpl); err != nil {
+			return errors.Wrap(err, fmt.Sprintf("failed to delete deployable %v", dpl.Name))
+		}
+	} else {
+		chmap[cver] = true
+		var crepo string
+		if strings.EqualFold(string(chn.Spec.Type), chnv1alpha1.ChannelTypeGitHub) {
+			crepo = obj.Spec.Source.GitHub.URLs[0]
+		} else {
+			crepo = obj.Spec.Source.HelmRepo.URLs[0]
+		}
+
+		if crepo != chn.Spec.PathName {
+			klog.Infof("channel %v path changed to %v", chn.GetName(), chn.Spec.PathName)
+			//here might need to do a better code review to see if `crepo = chn.Spec.PathName` is needed
+			if err := sync.kubeClient.Update(context.TODO(), &dpl); err != nil {
+				return errors.Wrap(err, fmt.Sprintf("failed to update deployable %v in helm repo channel %v", dpl.Name, chn.Spec.PathName))
+			}
+		}
+	}
+
+	return nil
 }
 
 func (sync *ChannelSynchronizer) processGeneralMap(idx *repo.IndexFile, chn *chnv1alpha1.Channel,

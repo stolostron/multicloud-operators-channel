@@ -208,6 +208,7 @@ func Test_getChannelForNamespace(t *testing.T) {
 
 func assertChannelObject(t *testing.T, want, got *chnv1alpha1.Channel) {
 	t.Helper()
+
 	if want == nil && got == nil {
 		return
 	}
@@ -225,5 +226,4 @@ func assertChannelObject(t *testing.T, want, got *chnv1alpha1.Channel) {
 	if want.GetName() == got.GetName() && want.GetNamespace() == got.GetNamespace() {
 		return
 	}
-
 }
