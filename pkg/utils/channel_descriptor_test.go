@@ -193,7 +193,7 @@ func TestValidateChannel(t *testing.T) {
 
 	for _, tC := range testCases {
 		t.Run(tC.desc, func(t *testing.T) {
-			myChDescriptor, _ := utils.CreateChannelDescriptor()
+			myChDescriptor, _ := utils.CreateObjectStorageChannelDescriptor()
 
 			if tC.myStorage == nil {
 				_ = myChDescriptor.ValidateChannel(tC.chn, tC.kubeClient)

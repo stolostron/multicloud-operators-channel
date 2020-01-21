@@ -47,7 +47,7 @@ func TestObjstoreController(t *testing.T) {
 	mgr, err := manager.New(cfg, manager.Options{MetricsBindAddress: "0"})
 	g.Expect(err).NotTo(gomega.HaveOccurred())
 
-	chDesc, err := utils.CreateChannelDescriptor()
+	chDesc, err := utils.CreateObjectStorageChannelDescriptor()
 	g.Expect(err).NotTo(gomega.HaveOccurred())
 
 	rec := newReconciler(mgr, chDesc)
@@ -95,7 +95,7 @@ func Test_getChannelForNamespace(t *testing.T) {
 	mgr, err := manager.New(cfg, manager.Options{MetricsBindAddress: "0"})
 	g.Expect(err).NotTo(gomega.HaveOccurred())
 
-	chDesc, err := utils.CreateChannelDescriptor()
+	chDesc, err := utils.CreateObjectStorageChannelDescriptor()
 	g.Expect(err).NotTo(gomega.HaveOccurred())
 
 	rec := newReconciler(mgr, chDesc)

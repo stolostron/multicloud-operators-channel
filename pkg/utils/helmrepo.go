@@ -26,10 +26,6 @@ import (
 	"k8s.io/klog"
 )
 
-const (
-	infoLevel = klog.Level(5)
-)
-
 func decideHTTPClient(repoURL string) *http.Client {
 	klog.V(infoLevel).Info(repoURL)
 

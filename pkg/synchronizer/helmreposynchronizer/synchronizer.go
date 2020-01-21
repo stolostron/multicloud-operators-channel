@@ -28,11 +28,12 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 
+	"github.com/pkg/errors"
+
 	chnv1alpha1 "github.com/IBM/multicloud-operators-channel/pkg/apis/app/v1alpha1"
 	"github.com/IBM/multicloud-operators-channel/pkg/utils"
 	dplv1alpha1 "github.com/IBM/multicloud-operators-deployable/pkg/apis/app/v1alpha1"
 	deputils "github.com/IBM/multicloud-operators-deployable/pkg/utils"
-	"github.com/pkg/errors"
 )
 
 // ChannelSynchronizer syncs objectbucket channels with helmrepo
