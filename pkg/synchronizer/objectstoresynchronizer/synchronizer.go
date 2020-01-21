@@ -50,7 +50,7 @@ type ChannelSynchronizer struct {
 }
 
 // CreateSynchronizer - creates an instance of ChannelSynchronizer
-func CreateSynchronizer(config *rest.Config, chdesc *utils.ChannelDescriptor, syncInterval int) (*ChannelSynchronizer, error) {
+func CreateObjectStoreSynchronizer(config *rest.Config, chdesc *utils.ChannelDescriptor, syncInterval int) (*ChannelSynchronizer, error) {
 	client, err := client.New(config, client.Options{})
 	if err != nil {
 		klog.Error("Failed to initialize client for synchronizer. err: ", err)

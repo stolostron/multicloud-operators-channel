@@ -45,7 +45,7 @@ type ChannelDescriptor struct {
 }
 
 // CreateChannelDescriptor - creates an instance of ChannelDescriptor
-func CreateChannelDescriptor() (*ChannelDescriptor, error) {
+func CreateObjectStorageChannelDescriptor() (*ChannelDescriptor, error) {
 	c := &ChannelDescriptor{
 		channelDescriptorMap: make(map[string]*ChannelDescription),
 	}

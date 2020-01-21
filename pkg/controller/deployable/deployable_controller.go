@@ -173,7 +173,7 @@ func (r *ReconcileDeployable) Reconcile(request reconcile.Request) (reconcile.Re
 	channelmap, err := utils.GenerateChannelMap(r.Client)
 	if err != nil {
 		if !errors.IsNotFound(err) {
-			klog.Error("Failed to get all deployables")
+			klog.Error("failed to get all deployables")
 			return reconcile.Result{}, nil
 		}
 

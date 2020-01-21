@@ -84,7 +84,7 @@ type kubeResource struct {
 }
 
 // CreateSynchronizer - creates an instance of ChannelSynchronizer
-func CreateSynchronizer(config *rest.Config, scheme *runtime.Scheme, syncInterval int) (*ChannelSynchronizer, error) {
+func CreateGithubSynchronizer(config *rest.Config, scheme *runtime.Scheme, syncInterval int) (*ChannelSynchronizer, error) {
 	client, err := client.New(config, client.Options{})
 	if err != nil {
 		klog.Error("Failed to initialize client for synchronizer. err: ", err)

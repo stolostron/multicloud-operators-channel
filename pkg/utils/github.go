@@ -40,7 +40,8 @@ const (
 	// UserID is key of GitHub user ID in secret
 	UserID = "user"
 	// Password is key of GitHub user password or personal token in secret
-	Password = "password"
+	Password   = "password"
+	debugLevel = klog.Level(10)
 )
 
 // CloneGitRepo clones the GitHub repo
@@ -104,7 +105,7 @@ func CloneGitRepo(chn *chnv1alpha1.Channel, kubeClient client.Client) (*repo.Ind
 		}
 	}
 
-	klog.V(10).Info("Cloning ", chn.Spec.PathName, " into ", repoRoot)
+	klog.V(debugLevel).Info("Cloning ", chn.Spec.PathName, " into ", repoRoot)
 	_, err := git.PlainClone(repoRoot, false, options)
 
 	if err != nil {
@@ -134,16 +135,16 @@ func generateIndexYAML(repoRoot string) (*repo.IndexFile, map[string]string, err
 				return err
 			}
 			if info.IsDir() {
-				klog.V(10).Info("Ignoring subfolders of ", currentChartDir)
+				klog.V(debugLevel).Info("Ignoring subfolders of ", currentChartDir)
 				if _, err := os.Stat(path + "/Chart.yaml"); err == nil {
-					klog.V(10).Info("Found Chart.yaml in ", path)
+					klog.V(debugLevel).Info("Found Chart.yaml in ", path)
 					if !strings.HasPrefix(path, currentChartDir) {
-						klog.V(10).Info("This is a helm chart folder.")
+						klog.V(debugLevel).Info("This is a helm chart folder.")
 						chartDirs[path+"/"] = path + "/"
 						currentChartDir = path + "/"
 					}
 				} else if !strings.HasPrefix(path, currentChartDir) && !strings.HasPrefix(path, repoRoot+"/.git") {
-					klog.V(10).Info("This is not a helm chart directory. ", path)
+					klog.V(debugLevel).Info("This is not a helm chart directory. ", path)
 					resourceDirs[path+"/"] = path + "/"
 				}
 			}
@@ -174,7 +175,7 @@ func generateIndexYAML(repoRoot string) (*repo.IndexFile, map[string]string, err
 
 	indexFile.SortEntries()
 	b, _ := yaml.Marshal(indexFile)
-	klog.V(10).Info("New index file ", string(b))
+	klog.V(debugLevel).Info("New index file ", string(b))
 
 	return indexFile, resourceDirs, nil
 }

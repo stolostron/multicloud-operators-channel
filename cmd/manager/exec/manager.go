@@ -97,14 +97,14 @@ func RunManager(sig <-chan struct{}) {
 	}
 
 	// Create channel descriptor
-	chdesc, err := utils.CreateChannelDescriptor()
+	chdesc, err := utils.CreateObjectStorageChannelDescriptor()
 	if err != nil {
 		klog.Error("unable to create channel descriptor.", err)
 		os.Exit(exitCode)
 	}
 
 	// Create channel synchronizer
-	osync, err := objsync.CreateSynchronizer(cfg, chdesc, options.SyncInterval)
+	osync, err := objsync.CreateObjectStoreSynchronizer(cfg, chdesc, options.SyncInterval)
 
 	if err != nil {
 		klog.Error("unable to create object-store syncrhonizer on destination cluster.", err)
@@ -118,7 +118,7 @@ func RunManager(sig <-chan struct{}) {
 	}
 
 	// Create channel synchronizer for helm repo
-	hsync, err := helmsync.CreateSynchronizer(cfg, mgr.GetScheme(), options.SyncInterval)
+	hsync, err := helmsync.CreateHelmrepoSynchronizer(cfg, mgr.GetScheme(), options.SyncInterval)
 
 	if err != nil {
 		klog.Error("unable to create helo-repo syncrhonizer on destination cluster.", err)
@@ -132,7 +132,7 @@ func RunManager(sig <-chan struct{}) {
 	}
 
 	// Create channel synchronizer for github
-	gsync, err := gitsync.CreateSynchronizer(cfg, mgr.GetScheme(), options.SyncInterval)
+	gsync, err := gitsync.CreateGithubSynchronizer(cfg, mgr.GetScheme(), options.SyncInterval)
 
 	if err != nil {
 		klog.Error("unable to create github syncrhonizer on destination cluster.", err)

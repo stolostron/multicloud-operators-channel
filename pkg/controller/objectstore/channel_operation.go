@@ -89,7 +89,7 @@ func (r *ReconcileDeployable) deleteDeployableInObjectStore(request types.Namesp
 	return reconcile.Result{}, err
 }
 
-// ReconcileForChannel populate object store with channel when turned on
+// reconcileForChannel populate object store with channel when turned on
 func (r *ReconcileDeployable) reconcileForChannel(deployable *appv1alpha1.Deployable) (reconcile.Result, error) {
 	dplchn, err := r.getChannelForNamespace(deployable.Namespace)
 	if dplchn == nil || err != nil {
