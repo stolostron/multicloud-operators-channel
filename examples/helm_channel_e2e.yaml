@@ -37,8 +37,6 @@ metadata:
   namespace: helm-sub-ns
 spec:
   clusterReplicas: 1
-  clusterConditions:
-    - type: OK
   clusterLabels:
     matchLabels:
       name: gamp

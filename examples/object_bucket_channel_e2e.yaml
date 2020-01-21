@@ -56,8 +56,6 @@ metadata:
   namespace: obj-sub-ns
 spec:
   clusterReplicas: 1
-  clusterConditions:
-    - type: OK
   clusterLabels:
     matchLabels:
       name: gamp
