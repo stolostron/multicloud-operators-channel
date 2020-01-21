@@ -116,6 +116,7 @@ func CloneGitRepo(chn *chnv1alpha1.Channel, kubeClient client.Client) (*repo.Ind
 	indexFile, resourceDirs, err := generateIndexYAML(repoRoot)
 	if err != nil {
 		klog.Error("Failed to generate helm chart index file", err.Error())
+		return nil, nil, err
 	}
 	// Generate list of resource dirs
 	return indexFile, resourceDirs, nil
@@ -173,7 +174,11 @@ func generateIndexYAML(repoRoot string) (*repo.IndexFile, map[string]string, err
 	}
 
 	indexFile.SortEntries()
-	b, _ := yaml.Marshal(indexFile)
+	b, err := yaml.Marshal(indexFile)
+	if err != nil {
+		return nil, nil, err
+	}
+
 	klog.V(debugLevel).Info("New index file ", string(b))
 
 	return indexFile, resourceDirs, nil
