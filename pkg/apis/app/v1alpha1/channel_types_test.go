@@ -77,5 +77,6 @@ func TestStorageChannel(t *testing.T) {
 	g.Expect(fetched.GetLabels()).To(gomega.Equal(updated.Labels))
 	// Test Delete
 	g.Expect(c.Delete(context.TODO(), fetched)).NotTo(gomega.HaveOccurred())
+	time.Sleep(time.Second * 1)
 	g.Expect(c.Get(context.TODO(), key, fetched)).To(gomega.HaveOccurred())
 }
