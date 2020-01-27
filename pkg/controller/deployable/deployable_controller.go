@@ -173,19 +173,19 @@ func (r *ReconcileDeployable) Reconcile(request reconcile.Request) (reconcile.Re
 	channelmap, err := utils.GenerateChannelMap(r.Client)
 	if err != nil {
 		if !errors.IsNotFound(err) {
-			klog.Error("Failed to get all deployables")
+			klog.Error("failed to get all deployables")
 			return reconcile.Result{}, nil
 		}
 
 		channelmap = make(map[string]*appv1alpha1.Channel)
 	}
 
-	channelnsMap := make(map[string]string)
+	channelNsMap := make(map[string]string)
 	for _, ch := range channelmap {
-		channelnsMap[ch.Namespace] = ch.Name
+		channelNsMap[ch.Namespace] = ch.Name
 	}
 
-	parent, dplmap, err := utils.FindDeployableForChannelsInMap(r.Client, instance, channelnsMap)
+	parent, dplmap, err := utils.FindDeployableForChannelsInMap(r.Client, instance, channelNsMap)
 	if err != nil && !errors.IsNotFound(err) {
 		klog.Error("Failed to get all deployables")
 		return reconcile.Result{}, nil
@@ -193,34 +193,9 @@ func (r *ReconcileDeployable) Reconcile(request reconcile.Request) (reconcile.Re
 
 	klog.V(debugLevel).Infof("Dpl Map, before deletion: %#v", dplmap)
 
-	if len(instance.GetFinalizers()) == 0 {
-		annotations := instance.Annotations
-		if channelnsMap[instance.Namespace] != "" && annotations != nil && annotations[appv1alpha1.KeyChannelSource] != "" && parent == nil {
-			klog.V(debugLevel).Infof("Delete instance: The parent of the instance not found: %#v, %#v", annotations[appv1alpha1.KeyChannelSource], instance)
-			return reconcile.Result{}, r.Client.Delete(context.TODO(), instance)
-		}
-
-		for _, chname := range instance.Spec.Channels {
-			ch, ok := channelmap[chname]
-			if !ok {
-				klog.Error("Failed to find channel name:", chname, " for deployable ", instance.Namespace, "/", instance.Name, " err: ", err)
-				continue
-			}
-
-			err = r.propagateDeployableToChannel(instance, dplmap, ch)
-			if err != nil {
-				klog.Error("Failed to validate deplyable for ", instance)
-			}
-
-			delete(channelmap, chname)
-		}
-
-		for _, ch := range channelmap {
-			err = r.propagateDeployableToChannel(instance, dplmap, ch)
-			if err != nil {
-				klog.Errorf("Failed to propagate %v To Channel due to %v ", instance, err)
-			}
-		}
+	dplmap, err = r.updateDeployableRelationWithChannel(instance, dplmap, parent, channelNsMap, channelmap)
+	if err != nil {
+		return reconcile.Result{}, err
 	}
 
 	r.handleOrphanDeployable(dplmap)
@@ -354,4 +329,39 @@ func (r *ReconcileDeployable) propagateDeployableToChannel(deployable *dplv1alph
 	delete(dplmap, chkey)
 
 	return err
+}
+
+func (r *ReconcileDeployable) updateDeployableRelationWithChannel(
+	instance *dplv1alpha1.Deployable, dplmap map[string]*dplv1alpha1.Deployable,
+	parent *dplv1alpha1.Deployable, channelNsMap map[string]string,
+	channelmap map[string]*appv1alpha1.Channel) (map[string]*dplv1alpha1.Deployable, error) {
+	if len(instance.GetFinalizers()) == 0 {
+		annotations := instance.Annotations
+		if channelNsMap[instance.Namespace] != "" && annotations != nil && annotations[appv1alpha1.KeyChannelSource] != "" && parent == nil {
+			klog.V(debugLevel).Infof("Delete instance: The parent of the instance not found: %#v, %#v", annotations[appv1alpha1.KeyChannelSource], instance)
+			return nil, r.Client.Delete(context.TODO(), instance)
+		}
+
+		for _, chname := range instance.Spec.Channels {
+			ch, ok := channelmap[chname]
+			if !ok {
+				klog.Errorf("failed to find channel name %v for deployable %v/%v", chname, instance.Namespace, instance.Name)
+				continue
+			}
+
+			if err := r.propagateDeployableToChannel(instance, dplmap, ch); err != nil {
+				klog.Error("Failed to validate deplyable for ", instance)
+			}
+
+			delete(channelmap, chname)
+		}
+
+		for _, ch := range channelmap {
+			if err := r.propagateDeployableToChannel(instance, dplmap, ch); err != nil {
+				klog.Errorf("Failed to propagate %v To Channel due to %v ", instance, err)
+			}
+		}
+	}
+
+	return dplmap, nil
 }

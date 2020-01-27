@@ -28,6 +28,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 
+	"github.com/pkg/errors"
+
 	chnv1alpha1 "github.com/IBM/multicloud-operators-channel/pkg/apis/app/v1alpha1"
 	"github.com/IBM/multicloud-operators-channel/pkg/utils"
 	dplv1alpha1 "github.com/IBM/multicloud-operators-deployable/pkg/apis/app/v1alpha1"
@@ -44,7 +46,7 @@ type ChannelSynchronizer struct {
 }
 
 // CreateSynchronizer - creates an instance of ChannelSynchronizer
-func CreateSynchronizer(config *rest.Config, scheme *runtime.Scheme, syncInterval int) (*ChannelSynchronizer, error) {
+func CreateHelmrepoSynchronizer(config *rest.Config, scheme *runtime.Scheme, syncInterval int) (*ChannelSynchronizer, error) {
 	client, err := client.New(config, client.Options{})
 	if err != nil {
 		klog.Error("Failed to initialize client for synchronizer. err: ", err)
@@ -106,7 +108,7 @@ func (sync *ChannelSynchronizer) syncChannel(chn *chnv1alpha1.Channel) {
 	// retrieve helm chart list from helm repo
 	idx, err := utils.GetHelmRepoIndex(chn.Spec.PathName)
 	if err != nil {
-		klog.Error("Error getting index for channel: ", chn.Namespace, " ", chn.Name)
+		klog.Errorf("Error getting index for channel %v/%v err: %v ", chn.Namespace, chn.Name, errors.Cause(err).Error())
 		return
 	}
 

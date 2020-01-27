@@ -40,6 +40,8 @@ import (
 * business logic.  Delete these comments after modifying this file.*
  */
 
+const debugLevel = klog.Level(10)
+
 // Add creates a new Deployable Controller and adds it to the Manager with default RBAC. The Manager will set fields on the Controller
 // and Start it when the Manager is Started.
 func Add(mgr manager.Manager, recorder record.EventRecorder,
@@ -102,13 +104,13 @@ func (r *ReconcileChannel) Reconcile(request reconcile.Request) (reconcile.Resul
 			return reconcile.Result{}, nil
 		}
 		// Error reading the object - requeue the request.
-		klog.V(10).Info("Reconciling - Errored.", request.NamespacedName, " with Get err:", err)
+		klog.V(debugLevel).Info("Reconciling - Errored.", request.NamespacedName, " with Get err:", err)
 
 		return reconcile.Result{}, err
 	}
 
 	if !strings.EqualFold(string(instance.Spec.Type), chnv1alpha1.ChannelTypeHelmRepo) {
-		klog.V(10).Info("Ignoring type ", instance.Spec.Type)
+		klog.V(debugLevel).Info("Ignoring type ", instance.Spec.Type)
 		return reconcile.Result{}, nil
 	}
 

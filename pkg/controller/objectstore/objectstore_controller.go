@@ -40,6 +40,8 @@ import (
 * business logic.  Delete these comments after modifying this file.*
  */
 
+const debugLevel = klog.Level(10)
+
 // Add creates a new Deployable Controller and adds it to the Manager with default RBAC. The Manager will set fields on the Controller
 // and Start it when the Manager is Started.
 func Add(mgr manager.Manager, recorder record.EventRecorder,
@@ -92,9 +94,7 @@ func add(mgr manager.Manager, r reconcile.Reconciler) error {
 	}
 
 	// watch for changes to channel too
-	err = c.Watch(&source.Kind{Type: &chnv1alpha1.Channel{}}, &handler.EnqueueRequestsFromMapFunc{ToRequests: &channelMapper{mgr.GetClient()}})
-
-	return err
+	return c.Watch(&source.Kind{Type: &chnv1alpha1.Channel{}}, &handler.EnqueueRequestsFromMapFunc{ToRequests: &channelMapper{mgr.GetClient()}})
 }
 
 var _ reconcile.Reconciler = &ReconcileDeployable{}
@@ -129,14 +129,15 @@ func (r *ReconcileDeployable) Reconcile(request reconcile.Request) (reconcile.Re
 			return reconcile.Result{}, nil
 		}
 		// Error reading the object - requeue the request.
-		klog.V(10).Info("Reconciling - Errored.", request.NamespacedName, " with Get err:", err)
+		klog.V(debugLevel).Info("Reconciling - Errored.", request.NamespacedName, " with Get err:", err)
 
 		return reconcile.Result{}, err
 	}
 
-	_, err = r.reconcileForChannel(instance)
+	req, err := r.reconcileForChannel(instance)
 	if err != nil {
-		klog.Error("Failed to reconcile deployable for channel")
+		klog.Errorf("failed to reconcile deployable for channel %v, err %v", request.String(), err)
+		return req, err
 	}
 
 	return reconcile.Result{}, err

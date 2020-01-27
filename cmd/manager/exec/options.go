@@ -17,6 +17,8 @@ import (
 	pflag "github.com/spf13/pflag"
 )
 
+const defaultSyncInterval = 60 //seconds
+
 // ChannelCMDOptions for command line flag parsing
 type ChannelCMDOptions struct {
 	MetricsAddr  string
@@ -26,7 +28,7 @@ type ChannelCMDOptions struct {
 
 var options = ChannelCMDOptions{
 	MetricsAddr:  "",
-	SyncInterval: 60,
+	SyncInterval: defaultSyncInterval,
 }
 
 // ProcessFlags parses command line parameters into options
