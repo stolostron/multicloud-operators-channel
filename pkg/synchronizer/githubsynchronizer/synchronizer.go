@@ -81,9 +81,15 @@ type sourceURLs struct {
 type kubeResource struct {
 	APIVersion string `yaml:"apiVersion"`
 	Kind       string `yaml:"kind"`
+	Metadata   *kubeResourceMetadata
 }
 
-// CreateSynchronizer - creates an instance of ChannelSynchronizer
+type kubeResourceMetadata struct {
+	Name      string `yaml:"name"`
+	Namespace string `yaml:"namespace"`
+}
+
+// CreateGithubSynchronizer - creates an instance of ChannelSynchronizer
 func CreateGithubSynchronizer(config *rest.Config, scheme *runtime.Scheme, syncInterval int) (*ChannelSynchronizer, error) {
 	client, err := client.New(config, client.Options{})
 	if err != nil {
@@ -174,7 +180,7 @@ func (sync *ChannelSynchronizer) handleSingleDeployable(chn *chnv1alpha1.Channel
 	}
 
 	dpl := &dplv1alpha1.Deployable{}
-	dpl.Name = strings.ToLower(chn.GetName() + "-" + t.Kind + "-deployable")
+	dpl.Name = strings.ToLower(chn.GetName() + "-" + t.APIVersion + "-" + t.Kind + "-" + t.Metadata.Namespace + "-" + t.Metadata.Name)
 	dpl.Namespace = chn.GetNamespace()
 
 	if err := controllerutil.SetControllerReference(chn, dpl, sync.Scheme); err != nil {
