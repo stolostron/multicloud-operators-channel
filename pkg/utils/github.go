@@ -40,7 +40,7 @@ const (
 	// UserID is key of GitHub user ID in secret
 	UserID = "user"
 	// Password is key of GitHub user password or personal token in secret
-	Password = "password"
+	Password = "accessToken"
 )
 
 // CloneGitRepo clones the GitHub repo
@@ -175,6 +175,7 @@ func generateIndexYAML(repoRoot string) (*repo.IndexFile, map[string]string, err
 
 	indexFile.SortEntries()
 	b, err := yaml.Marshal(indexFile)
+
 	if err != nil {
 		return nil, nil, err
 	}
