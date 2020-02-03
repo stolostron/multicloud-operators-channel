@@ -41,7 +41,7 @@ const (
 	ChannelTypeHelmRepo = "helmrepo"
 	// ChannelTypeObjectBucket defines type name of bucket in object store
 	ChannelTypeObjectBucket = "objectbucket"
-	// ChannelTypeGitHub defines type name of GitHub repository channel
+	// ChannelTypeGitHub defines type name of GitHub repository
 	ChannelTypeGitHub = "github"
 )
 
@@ -56,13 +56,14 @@ type ChannelGate struct {
 type ChannelSpec struct {
 	// INSERT ADDITIONAL SPEC FIELDS - desired state of cluster
 	// Important: Run "make" to regenerate code after modifying this file
-	// +kubebuilder:validation:Enum=Namespace,HelmRepo,ObjectBucket,namespace,helmrepo,objectbucket
-	Type             ChannelType             `json:"type"`
-	PathName         string                  `json:"pathname"`
-	SecretRef        *corev1.ObjectReference `json:"secretRef,omitempty"`
-	ConfigMapRef     *corev1.ObjectReference `json:"configRef,omitempty"`
-	Gates            *ChannelGate            `json:"gates,omitempty"`
-	SourceNamespaces []string                `json:"sourceNamespaces,omitempty"`
+	// +kubebuilder:validation:Enum={Namespace,HelmRepo,ObjectBucket,GitHub,namespace,helmrepo,objectbucket,github}
+	Type         ChannelType             `json:"type"`
+	PathName     string                  `json:"pathname"`
+	SecretRef    *corev1.ObjectReference `json:"secretRef,omitempty"`
+	ConfigMapRef *corev1.ObjectReference `json:"configRef,omitempty"`
+	Gates        *ChannelGate            `json:"gates,omitempty"`
+	// +listType=set
+	SourceNamespaces []string `json:"sourceNamespaces,omitempty"`
 }
 
 // ChannelStatus defines the observed state of Channel
@@ -79,11 +80,12 @@ type ChannelStatus struct {
 // +kubebuilder:printcolumn:name="Type",type="string",JSONPath=".spec.type",description="type of the channel"
 // +kubebuilder:printcolumn:name="PathName",type="string",JSONPath=".spec.pathname",description="pathname of the channel"
 // +kubebuilder:printcolumn:name="Age",type="date",JSONPath=".metadata.creationTimestamp"
+// +kubebuilder:resource:scope=Namespaced
 type Channel struct {
-	metav1.TypeMeta   `json:",inline"`
+	Status            ChannelStatus `json:"status,omitempty"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
-
-	Spec ChannelSpec `json:"spec,omitempty"`
+	Spec              ChannelSpec `json:"spec,omitempty"`
+	metav1.TypeMeta   `json:",inline"`
 }
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
@@ -92,7 +94,8 @@ type Channel struct {
 type ChannelList struct {
 	metav1.TypeMeta `json:",inline"`
 	metav1.ListMeta `json:"metadata,omitempty"`
-	Items           []Channel `json:"items"`
+	// +listType=set
+	Items []Channel `json:"items"`
 }
 
 func init() {

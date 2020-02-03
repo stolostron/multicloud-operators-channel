@@ -12,10 +12,15 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+// Package apis contains Kubernetes API groups.
 package apis
 
 import (
 	"k8s.io/apimachinery/pkg/runtime"
+	clusterv1alpha1 "k8s.io/cluster-registry/pkg/apis/clusterregistry/v1alpha1"
+	"k8s.io/klog"
+
+	dplapis "github.com/IBM/multicloud-operators-deployable/pkg/apis"
 )
 
 // AddToSchemes may be used to add all resources defined in the project to a Scheme
@@ -23,5 +28,17 @@ var AddToSchemes runtime.SchemeBuilder
 
 // AddToScheme adds all Resources to the Scheme
 func AddToScheme(s *runtime.Scheme) error {
+	var err error
+	// add mcm scheme, mcm scheme only on hub cluster
+	if err = dplapis.AddToSchemes.AddToScheme(s); err != nil {
+		klog.Error("unable add deployable APIs to scheme", err)
+		return err
+	}
+
+	if err = clusterv1alpha1.AddToScheme(s); err != nil {
+		klog.Error("unable add deployable APIs to scheme", err)
+		return err
+	}
+
 	return AddToSchemes.AddToScheme(s)
 }

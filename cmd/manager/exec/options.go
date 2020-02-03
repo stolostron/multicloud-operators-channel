@@ -1,5 +1,4 @@
 // Copyright 2019 The Kubernetes Authors.
-//
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
@@ -18,23 +17,36 @@ import (
 	pflag "github.com/spf13/pflag"
 )
 
-// PlacementRuleCMDOptions for command line flag parsing
-type PlacementRuleCMDOptions struct {
-	MetricsAddr string
+const defaultSyncInterval = 60 //seconds
+
+// ChannelCMDOptions for command line flag parsing
+type ChannelCMDOptions struct {
+	MetricsAddr  string
+	SyncInterval int
+	LeaderElect  bool
 }
 
-var options = PlacementRuleCMDOptions{
-	MetricsAddr: "",
+var options = ChannelCMDOptions{
+	MetricsAddr:  "",
+	SyncInterval: defaultSyncInterval,
 }
 
 // ProcessFlags parses command line parameters into options
 func ProcessFlags() {
 	flag := pflag.CommandLine
+
 	// add flags
 	flag.StringVar(
 		&options.MetricsAddr,
 		"metrics-addr",
 		options.MetricsAddr,
 		"The address the metric endpoint binds to.",
+	)
+
+	flag.IntVar(
+		&options.SyncInterval,
+		"sync-interval",
+		options.SyncInterval,
+		"Setting up the cache sync time.",
 	)
 }

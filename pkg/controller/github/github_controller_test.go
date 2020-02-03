@@ -12,30 +12,24 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package main
+package github
 
 import (
-	"flag"
+	"testing"
+	"time"
 
-	// Import all Kubernetes client auth plugins (e.g. Azure, GCP, OIDC, etc.)
-	_ "k8s.io/client-go/plugin/pkg/client/auth"
-	"sigs.k8s.io/controller-runtime/pkg/manager/signals"
-
-	"github.com/spf13/pflag"
-	"k8s.io/klog"
-
-	"github.com/IBM/multicloud-operators-channel/cmd/manager/exec"
+	"k8s.io/apimachinery/pkg/types"
+	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
 
-func main() {
-	exec.ProcessFlags()
+var c client.Client
 
-	klog.InitFlags(nil)
+var expectedRequest = reconcile.Request{NamespacedName: types.NamespacedName{Name: "foo", Namespace: "default"}}
 
-	pflag.CommandLine.AddGoFlagSet(flag.CommandLine)
-	pflag.Parse()
+const timeout = time.Second * 5
 
-	defer klog.Flush()
-
-	exec.RunManager(signals.SetupSignalHandler())
+func TestGitHubReconcile(t *testing.T) {
+	t.Log("this print is used to passing lint while the test cases is not built yet")
+	t.Log(timeout, c, expectedRequest)
 }

@@ -12,26 +12,23 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package controller
+package webhook
 
 import (
-	"k8s.io/client-go/tools/record"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
-
-	gitsync "github.com/IBM/multicloud-operators-channel/pkg/synchronizer/githubsynchronizer"
-	helmsync "github.com/IBM/multicloud-operators-channel/pkg/synchronizer/helmreposynchronizer"
-	"github.com/IBM/multicloud-operators-channel/pkg/utils"
 )
 
 // AddToManagerFuncs is a list of functions to add all Controllers to the Manager
-var AddToManagerFuncs []func(manager.Manager, record.EventRecorder, *utils.ChannelDescriptor, *helmsync.ChannelSynchronizer, *gitsync.ChannelSynchronizer) error
+var AddToManagerFuncs []func(manager.Manager) error
 
 // AddToManager adds all Controllers to the Manager
-func AddToManager(m manager.Manager, recorder record.EventRecorder,
-	chdesc *utils.ChannelDescriptor, sync *helmsync.ChannelSynchronizer,
-	gsync *gitsync.ChannelSynchronizer) error {
+// +kubebuilder:rbac:groups=admissionregistration.k8s.io,resources=mutatingwebhookconfigurations;verbs=get;list;watch;create;update;patch;delete
+// +kubebuilder:rbac:groups=admissionregistration.k8s.io,resources=validatingwebhookconfigurations;verbs=get;list;watch;create;update;patch;delete
+// +kubebuilder:rbac:groups="",resources=secrets,verbs=get;list;watch;create;update;patch;delete
+// +kubebuilder:rbac:groups="",resources=services,verbs=get;list;watch;create;update;patch;delete
+func AddToManager(m manager.Manager) error {
 	for _, f := range AddToManagerFuncs {
-		if err := f(m, recorder, chdesc, sync, gsync); err != nil {
+		if err := f(m); err != nil {
 			return err
 		}
 	}
