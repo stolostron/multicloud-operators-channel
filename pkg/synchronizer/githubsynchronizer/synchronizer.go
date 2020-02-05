@@ -288,22 +288,22 @@ func (sync *ChannelSynchronizer) handleResourceDeployable(
 	dpl dplv1alpha1.Deployable,
 	chn *chnv1alpha1.Channel,
 	newDplList map[string]*dplv1alpha1.Deployable) error {
-	klog.V(debugLevel).Infof("synching dpl %v", dpl.Name)
+	klog.V(debugLevel).Infof("Synchronizing kube resource deployable %v", dpl.Name)
 
 	if dpl.Spec.Template == nil {
-		return errors.New("Processing deployable without template:" + dpl.GetName())
+		return errors.New("missing template in deployable:" + dpl.GetName())
 	}
 
 	dpltpl := &unstructured.Unstructured{}
 	err := json.Unmarshal(dpl.Spec.Template.Raw, dpltpl)
 
 	if err != nil {
-		klog.Warning("Processing local deployable with error template:", dpl, err)
-		return errors.New("processing local deployable with error template")
+		klog.Warning("Failed to unmarshall the template from existing deployable:", dpl, err)
+		return errors.New("failed to unmarshall the template from existing deployable")
 	}
 
 	if dpltpl.GetKind() == utils.HelmCRKind && dpltpl.GetAPIVersion() == utils.HelmCRAPIVersion {
-		klog.Info("Skipping helm chart deployable:", dpltpl.GetKind(), ".", dpltpl.GetAPIVersion())
+		klog.Info("Skipping helm release deployable:", dpltpl.GetKind(), ".", dpltpl.GetAPIVersion())
 		return nil
 	}
 
@@ -322,12 +322,12 @@ func (sync *ChannelSynchronizer) handleResourceDeployable(
 	err = json.Unmarshal(newdpl.Spec.Template.Raw, newdpltpl)
 
 	if err != nil {
-		klog.Warning("Processing new deployable with error template:", newdpl, err)
-		return errors.Wrap(err, fmt.Sprintf("Processing new deployable with error template: %v", newdpl))
+		klog.Warning("Failed to unmarshall the template from updated deployable:", newdpl, err)
+		return errors.Wrap(err, fmt.Sprintf("failed to unmarshall the template from updated deployable: %v", newdpl))
 	}
 
 	if !reflect.DeepEqual(dpltpl, newdpltpl) {
-		klog.Info("Sync - Updating existing deployable ", dpl.Name, " in channel ", chn.Name)
+		klog.Info("Sync - Updating the template in existing deployable ", dpl.Name, " in channel ", chn.Name)
 		dpl.Spec.Template.Raw, err = json.Marshal(newdpltpl)
 
 		if err != nil {
@@ -344,7 +344,7 @@ func (sync *ChannelSynchronizer) handleResourceDeployable(
 }
 
 func (sync *ChannelSynchronizer) handleHelmDeployable(dpl dplv1alpha1.Deployable, chn *chnv1alpha1.Channel, generalmap map[string]map[string]bool) error {
-	klog.V(debugLevel).Infof("synching dpl %v", dpl.Name)
+	klog.V(debugLevel).Infof("Synchronizing helm release deployable %v", dpl.Name)
 
 	obj := &helmTemplate{}
 
