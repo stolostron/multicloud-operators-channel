@@ -21,6 +21,7 @@ import (
 	"io/ioutil"
 	"os"
 	"path/filepath"
+	"reflect"
 	"strings"
 	"time"
 
@@ -144,7 +145,7 @@ func (sync *ChannelSynchronizer) syncChannelsWithGitRepo() {
 	}
 }
 
-func (sync *ChannelSynchronizer) processYamlFile(chn *chnv1alpha1.Channel, files []os.FileInfo, dir string) {
+func (sync *ChannelSynchronizer) processYamlFile(chn *chnv1alpha1.Channel, files []os.FileInfo, dir string, newDplList map[string]*dplv1alpha1.Deployable) {
 	for _, f := range files {
 		// If YAML or YML,
 		if f.Mode().IsRegular() {
@@ -162,7 +163,7 @@ func (sync *ChannelSynchronizer) processYamlFile(chn *chnv1alpha1.Channel, files
 
 				if t.APIVersion == "" || t.Kind == "" {
 					klog.V(debugLevel).Info("Not a Kubernetes resource")
-				} else if err := sync.handleSingleDeployable(chn, f, file, t); err != nil {
+				} else if err := sync.handleSingleDeployable(chn, f, file, t, newDplList); err != nil {
 					klog.Error(errors.Cause(err).Error())
 				}
 			}
@@ -170,7 +171,12 @@ func (sync *ChannelSynchronizer) processYamlFile(chn *chnv1alpha1.Channel, files
 	}
 }
 
-func (sync *ChannelSynchronizer) handleSingleDeployable(chn *chnv1alpha1.Channel, fileinfo os.FileInfo, filecontent []byte, t kubeResource) error {
+func (sync *ChannelSynchronizer) handleSingleDeployable(
+	chn *chnv1alpha1.Channel,
+	fileinfo os.FileInfo,
+	filecontent []byte,
+	t kubeResource,
+	newDplList map[string]*dplv1alpha1.Deployable) error {
 	klog.V(debugLevel).Info("Kubernetes resource of kind ", t.Kind, " Creating a deployable.")
 
 	obj := &unstructured.Unstructured{}
@@ -201,6 +207,8 @@ func (sync *ChannelSynchronizer) handleSingleDeployable(chn *chnv1alpha1.Channel
 		return errors.Wrap(err, "failed to marshal helm CR to template")
 	}
 
+	newDplList[dpl.Name] = dpl
+
 	if err := sync.kubeClient.Create(context.TODO(), dpl); err != nil {
 		return errors.Wrap(err, "failed to create deployable")
 	}
@@ -223,6 +231,7 @@ func (sync *ChannelSynchronizer) syncChannel(chn *chnv1alpha1.Channel) {
 	klog.V(debugLevel).Info("There are ", len(idx.Entries), " entries in the index.yaml")
 	klog.V(debugLevel).Info("There are ", len(resourceDirs), " non-helm directories.")
 
+	newDplList := make(map[string]*dplv1alpha1.Deployable)
 	// sync kube resource deployables
 	for _, dir := range resourceDirs {
 		files, err := ioutil.ReadDir(dir)
@@ -230,7 +239,7 @@ func (sync *ChannelSynchronizer) syncChannel(chn *chnv1alpha1.Channel) {
 			klog.Error("Failed to list files in directory ", dir, err.Error())
 		}
 
-		sync.processYamlFile(chn, files, dir)
+		sync.processYamlFile(chn, files, dir, newDplList)
 	}
 
 	// chartname, chartversion, exists
@@ -263,7 +272,11 @@ func (sync *ChannelSynchronizer) syncChannel(chn *chnv1alpha1.Channel) {
 	}
 
 	for _, dpl := range dpllist.Items {
-		if err := sync.handleDeployable(dpl, chn, generalmap); err != nil {
+		if err := sync.handleHelmDeployable(dpl, chn, generalmap); err != nil {
+			klog.Errorf(errors.Cause(err).Error())
+		}
+
+		if err := sync.handleResourceDeployable(dpl, chn, newDplList); err != nil {
 			klog.Errorf(errors.Cause(err).Error())
 		}
 	}
@@ -271,7 +284,66 @@ func (sync *ChannelSynchronizer) syncChannel(chn *chnv1alpha1.Channel) {
 	sync.processGeneralMap(idx, chn, majorversion, generalmap)
 }
 
-func (sync *ChannelSynchronizer) handleDeployable(dpl dplv1alpha1.Deployable, chn *chnv1alpha1.Channel, generalmap map[string]map[string]bool) error {
+func (sync *ChannelSynchronizer) handleResourceDeployable(
+	dpl dplv1alpha1.Deployable,
+	chn *chnv1alpha1.Channel,
+	newDplList map[string]*dplv1alpha1.Deployable) error {
+	klog.V(debugLevel).Infof("synching dpl %v", dpl.Name)
+
+	if dpl.Spec.Template == nil {
+		return errors.New("Processing deployable without template:" + dpl.GetName())
+	}
+
+	dpltpl := &unstructured.Unstructured{}
+	err := json.Unmarshal(dpl.Spec.Template.Raw, dpltpl)
+
+	if err != nil {
+		klog.Warning("Processing local deployable with error template:", dpl, err)
+		return errors.New("processing local deployable with error template")
+	}
+
+	if dpltpl.GetKind() == utils.HelmCRKind && dpltpl.GetAPIVersion() == utils.HelmCRAPIVersion {
+		klog.Info("Skipping helm chart deployable:", dpltpl.GetKind(), ".", dpltpl.GetAPIVersion())
+		return nil
+	}
+
+	// Delete deployables that don't exist in the bucket anymore
+	if _, ok := newDplList[dpl.Name]; !ok {
+		klog.Info("Sync - Deleting deployable ", dpl.Namespace, "/", dpl.Name, " from channel ", chn.Name)
+
+		if err := sync.kubeClient.Delete(context.TODO(), &dpl); err != nil {
+			return errors.Wrap(err, fmt.Sprintf("sync failed to delete deployable %v", dpl.Name))
+		}
+	}
+
+	// Update deployables if the template is updated in the git repo
+	newdpl := newDplList[dpl.Name]
+	newdpltpl := &unstructured.Unstructured{}
+	err = json.Unmarshal(newdpl.Spec.Template.Raw, newdpltpl)
+
+	if err != nil {
+		klog.Warning("Processing new deployable with error template:", newdpl, err)
+		return errors.Wrap(err, fmt.Sprintf("Processing new deployable with error template: %v", newdpl))
+	}
+
+	if !reflect.DeepEqual(dpltpl, newdpltpl) {
+		klog.Info("Sync - Updating existing deployable ", dpl.Name, " in channel ", chn.Name)
+		dpl.Spec.Template.Raw, err = json.Marshal(newdpltpl)
+
+		if err != nil {
+			klog.Warning(err.Error())
+			return errors.Wrap(err, fmt.Sprintf("failed to mashall template %v", newdpltpl))
+		}
+
+		if err := sync.kubeClient.Update(context.TODO(), &dpl); err != nil {
+			return errors.Wrap(err, fmt.Sprintf("failed to update deployable %v", dpl.Name))
+		}
+	}
+
+	return nil
+}
+
+func (sync *ChannelSynchronizer) handleHelmDeployable(dpl dplv1alpha1.Deployable, chn *chnv1alpha1.Channel, generalmap map[string]map[string]bool) error {
 	klog.V(debugLevel).Infof("synching dpl %v", dpl.Name)
 
 	obj := &helmTemplate{}
