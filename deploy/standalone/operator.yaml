@@ -1,0 +1,56 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: multicloud-operators-channel
+  labels:
+    name: multicloud-operators-channel
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      name: multicloud-operators-channel
+  template:
+    metadata:
+      labels:
+        name: multicloud-operators-channel
+    spec:
+      serviceAccountName: multicloud-operators
+      containers:
+        - name: multicloud-operators-channel
+          image: quay.io/multicloudlab/multicloud-operators-channel
+          ports:
+          - containerPort: 8443
+          command:
+          - /usr/local/bin/multicloud-operators-channel
+          - --sync-interval=10
+          - --standalone
+          imagePullPolicy: Always
+          env:
+            - name: WATCH_NAMESPACE
+            - name: POD_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.name
+            - name: OPERATOR_NAME
+              value: "multicloud-operators-channel"
+          resources:
+              requests:
+                cpu: 100m
+                memory: 256Mi
+              limits:
+                cpu: 500m
+                memory: 512Mi
+          volumeMounts:
+          - name: multicloud-operators-channel-tls
+            readOnly: true
+            mountPath: "/etc/channel"
+      volumes:
+        - name: multicloud-operators-channel-tls
+          secret:
+            defaultMode: 420
+            secretName: multicloud-operators-channel
+            items:
+            - key: tls.crt
+              path: tls.crt
+            - key: tls.key
+              path: tls.key
