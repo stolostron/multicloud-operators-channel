@@ -15,7 +15,7 @@
 package apis
 
 import (
-	"github.com/IBM/multicloud-operators-channel/pkg/apis/app/v1alpha1"
+	"github.com/open-cluster-management/multicloud-operators-channel/pkg/apis/app/v1alpha1"
 )
 
 func init() {

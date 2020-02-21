@@ -16,6 +16,8 @@ github.com/BurntSushi/toml v0.3.1/go.mod h1:xHWCNGjB5oqiDr8zfno3MHue2Ht5sIBksp03
 github.com/BurntSushi/xgb v0.0.0-20160522181843-27f122750802/go.mod h1:IVnqGOEym/WlBOVXweHU+Q+/VP0lqqI8lqeDx9IjBqo=
 github.com/DATA-DOG/go-sqlmock v1.3.3/go.mod h1:f/Ixk793poVmq4qj/V1dPUg2JEAKC73Q5eFN3EC/SaM=
 github.com/GoogleCloudPlatform/k8s-cloud-provider v0.0.0-20181220005116-f8e995905100/go.mod h1:iroGtC8B3tQiqtds1l+mgk/BBOrxbqjH+eUfFQYRc14=
+github.com/IBM/multicloud-operators-channel v0.0.0-20200205162544-a2f214df83fc h1:8s3iTTvWo5lJoN8ZK8xxS41uAV/4EokkJQZ1xBJFZJo=
+github.com/IBM/multicloud-operators-channel v0.0.0-20200205162544-a2f214df83fc/go.mod h1:GFe5ctrSeg7vO0V5++NinHKr64TTT0g1C3lcVNtGUvk=
 github.com/IBM/multicloud-operators-deployable v0.0.0-20191121134707-a429faaac3b4 h1:Hc7UDy49cjAdVVADwTp4OK2sPZSopL+2uEDjZMXGS48=
 github.com/IBM/multicloud-operators-deployable v0.0.0-20191121134707-a429faaac3b4/go.mod h1:ApSlB2lG+xWZ6PccrZWNxIT91V3iZJ3froY2OuQ0NVU=
 github.com/IBM/multicloud-operators-placementrule v0.0.0-20191106021205-80eeda99597f h1:oLZ1y6XfEcFYQNKrAJRx2g5VNdBLwBQI2aMEerREnNs=

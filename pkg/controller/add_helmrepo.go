@@ -15,7 +15,7 @@
 package controller
 
 import (
-	"github.com/IBM/multicloud-operators-channel/pkg/controller/helmrepo"
+	"github.com/open-cluster-management/multicloud-operators-channel/pkg/controller/helmrepo"
 )
 
 func init() {
