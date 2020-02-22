@@ -194,7 +194,7 @@ func schema_pkg_apis_app_v1alpha1_ChannelSpec(ref common.ReferenceCallback) comm
 							Ref: ref("k8s.io/api/core/v1.ObjectReference"),
 						},
 					},
-					"configRef": {
+					"configMapRef": {
 						SchemaProps: spec.SchemaProps{
 							Ref: ref("k8s.io/api/core/v1.ObjectReference"),
 						},

@@ -188,7 +188,7 @@ func (sync *ChannelSynchronizer) syncChannel(chn *chnv1alpha1.Channel) error {
 			continue
 		}
 		// Set AnnotationExternalSource
-		tplannotations[dplv1alpha1.AnnotationExternalSource] = chn.Spec.PathName
+		tplannotations[dplv1alpha1.AnnotationExternalSource] = chn.Spec.Pathname
 		tplannotations[dplv1alpha1.AnnotationLocal] = "false"
 		tpl.SetAnnotations(tplannotations)
 
@@ -242,7 +242,7 @@ func (sync *ChannelSynchronizer) updateSynchronizerWithDeployable(
 		tplannotations = make(map[string]string)
 	}
 
-	tplannotations[dplv1alpha1.AnnotationExternalSource] = chn.Spec.PathName
+	tplannotations[dplv1alpha1.AnnotationExternalSource] = chn.Spec.Pathname
 	tpl.SetAnnotations(tplannotations)
 
 	if !reflect.DeepEqual(tpl, dpltpl) {

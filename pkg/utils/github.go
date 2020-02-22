@@ -46,7 +46,7 @@ const (
 // CloneGitRepo clones the GitHub repo
 func CloneGitRepo(chn *chnv1alpha1.Channel, kubeClient client.Client) (*repo.IndexFile, map[string]string, error) {
 	options := &git.CloneOptions{
-		URL:               chn.Spec.PathName,
+		URL:               chn.Spec.Pathname,
 		Depth:             1,
 		SingleBranch:      true,
 		RecurseSubmodules: git.DefaultSubmoduleRecursionDepth,
@@ -104,7 +104,7 @@ func CloneGitRepo(chn *chnv1alpha1.Channel, kubeClient client.Client) (*repo.Ind
 		}
 	}
 
-	klog.V(debugLevel).Info("Cloning ", chn.Spec.PathName, " into ", repoRoot)
+	klog.V(debugLevel).Info("Cloning ", chn.Spec.Pathname, " into ", repoRoot)
 	_, err := git.PlainClone(repoRoot, false, options)
 
 	if err != nil {

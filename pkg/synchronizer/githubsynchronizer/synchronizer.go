@@ -387,11 +387,11 @@ func (sync *ChannelSynchronizer) handleHelmDeployable(dpl dplv1alpha1.Deployable
 			crepo = obj.Spec.Source.HelmRepo.URLs[0]
 		}
 
-		if crepo != chn.Spec.PathName {
-			klog.Infof("channel %v path changed to %v", chn.GetName(), chn.Spec.PathName)
-			//here might need to do a better code review to see if `crepo = chn.Spec.PathName` is needed
+		if crepo != chn.Spec.Pathname {
+			klog.Infof("channel %v path changed to %v", chn.GetName(), chn.Spec.Pathname)
+			//here might need to do a better code review to see if `crepo = chn.Spec.Pathname` is needed
 			if err := sync.kubeClient.Update(context.TODO(), &dpl); err != nil {
-				return errors.Wrap(err, fmt.Sprintf("failed to update deployable %v in helm repo channel %v", dpl.Name, chn.Spec.PathName))
+				return errors.Wrap(err, fmt.Sprintf("failed to update deployable %v in helm repo channel %v", dpl.Name, chn.Spec.Pathname))
 			}
 		}
 	}
@@ -414,7 +414,7 @@ func (sync *ChannelSynchronizer) processGeneralMap(idx *repo.IndexFile, chn *chn
 		spec.Version = mv
 
 		sourceurls := &sourceURLs{}
-		sourceurls.URLs = []string{chn.Spec.PathName}
+		sourceurls.URLs = []string{chn.Spec.Pathname}
 
 		src := &source{}
 

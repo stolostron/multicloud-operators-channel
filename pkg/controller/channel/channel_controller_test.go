@@ -52,7 +52,7 @@ func TestChannelControllerReconcile(t *testing.T) {
 		ObjectMeta: metav1.ObjectMeta{Name: tragetChannelName, Namespace: targetNamespace},
 		Spec: appv1alpha1.ChannelSpec{
 			Type:     targetChannelType,
-			PathName: targetNamespace,
+			Pathname: targetNamespace,
 		},
 	}
 

@@ -198,12 +198,12 @@ func (r *ReconcileChannel) Reconcile(request reconcile.Request) (reconcile.Resul
 		return reconcile.Result{}, err
 	}
 
-	if (strings.EqualFold(string(instance.Spec.Type), appv1alpha1.ChannelTypeNamespace)) && (instance.Spec.PathName != instance.GetNamespace()) {
-		instance.Spec.PathName = instance.GetNamespace()
+	if (strings.EqualFold(string(instance.Spec.Type), appv1alpha1.ChannelTypeNamespace)) && (instance.Spec.Pathname != instance.GetNamespace()) {
+		instance.Spec.Pathname = instance.GetNamespace()
 
 		err := r.Update(context.TODO(), instance)
 		if err != nil {
-			klog.Infof("Can't update the pathName field due to %v", err)
+			klog.Infof("Can't update the pathname field due to %v", err)
 			return reconcile.Result{}, err
 		}
 

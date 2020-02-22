@@ -132,7 +132,7 @@ func getCredentialFromKube(secretRef *corev1.ObjectReference, defaultNs string, 
 func (desc *ChannelDescriptor) initChannelDescription(chn *chnv1alpha1.Channel, accessKeyID, secretAccessKey string, objStoreHandler ObjectStore) error {
 	chndesc := &ChannelDescription{}
 
-	pathName := chn.Spec.PathName
+	pathName := chn.Spec.Pathname
 	if pathName == "" {
 		return errors.New(fmt.Sprintf("empty pathname in channel %v", chn.Name))
 	}

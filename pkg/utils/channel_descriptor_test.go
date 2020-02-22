@@ -127,7 +127,7 @@ func TestValidateChannel(t *testing.T) {
 				},
 				Spec: chnv1alpha1.ChannelSpec{
 					Type:     chnv1alpha1.ChannelTypeGitHub,
-					PathName: "",
+					Pathname: "",
 				},
 			},
 			kubeClient: c,
@@ -143,7 +143,7 @@ func TestValidateChannel(t *testing.T) {
 				},
 				Spec: chnv1alpha1.ChannelSpec{
 					Type:     chnv1alpha1.ChannelTypeGitHub,
-					PathName: "",
+					Pathname: "",
 					SecretRef: &v1.ObjectReference{
 						Kind:      "Secret",
 						Name:      testSrt,
@@ -164,7 +164,7 @@ func TestValidateChannel(t *testing.T) {
 				},
 				Spec: chnv1alpha1.ChannelSpec{
 					Type:     chnv1alpha1.ChannelTypeGitHub,
-					PathName: "https://www.google.com/" + testBucket + "/",
+					Pathname: "https://www.google.com/" + testBucket + "/",
 					SecretRef: &v1.ObjectReference{
 						Kind:      "Secret",
 						Name:      testSrt,

@@ -60,7 +60,7 @@ func TestDeployableReconcile(t *testing.T) {
 			Namespace: targetNamespace},
 		Spec: appv1alpha1.ChannelSpec{
 			Type:     targetChannelType,
-			PathName: targetNamespace,
+			Pathname: targetNamespace,
 		},
 	}
 
