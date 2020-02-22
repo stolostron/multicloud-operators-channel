@@ -30,9 +30,9 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
+	appv1alpha1 "github.com/IBM/multicloud-operators-deployable/pkg/apis/app/v1alpha1"
 	chnv1alpha1 "github.com/open-cluster-management/multicloud-operators-channel/pkg/apis/app/v1alpha1"
 	"github.com/open-cluster-management/multicloud-operators-channel/pkg/utils"
-	appv1alpha1 "github.com/open-cluster-management/multicloud-operators-deployable/pkg/apis/app/v1alpha1"
 )
 
 //

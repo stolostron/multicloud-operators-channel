@@ -21,9 +21,9 @@ import (
 	"k8s.io/klog"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
+	dplv1alpha1 "github.com/IBM/multicloud-operators-deployable/pkg/apis/app/v1alpha1"
+	dplutils "github.com/IBM/multicloud-operators-deployable/pkg/utils"
 	appv1alpha1 "github.com/open-cluster-management/multicloud-operators-channel/pkg/apis/app/v1alpha1"
-	dplv1alpha1 "github.com/open-cluster-management/multicloud-operators-deployable/pkg/apis/app/v1alpha1"
-	dplutils "github.com/open-cluster-management/multicloud-operators-deployable/pkg/utils"
 )
 
 // ValidateDeployableInChannel check if a deployable rightfully in channel
