@@ -62,7 +62,9 @@ var (
 	DeployableAnnotation = "app.ibm.com/deployables"
 )
 
-var debugLevel = klog.Level(10)
+const (
+	debugLevel = klog.Level(10)
+)
 
 /**
 * USER ACTION REQUIRED: This is a scaffold file intended for the user to modify with their own Controller

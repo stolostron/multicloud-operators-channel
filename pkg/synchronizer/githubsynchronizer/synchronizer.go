@@ -44,7 +44,9 @@ import (
 	"github.com/open-cluster-management/multicloud-operators-channel/pkg/utils"
 )
 
-var debugLevel = klog.Level(10)
+const (
+	debugLevel = klog.Level(10)
+)
 
 // ChannelSynchronizer syncs github channels with github repository
 type ChannelSynchronizer struct {
