@@ -10,14 +10,13 @@
 <!-- DON'T EDIT THIS SECTION, INSTEAD RE-RUN doctoc TO UPDATE -->
 **Table of Contents**  *generated with [DocToc](https://github.com/thlorenz/doctoc)*
 
-- [Top level title](#top-level-title)
-    - [What is the XXX](#what-is-the-xxx)
-    - [Community, discussion, contribution, and support](#community-discussion-contribution-and-support)
-    - [Getting Started](#getting-started)
-        - [Prerequisites](#prerequisites)
-        - [XXXXX](#xxxxx)
-        - [Trouble shooting](#trouble-shooting)
-    - [XXX References](#xxx-references)
+- [Overview](#overview)
+- [Quick Start](#quick-start)
+  - [Setting up a channel to sync resouce between your hub cluster and a object store](#setting-up-a-channel-to-sync-resouce-between-your-hub-cluster-and-a-object-store)
+  - [Trouble shooting](#trouble-shooting)
+- [Community, discussion, contribution, and support](#community-discussion-contribution-and-support)
+- [References](#references)
+  - [multicloud-operators repositories](#multicloud-operators-repositories)
 
 <!-- END doctoc generated TOC please keep comment here to allow auto update -->
 
@@ -26,39 +25,47 @@
 
 ------
 
-Channel controller sync and promote resources from the target source to a channel namespace on your hub cluster or a host(such as object bucket). Then your subsucription can consume these resources.
+Channel controller sync and promote resources from the target source to a channel namespace on your hub cluster or a host(such as object bucket). Then your subscription can consume these resources.
 
 ## Quick Start
 
 ------
 
-### Setting up a channel to sync resouce between your hub cluster and a object store 
+### Setting up a channel to sync resourcese between your hub cluster and a object store 
 
 - Clone the subscription operator repository
 
 ```shell
-mkdir -p "$GOPATH"/src/github.com/IBM
-cd "$GOPATH"/src/github.com/IBM
-git clone https://github.com/IBM/multicloud-operators-subscription.git
-cd "$GOPATH"/src/github.com/IBM/multicloud-operators-subscription
+% mkdir -p "$GOPATH"/src/github.com/open-cluster-management
+
+% cd "$GOPATH"/src/github.com/open-cluster-management
+
+% git clone https://github.com/open-cluster-management/multicloud-operators-subscription.git
+
+% cd "$GOPATH"/src/github.com/open-cluster-management/multicloud-operators-subscription
 ```
 
 - Setup environment and deploy subscription operator
 
 ```shell
-kubectl apply -f ./deploy/standalone
+# apply all the necessary CRDs
+% kubectl apply -f ./deploy/crds
+
+# deploy the channel controller to your cluster via a deployment, also grant access to the controller
+% kubectl apply -f ./deploy/standalone
 ```
 
 - Create a Channel and Subscription
 
 ```shell
-kubectl apply -f ./examples/helmrepo-channel
+# a simple namespace type channel example
+% kubectl apply -f ./examples/channel-alone
 ```
 
 - Subscribe!
 
 ```shell
-kubectl patch subscriptions.app.ibm.com simple --type='json' -p='[{"op": "replace", "path": "/spec/placement/local", "value": true}]'
+$ kubectl patch subscriptions.app.ibm.com simple --type='json' -p='[{"op": "replace", "path": "/spec/placement/local", "value": true}]'
 ```
 
 Find the nginx pods deployed to current namespace, and the number of backend pods is overrided to 3
@@ -150,11 +157,11 @@ You can reach the maintainers of this by raising issues. Slack communication is 
 
 ### multicloud-operators repositories
 
-- [multicloud-operators-deployable](https://github.com/IBM/multicloud-operators-deployable)
-- [multicloud-operators-placementrule](https://github.com/IBM/multicloud-operators-placementrule)
-- [multicloud-operators-channel](https://github.com/IBM/multicloud-operators-channel)
-- [multicloud-operators-subscription](https://github.com/IBM/multicloud-operators-subscription)
-- [multicloud-operators-subscription-release](https://github.com/IBM/multicloud-operators-subscription-release)
+- [multicloud-operators-deployable](https://github.com/open-cluster-management/multicloud-operators-deployable)
+- [multicloud-operators-placementrule](https://github.com/open-cluster-management/multicloud-operators-placementrule)
+- [multicloud-operators-channel](https://github.com/open-cluster-management/multicloud-operators-channel)
+- [multicloud-operators-subscription](https://github.com/open-cluster-management/multicloud-operators-subscription)
+- [multicloud-operators-subscription-release](https://github.com/open-cluster-management/multicloud-operators-subscription-release)
 
 ------
 
