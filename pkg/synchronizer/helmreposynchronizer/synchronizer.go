@@ -30,10 +30,10 @@ import (
 
 	"github.com/pkg/errors"
 
-	dplv1alpha1 "github.com/IBM/multicloud-operators-deployable/pkg/apis/app/v1alpha1"
-	deputils "github.com/IBM/multicloud-operators-deployable/pkg/utils"
 	chnv1alpha1 "github.com/open-cluster-management/multicloud-operators-channel/pkg/apis/app/v1alpha1"
 	"github.com/open-cluster-management/multicloud-operators-channel/pkg/utils"
+	dplv1alpha1 "github.com/open-cluster-management/multicloud-operators-deployable/pkg/apis/multicloudapps/v1alpha1"
+	deputils "github.com/open-cluster-management/multicloud-operators-deployable/pkg/utils"
 )
 
 // ChannelSynchronizer syncs objectbucket channels with helmrepo
