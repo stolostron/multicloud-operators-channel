@@ -11,6 +11,7 @@ require (
 	github.com/google/go-cmp v0.3.1
 	github.com/jstemmer/go-junit-report v0.9.1 // indirect
 	github.com/onsi/gomega v1.5.0
+	github.com/open-cluster-management/multicloud-operators-channel v0.0.0-20200224202707-3dbfcb223cd9 // indirect
 	github.com/operator-framework/operator-sdk v0.12.0
 	github.com/pkg/errors v0.8.1
 	github.com/prometheus/common v0.4.1

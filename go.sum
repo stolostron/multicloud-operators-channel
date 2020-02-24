@@ -406,6 +406,12 @@ github.com/onsi/gomega v1.4.2/go.mod h1:ex+gbHU/CVuBBDIJjb2X0qEXbFg53c61hWP/1Cpa
 github.com/onsi/gomega v1.4.3/go.mod h1:ex+gbHU/CVuBBDIJjb2X0qEXbFg53c61hWP/1CpauHY=
 github.com/onsi/gomega v1.5.0 h1:izbySO9zDPmjJ8rDjLvkA2zJHIo+HkYXHnf7eN7SSyo=
 github.com/onsi/gomega v1.5.0/go.mod h1:ex+gbHU/CVuBBDIJjb2X0qEXbFg53c61hWP/1CpauHY=
+github.com/open-cluster-management/multicloud-operators-channel v0.0.0-20200224202707-3dbfcb223cd9 h1:khL4Cq2oLkVCGdKH9un6JinL4Xc95KFGdtfPQ+fnCuY=
+github.com/open-cluster-management/multicloud-operators-channel v0.0.0-20200224202707-3dbfcb223cd9/go.mod h1:ZIqnDup+TWSQT8g2W+56YToExcjMNN3BMUGeWFzCfBU=
+github.com/open-cluster-management/multicloud-operators-deployable v0.0.0-20200222223552-26f855167607 h1:0Wg8D3omtioenjirm22wfZd6NlI4/ebtxi/DMwxHR4Q=
+github.com/open-cluster-management/multicloud-operators-deployable v0.0.0-20200222223552-26f855167607/go.mod h1:1Ly/Ff5ClGnELbxzo5fV9ifg01geTS2UIywFoRd2ju0=
+github.com/open-cluster-management/multicloud-operators-placementrule v0.0.0-20200221060829-23a78b442412 h1:DJvg2DUTO8hoQ71kTTIGEpmtef8uWqOTkrjdxQN/vOw=
+github.com/open-cluster-management/multicloud-operators-placementrule v0.0.0-20200221060829-23a78b442412/go.mod h1:mgU+3nfxS4FgPcywx9VpQiQosWY+o0XXHhBJiT3fr2o=
 github.com/opencontainers/go-digest v0.0.0-20170106003457-a6d0ee40d420/go.mod h1:cMLVZDEM3+U2I4VmLI6N8jQYUd2OVphdqWwCJHrFt2s=
 github.com/opencontainers/go-digest v1.0.0-rc1/go.mod h1:cMLVZDEM3+U2I4VmLI6N8jQYUd2OVphdqWwCJHrFt2s=
 github.com/opencontainers/image-spec v0.0.0-20170604055404-372ad780f634/go.mod h1:BtxoFyWECRxE4U/7sNtV5W15zMzWCbyJoFRP3s7yZA0=
