@@ -28,7 +28,7 @@ import (
 	"k8s.io/klog"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	chnv1alpha1 "github.com/IBM/multicloud-operators-channel/pkg/apis/app/v1alpha1"
+	chnv1alpha1 "github.com/open-cluster-management/multicloud-operators-channel/pkg/apis/app/v1alpha1"
 )
 
 // ChannelDescription contains channel and its object store information
@@ -132,7 +132,7 @@ func getCredentialFromKube(secretRef *corev1.ObjectReference, defaultNs string, 
 func (desc *ChannelDescriptor) initChannelDescription(chn *chnv1alpha1.Channel, accessKeyID, secretAccessKey string, objStoreHandler ObjectStore) error {
 	chndesc := &ChannelDescription{}
 
-	pathName := chn.Spec.PathName
+	pathName := chn.Spec.Pathname
 	if pathName == "" {
 		return errors.New(fmt.Sprintf("empty pathname in channel %v", chn.Name))
 	}

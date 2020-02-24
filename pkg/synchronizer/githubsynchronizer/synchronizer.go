@@ -38,13 +38,15 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 
-	chnv1alpha1 "github.com/IBM/multicloud-operators-channel/pkg/apis/app/v1alpha1"
-	"github.com/IBM/multicloud-operators-channel/pkg/utils"
-	dplv1alpha1 "github.com/IBM/multicloud-operators-deployable/pkg/apis/app/v1alpha1"
-	deputils "github.com/IBM/multicloud-operators-deployable/pkg/utils"
+	chnv1alpha1 "github.com/open-cluster-management/multicloud-operators-channel/pkg/apis/app/v1alpha1"
+	"github.com/open-cluster-management/multicloud-operators-channel/pkg/utils"
+	dplv1alpha1 "github.com/open-cluster-management/multicloud-operators-deployable/pkg/apis/multicloudapps/v1alpha1"
+	deputils "github.com/open-cluster-management/multicloud-operators-deployable/pkg/utils"
 )
 
-var debugLevel = klog.Level(10)
+const (
+	debugLevel = klog.Level(10)
+)
 
 // ChannelSynchronizer syncs github channels with github repository
 type ChannelSynchronizer struct {
@@ -387,11 +389,11 @@ func (sync *ChannelSynchronizer) handleHelmDeployable(dpl dplv1alpha1.Deployable
 			crepo = obj.Spec.Source.HelmRepo.URLs[0]
 		}
 
-		if crepo != chn.Spec.PathName {
-			klog.Infof("channel %v path changed to %v", chn.GetName(), chn.Spec.PathName)
-			//here might need to do a better code review to see if `crepo = chn.Spec.PathName` is needed
+		if crepo != chn.Spec.Pathname {
+			klog.Infof("channel %v path changed to %v", chn.GetName(), chn.Spec.Pathname)
+			//here might need to do a better code review to see if `crepo = chn.Spec.Pathname` is needed
 			if err := sync.kubeClient.Update(context.TODO(), &dpl); err != nil {
-				return errors.Wrap(err, fmt.Sprintf("failed to update deployable %v in helm repo channel %v", dpl.Name, chn.Spec.PathName))
+				return errors.Wrap(err, fmt.Sprintf("failed to update deployable %v in helm repo channel %v", dpl.Name, chn.Spec.Pathname))
 			}
 		}
 	}
@@ -414,7 +416,7 @@ func (sync *ChannelSynchronizer) processGeneralMap(idx *repo.IndexFile, chn *chn
 		spec.Version = mv
 
 		sourceurls := &sourceURLs{}
-		sourceurls.URLs = []string{chn.Spec.PathName}
+		sourceurls.URLs = []string{chn.Spec.Pathname}
 
 		src := &source{}
 

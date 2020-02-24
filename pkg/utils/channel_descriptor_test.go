@@ -25,8 +25,8 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	chnv1alpha1 "github.com/IBM/multicloud-operators-channel/pkg/apis/app/v1alpha1"
-	"github.com/IBM/multicloud-operators-channel/pkg/utils"
+	chnv1alpha1 "github.com/open-cluster-management/multicloud-operators-channel/pkg/apis/app/v1alpha1"
+	"github.com/open-cluster-management/multicloud-operators-channel/pkg/utils"
 )
 
 type myObjectStore struct {
@@ -127,7 +127,7 @@ func TestValidateChannel(t *testing.T) {
 				},
 				Spec: chnv1alpha1.ChannelSpec{
 					Type:     chnv1alpha1.ChannelTypeGitHub,
-					PathName: "",
+					Pathname: "",
 				},
 			},
 			kubeClient: c,
@@ -143,7 +143,7 @@ func TestValidateChannel(t *testing.T) {
 				},
 				Spec: chnv1alpha1.ChannelSpec{
 					Type:     chnv1alpha1.ChannelTypeGitHub,
-					PathName: "",
+					Pathname: "",
 					SecretRef: &v1.ObjectReference{
 						Kind:      "Secret",
 						Name:      testSrt,
@@ -164,7 +164,7 @@ func TestValidateChannel(t *testing.T) {
 				},
 				Spec: chnv1alpha1.ChannelSpec{
 					Type:     chnv1alpha1.ChannelTypeGitHub,
-					PathName: "https://www.google.com/" + testBucket + "/",
+					Pathname: "https://www.google.com/" + testBucket + "/",
 					SecretRef: &v1.ObjectReference{
 						Kind:      "Secret",
 						Name:      testSrt,

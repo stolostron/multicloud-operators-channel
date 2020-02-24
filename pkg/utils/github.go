@@ -33,7 +33,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	chnv1alpha1 "github.com/IBM/multicloud-operators-channel/pkg/apis/app/v1alpha1"
+	chnv1alpha1 "github.com/open-cluster-management/multicloud-operators-channel/pkg/apis/app/v1alpha1"
 )
 
 const (
@@ -46,7 +46,7 @@ const (
 // CloneGitRepo clones the GitHub repo
 func CloneGitRepo(chn *chnv1alpha1.Channel, kubeClient client.Client) (*repo.IndexFile, map[string]string, error) {
 	options := &git.CloneOptions{
-		URL:               chn.Spec.PathName,
+		URL:               chn.Spec.Pathname,
 		Depth:             1,
 		SingleBranch:      true,
 		RecurseSubmodules: git.DefaultSubmoduleRecursionDepth,
@@ -104,7 +104,7 @@ func CloneGitRepo(chn *chnv1alpha1.Channel, kubeClient client.Client) (*repo.Ind
 		}
 	}
 
-	klog.V(debugLevel).Info("Cloning ", chn.Spec.PathName, " into ", repoRoot)
+	klog.V(debugLevel).Info("Cloning ", chn.Spec.Pathname, " into ", repoRoot)
 	_, err := git.PlainClone(repoRoot, false, options)
 
 	if err != nil {

@@ -1,17 +1,15 @@
-module github.com/IBM/multicloud-operators-channel
+module github.com/open-cluster-management/multicloud-operators-channel
 
 go 1.13
 
 require (
-	github.com/IBM/multicloud-operators-deployable v0.0.0-20191121134707-a429faaac3b4
-	github.com/IBM/multicloud-operators-placementrule v0.0.0-20191106021205-80eeda99597f
 	github.com/aws/aws-sdk-go-v2 v0.18.0
 	github.com/ghodss/yaml v1.0.1-0.20180820084758-c7ce16629ff4
 	github.com/go-openapi/spec v0.19.0
 	github.com/google/go-cmp v0.3.1
-	github.com/jstemmer/go-junit-report v0.9.1 // indirect
 	github.com/onsi/gomega v1.5.0
-	github.com/open-cluster-management/multicloud-operators-channel v0.0.0-20200224202707-3dbfcb223cd9 // indirect
+	github.com/open-cluster-management/multicloud-operators-deployable v0.0.0-20200222223552-26f855167607
+	github.com/open-cluster-management/multicloud-operators-placementrule v0.0.0-20200221060829-23a78b442412
 	github.com/operator-framework/operator-sdk v0.12.0
 	github.com/pkg/errors v0.8.1
 	github.com/prometheus/common v0.4.1

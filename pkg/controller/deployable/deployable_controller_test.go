@@ -34,8 +34,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
-	appv1alpha1 "github.com/IBM/multicloud-operators-channel/pkg/apis/app/v1alpha1"
-	dplv1alpha1 "github.com/IBM/multicloud-operators-deployable/pkg/apis/app/v1alpha1"
+	appv1alpha1 "github.com/open-cluster-management/multicloud-operators-channel/pkg/apis/app/v1alpha1"
+	dplv1alpha1 "github.com/open-cluster-management/multicloud-operators-deployable/pkg/apis/multicloudapps/v1alpha1"
 )
 
 var c client.Client
@@ -60,7 +60,7 @@ func TestDeployableReconcile(t *testing.T) {
 			Namespace: targetNamespace},
 		Spec: appv1alpha1.ChannelSpec{
 			Type:     targetChannelType,
-			PathName: targetNamespace,
+			Pathname: targetNamespace,
 		},
 	}
 

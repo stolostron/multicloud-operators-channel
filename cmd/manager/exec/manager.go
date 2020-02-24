@@ -42,14 +42,14 @@ import (
 
 	"k8s.io/klog"
 
-	"github.com/IBM/multicloud-operators-channel/pkg/apis"
-	"github.com/IBM/multicloud-operators-channel/pkg/controller"
-	"github.com/IBM/multicloud-operators-channel/pkg/utils"
-	"github.com/IBM/multicloud-operators-channel/pkg/webhook"
+	"github.com/open-cluster-management/multicloud-operators-channel/pkg/apis"
+	"github.com/open-cluster-management/multicloud-operators-channel/pkg/controller"
+	"github.com/open-cluster-management/multicloud-operators-channel/pkg/utils"
+	"github.com/open-cluster-management/multicloud-operators-channel/pkg/webhook"
 
-	gitsync "github.com/IBM/multicloud-operators-channel/pkg/synchronizer/githubsynchronizer"
-	helmsync "github.com/IBM/multicloud-operators-channel/pkg/synchronizer/helmreposynchronizer"
-	objsync "github.com/IBM/multicloud-operators-channel/pkg/synchronizer/objectstoresynchronizer"
+	gitsync "github.com/open-cluster-management/multicloud-operators-channel/pkg/synchronizer/githubsynchronizer"
+	helmsync "github.com/open-cluster-management/multicloud-operators-channel/pkg/synchronizer/helmreposynchronizer"
+	objsync "github.com/open-cluster-management/multicloud-operators-channel/pkg/synchronizer/objectstoresynchronizer"
 )
 
 // Change below variables to serve metrics on different host or port.

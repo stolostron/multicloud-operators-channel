@@ -30,10 +30,10 @@ import (
 
 	"github.com/pkg/errors"
 
-	chnv1alpha1 "github.com/IBM/multicloud-operators-channel/pkg/apis/app/v1alpha1"
-	"github.com/IBM/multicloud-operators-channel/pkg/utils"
-	dplv1alpha1 "github.com/IBM/multicloud-operators-deployable/pkg/apis/app/v1alpha1"
-	deputils "github.com/IBM/multicloud-operators-deployable/pkg/utils"
+	chnv1alpha1 "github.com/open-cluster-management/multicloud-operators-channel/pkg/apis/app/v1alpha1"
+	"github.com/open-cluster-management/multicloud-operators-channel/pkg/utils"
+	dplv1alpha1 "github.com/open-cluster-management/multicloud-operators-deployable/pkg/apis/multicloudapps/v1alpha1"
+	deputils "github.com/open-cluster-management/multicloud-operators-deployable/pkg/utils"
 )
 
 // ChannelSynchronizer syncs objectbucket channels with helmrepo
@@ -106,7 +106,7 @@ func (sync *ChannelSynchronizer) syncChannel(chn *chnv1alpha1.Channel) {
 	}
 
 	// retrieve helm chart list from helm repo
-	idx, err := utils.GetHelmRepoIndex(chn.Spec.PathName)
+	idx, err := utils.GetHelmRepoIndex(chn.Spec.Pathname)
 	if err != nil {
 		klog.Errorf("Error getting index for channel %v/%v err: %v ", chn.Namespace, chn.Name, errors.Cause(err).Error())
 		return
@@ -157,7 +157,7 @@ func (sync *ChannelSynchronizer) syncChannel(chn *chnv1alpha1.Channel) {
 		specMap := make(map[string]string)
 		specMap[utils.HelmCRChartName] = k
 		specMap[utils.HelmCRVersion] = mv
-		specMap[utils.HelmCRRepoURL] = chn.Spec.PathName
+		specMap[utils.HelmCRRepoURL] = chn.Spec.Pathname
 
 		obj.Object["spec"] = specMap
 		klog.V(10).Info("Object: ", obj.Object)
@@ -233,16 +233,16 @@ func (sync *ChannelSynchronizer) processDeployable(chn *chnv1alpha1.Channel,
 	if !keep {
 		err = sync.kubeClient.Delete(context.TODO(), &dpl)
 		if err != nil {
-			klog.Error("Failed to delete deployable in helm repo channel:", dpl.Name, " to ", chn.Spec.PathName)
+			klog.Error("Failed to delete deployable in helm repo channel:", dpl.Name, " to ", chn.Spec.Pathname)
 		}
 	} else {
 		chmap[cver] = true
 		crepo := specMap[utils.HelmCRRepoURL].(string)
-		if crepo != chn.Spec.PathName {
-			specMap[utils.HelmCRRepoURL] = chn.Spec.PathName
+		if crepo != chn.Spec.Pathname {
+			specMap[utils.HelmCRRepoURL] = chn.Spec.Pathname
 			err = sync.kubeClient.Update(context.TODO(), &dpl)
 			if err != nil {
-				klog.Error("Failed to update deployable in helm repo channel:", dpl.Name, " to ", chn.Spec.PathName)
+				klog.Error("Failed to update deployable in helm repo channel:", dpl.Name, " to ", chn.Spec.Pathname)
 			}
 		}
 	}
