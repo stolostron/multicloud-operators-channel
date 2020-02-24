@@ -17,11 +17,11 @@ package objectstore
 import (
 	"context"
 
-	chnv1alpha1 "github.com/IBM/multicloud-operators-channel/pkg/apis/app/v1alpha1"
-	gitsync "github.com/IBM/multicloud-operators-channel/pkg/synchronizer/githubsynchronizer"
-	helmsync "github.com/IBM/multicloud-operators-channel/pkg/synchronizer/helmreposynchronizer"
-	"github.com/IBM/multicloud-operators-channel/pkg/utils"
-	appv1alpha1 "github.com/IBM/multicloud-operators-deployable/pkg/apis/app/v1alpha1"
+	chnv1alpha1 "github.com/open-cluster-management/multicloud-operators-channel/pkg/apis/app/v1alpha1"
+	gitsync "github.com/open-cluster-management/multicloud-operators-channel/pkg/synchronizer/githubsynchronizer"
+	helmsync "github.com/open-cluster-management/multicloud-operators-channel/pkg/synchronizer/helmreposynchronizer"
+	"github.com/open-cluster-management/multicloud-operators-channel/pkg/utils"
+	dplv1alpha1 "github.com/open-cluster-management/multicloud-operators-deployable/pkg/apis/multicloudapps/v1alpha1"
 
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/types"
@@ -63,7 +63,7 @@ type channelMapper struct {
 }
 
 func (mapper *channelMapper) Map(obj handler.MapObject) []reconcile.Request {
-	dpllist := &appv1alpha1.DeployableList{}
+	dpllist := &dplv1alpha1.DeployableList{}
 
 	err := mapper.List(context.TODO(), dpllist, &client.ListOptions{Namespace: obj.Meta.GetNamespace()})
 	if err != nil {
@@ -88,7 +88,7 @@ func add(mgr manager.Manager, r reconcile.Reconciler) error {
 	}
 
 	// Watch for changes to Deployable
-	err = c.Watch(&source.Kind{Type: &appv1alpha1.Deployable{}}, &handler.EnqueueRequestForObject{})
+	err = c.Watch(&source.Kind{Type: &dplv1alpha1.Deployable{}}, &handler.EnqueueRequestForObject{})
 	if err != nil {
 		return err
 	}
@@ -113,7 +113,7 @@ type ReconcileDeployable struct {
 // +kubebuilder:rbac:groups=app.ibm.com,resources=deployables/status,verbs=get;update;patch
 func (r *ReconcileDeployable) Reconcile(request reconcile.Request) (reconcile.Result, error) {
 	// Fetch the Deployable instance
-	instance := &appv1alpha1.Deployable{}
+	instance := &dplv1alpha1.Deployable{}
 	err := r.KubeClient.Get(context.TODO(), request.NamespacedName, instance)
 	klog.Info("Reconciling:", request.NamespacedName, " with Get err:", err)
 

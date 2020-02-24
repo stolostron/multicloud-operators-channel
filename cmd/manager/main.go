@@ -24,7 +24,7 @@ import (
 	"github.com/spf13/pflag"
 	"k8s.io/klog"
 
-	"github.com/IBM/multicloud-operators-channel/cmd/manager/exec"
+	"github.com/open-cluster-management/multicloud-operators-channel/cmd/manager/exec"
 )
 
 func main() {

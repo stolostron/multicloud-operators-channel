@@ -20,10 +20,10 @@ import (
 
 	"k8s.io/klog"
 
-	chnv1alpha1 "github.com/IBM/multicloud-operators-channel/pkg/apis/app/v1alpha1"
-	gitsync "github.com/IBM/multicloud-operators-channel/pkg/synchronizer/githubsynchronizer"
-	helmsync "github.com/IBM/multicloud-operators-channel/pkg/synchronizer/helmreposynchronizer"
-	"github.com/IBM/multicloud-operators-channel/pkg/utils"
+	chnv1alpha1 "github.com/open-cluster-management/multicloud-operators-channel/pkg/apis/app/v1alpha1"
+	gitsync "github.com/open-cluster-management/multicloud-operators-channel/pkg/synchronizer/githubsynchronizer"
+	helmsync "github.com/open-cluster-management/multicloud-operators-channel/pkg/synchronizer/helmreposynchronizer"
+	"github.com/open-cluster-management/multicloud-operators-channel/pkg/utils"
 
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/client-go/tools/record"

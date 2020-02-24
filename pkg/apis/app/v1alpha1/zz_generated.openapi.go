@@ -25,11 +25,11 @@ import (
 
 func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenAPIDefinition {
 	return map[string]common.OpenAPIDefinition{
-		"github.com/IBM/multicloud-operators-channel/pkg/apis/app/v1alpha1.Channel":       schema_pkg_apis_app_v1alpha1_Channel(ref),
-		"github.com/IBM/multicloud-operators-channel/pkg/apis/app/v1alpha1.ChannelGate":   schema_pkg_apis_app_v1alpha1_ChannelGate(ref),
-		"github.com/IBM/multicloud-operators-channel/pkg/apis/app/v1alpha1.ChannelList":   schema_pkg_apis_app_v1alpha1_ChannelList(ref),
-		"github.com/IBM/multicloud-operators-channel/pkg/apis/app/v1alpha1.ChannelSpec":   schema_pkg_apis_app_v1alpha1_ChannelSpec(ref),
-		"github.com/IBM/multicloud-operators-channel/pkg/apis/app/v1alpha1.ChannelStatus": schema_pkg_apis_app_v1alpha1_ChannelStatus(ref),
+		"github.com/open-cluster-management/multicloud-operators-channel/pkg/apis/app/v1alpha1.Channel":       schema_pkg_apis_app_v1alpha1_Channel(ref),
+		"github.com/open-cluster-management/multicloud-operators-channel/pkg/apis/app/v1alpha1.ChannelGate":   schema_pkg_apis_app_v1alpha1_ChannelGate(ref),
+		"github.com/open-cluster-management/multicloud-operators-channel/pkg/apis/app/v1alpha1.ChannelList":   schema_pkg_apis_app_v1alpha1_ChannelList(ref),
+		"github.com/open-cluster-management/multicloud-operators-channel/pkg/apis/app/v1alpha1.ChannelSpec":   schema_pkg_apis_app_v1alpha1_ChannelSpec(ref),
+		"github.com/open-cluster-management/multicloud-operators-channel/pkg/apis/app/v1alpha1.ChannelStatus": schema_pkg_apis_app_v1alpha1_ChannelStatus(ref),
 	}
 }
 
@@ -42,7 +42,7 @@ func schema_pkg_apis_app_v1alpha1_Channel(ref common.ReferenceCallback) common.O
 				Properties: map[string]spec.Schema{
 					"status": {
 						SchemaProps: spec.SchemaProps{
-							Ref: ref("github.com/IBM/multicloud-operators-channel/pkg/apis/app/v1alpha1.ChannelStatus"),
+							Ref: ref("github.com/open-cluster-management/multicloud-operators-channel/pkg/apis/app/v1alpha1.ChannelStatus"),
 						},
 					},
 					"metadata": {
@@ -52,7 +52,7 @@ func schema_pkg_apis_app_v1alpha1_Channel(ref common.ReferenceCallback) common.O
 					},
 					"spec": {
 						SchemaProps: spec.SchemaProps{
-							Ref: ref("github.com/IBM/multicloud-operators-channel/pkg/apis/app/v1alpha1.ChannelSpec"),
+							Ref: ref("github.com/open-cluster-management/multicloud-operators-channel/pkg/apis/app/v1alpha1.ChannelSpec"),
 						},
 					},
 					"kind": {
@@ -73,7 +73,7 @@ func schema_pkg_apis_app_v1alpha1_Channel(ref common.ReferenceCallback) common.O
 			},
 		},
 		Dependencies: []string{
-			"github.com/IBM/multicloud-operators-channel/pkg/apis/app/v1alpha1.ChannelSpec", "github.com/IBM/multicloud-operators-channel/pkg/apis/app/v1alpha1.ChannelStatus", "k8s.io/apimachinery/pkg/apis/meta/v1.ObjectMeta"},
+			"github.com/open-cluster-management/multicloud-operators-channel/pkg/apis/app/v1alpha1.ChannelSpec", "github.com/open-cluster-management/multicloud-operators-channel/pkg/apis/app/v1alpha1.ChannelStatus", "k8s.io/apimachinery/pkg/apis/meta/v1.ObjectMeta"},
 	}
 }
 
@@ -154,7 +154,7 @@ func schema_pkg_apis_app_v1alpha1_ChannelList(ref common.ReferenceCallback) comm
 							Items: &spec.SchemaOrArray{
 								Schema: &spec.Schema{
 									SchemaProps: spec.SchemaProps{
-										Ref: ref("github.com/IBM/multicloud-operators-channel/pkg/apis/app/v1alpha1.Channel"),
+										Ref: ref("github.com/open-cluster-management/multicloud-operators-channel/pkg/apis/app/v1alpha1.Channel"),
 									},
 								},
 							},
@@ -165,7 +165,7 @@ func schema_pkg_apis_app_v1alpha1_ChannelList(ref common.ReferenceCallback) comm
 			},
 		},
 		Dependencies: []string{
-			"github.com/IBM/multicloud-operators-channel/pkg/apis/app/v1alpha1.Channel", "k8s.io/apimachinery/pkg/apis/meta/v1.ListMeta"},
+			"github.com/open-cluster-management/multicloud-operators-channel/pkg/apis/app/v1alpha1.Channel", "k8s.io/apimachinery/pkg/apis/meta/v1.ListMeta"},
 	}
 }
 
@@ -194,14 +194,14 @@ func schema_pkg_apis_app_v1alpha1_ChannelSpec(ref common.ReferenceCallback) comm
 							Ref: ref("k8s.io/api/core/v1.ObjectReference"),
 						},
 					},
-					"configRef": {
+					"configMapRef": {
 						SchemaProps: spec.SchemaProps{
 							Ref: ref("k8s.io/api/core/v1.ObjectReference"),
 						},
 					},
 					"gates": {
 						SchemaProps: spec.SchemaProps{
-							Ref: ref("github.com/IBM/multicloud-operators-channel/pkg/apis/app/v1alpha1.ChannelGate"),
+							Ref: ref("github.com/open-cluster-management/multicloud-operators-channel/pkg/apis/app/v1alpha1.ChannelGate"),
 						},
 					},
 					"sourceNamespaces": {
@@ -227,7 +227,7 @@ func schema_pkg_apis_app_v1alpha1_ChannelSpec(ref common.ReferenceCallback) comm
 			},
 		},
 		Dependencies: []string{
-			"github.com/IBM/multicloud-operators-channel/pkg/apis/app/v1alpha1.ChannelGate", "k8s.io/api/core/v1.ObjectReference"},
+			"github.com/open-cluster-management/multicloud-operators-channel/pkg/apis/app/v1alpha1.ChannelGate", "k8s.io/api/core/v1.ObjectReference"},
 	}
 }
 

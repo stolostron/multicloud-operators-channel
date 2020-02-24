@@ -19,12 +19,12 @@ import (
 	"reflect"
 	"strings"
 
-	appv1alpha1 "github.com/IBM/multicloud-operators-channel/pkg/apis/app/v1alpha1"
-	gitsync "github.com/IBM/multicloud-operators-channel/pkg/synchronizer/githubsynchronizer"
-	helmsync "github.com/IBM/multicloud-operators-channel/pkg/synchronizer/helmreposynchronizer"
-	"github.com/IBM/multicloud-operators-channel/pkg/utils"
-	dplutils "github.com/IBM/multicloud-operators-deployable/pkg/utils"
-	placementutils "github.com/IBM/multicloud-operators-placementrule/pkg/utils"
+	appv1alpha1 "github.com/open-cluster-management/multicloud-operators-channel/pkg/apis/app/v1alpha1"
+	gitsync "github.com/open-cluster-management/multicloud-operators-channel/pkg/synchronizer/githubsynchronizer"
+	helmsync "github.com/open-cluster-management/multicloud-operators-channel/pkg/synchronizer/helmreposynchronizer"
+	"github.com/open-cluster-management/multicloud-operators-channel/pkg/utils"
+	dplutils "github.com/open-cluster-management/multicloud-operators-deployable/pkg/utils"
+	placementutils "github.com/open-cluster-management/multicloud-operators-placementrule/pkg/utils"
 
 	corev1 "k8s.io/api/core/v1"
 	rbac "k8s.io/api/rbac/v1"
@@ -62,7 +62,9 @@ var (
 	DeployableAnnotation = "app.ibm.com/deployables"
 )
 
-var debugLevel = klog.Level(10)
+const (
+	debugLevel = klog.Level(10)
+)
 
 /**
 * USER ACTION REQUIRED: This is a scaffold file intended for the user to modify with their own Controller
@@ -198,12 +200,12 @@ func (r *ReconcileChannel) Reconcile(request reconcile.Request) (reconcile.Resul
 		return reconcile.Result{}, err
 	}
 
-	if (strings.EqualFold(string(instance.Spec.Type), appv1alpha1.ChannelTypeNamespace)) && (instance.Spec.PathName != instance.GetNamespace()) {
-		instance.Spec.PathName = instance.GetNamespace()
+	if (strings.EqualFold(string(instance.Spec.Type), appv1alpha1.ChannelTypeNamespace)) && (instance.Spec.Pathname != instance.GetNamespace()) {
+		instance.Spec.Pathname = instance.GetNamespace()
 
 		err := r.Update(context.TODO(), instance)
 		if err != nil {
-			klog.Infof("Can't update the pathName field due to %v", err)
+			klog.Infof("Can't update the pathname field due to %v", err)
 			return reconcile.Result{}, err
 		}
 
