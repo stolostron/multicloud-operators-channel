@@ -38,8 +38,8 @@ env:
 # define stages
 stages:
   - lint
-  - build
   - unit-test
+  - build
   - test-e2e
   - publish
 
