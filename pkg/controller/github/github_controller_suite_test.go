@@ -24,7 +24,7 @@ import (
 	"k8s.io/client-go/rest"
 	"sigs.k8s.io/controller-runtime/pkg/envtest"
 
-	"github.com/IBM/multicloud-operators-channel/pkg/apis"
+	"github.com/open-cluster-management/multicloud-operators-channel/pkg/apis"
 )
 
 var cfg *rest.Config

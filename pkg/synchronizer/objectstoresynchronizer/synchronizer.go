@@ -32,10 +32,10 @@ import (
 	"k8s.io/klog"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	chnv1alpha1 "github.com/IBM/multicloud-operators-channel/pkg/apis/app/v1alpha1"
-	"github.com/IBM/multicloud-operators-channel/pkg/utils"
-	dplv1alpha1 "github.com/IBM/multicloud-operators-deployable/pkg/apis/app/v1alpha1"
-	dplutils "github.com/IBM/multicloud-operators-deployable/pkg/utils"
+	chnv1alpha1 "github.com/open-cluster-management/multicloud-operators-channel/pkg/apis/app/v1alpha1"
+	"github.com/open-cluster-management/multicloud-operators-channel/pkg/utils"
+	dplv1alpha1 "github.com/open-cluster-management/multicloud-operators-deployable/pkg/apis/multicloudapps/v1alpha1"
+	dplutils "github.com/open-cluster-management/multicloud-operators-deployable/pkg/utils"
 )
 
 // ChannelSynchronizer syncs objectbucket channels with ObjectStore
@@ -188,7 +188,7 @@ func (sync *ChannelSynchronizer) syncChannel(chn *chnv1alpha1.Channel) error {
 			continue
 		}
 		// Set AnnotationExternalSource
-		tplannotations[dplv1alpha1.AnnotationExternalSource] = chn.Spec.PathName
+		tplannotations[dplv1alpha1.AnnotationExternalSource] = chn.Spec.Pathname
 		tplannotations[dplv1alpha1.AnnotationLocal] = "false"
 		tpl.SetAnnotations(tplannotations)
 
@@ -242,7 +242,7 @@ func (sync *ChannelSynchronizer) updateSynchronizerWithDeployable(
 		tplannotations = make(map[string]string)
 	}
 
-	tplannotations[dplv1alpha1.AnnotationExternalSource] = chn.Spec.PathName
+	tplannotations[dplv1alpha1.AnnotationExternalSource] = chn.Spec.Pathname
 	tpl.SetAnnotations(tplannotations)
 
 	if !reflect.DeepEqual(tpl, dpltpl) {

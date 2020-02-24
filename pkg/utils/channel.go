@@ -21,8 +21,8 @@ import (
 
 	"k8s.io/klog"
 
-	appv1alpha1 "github.com/IBM/multicloud-operators-channel/pkg/apis/app/v1alpha1"
-	dplutils "github.com/IBM/multicloud-operators-deployable/pkg/utils"
+	appv1alpha1 "github.com/open-cluster-management/multicloud-operators-channel/pkg/apis/app/v1alpha1"
+	dplutils "github.com/open-cluster-management/multicloud-operators-deployable/pkg/utils"
 
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )

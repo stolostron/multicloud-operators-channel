@@ -58,9 +58,9 @@ type ChannelSpec struct {
 	// Important: Run "make" to regenerate code after modifying this file
 	// +kubebuilder:validation:Enum={Namespace,HelmRepo,ObjectBucket,GitHub,namespace,helmrepo,objectbucket,github}
 	Type         ChannelType             `json:"type"`
-	PathName     string                  `json:"pathname"`
+	Pathname     string                  `json:"pathname"`
 	SecretRef    *corev1.ObjectReference `json:"secretRef,omitempty"`
-	ConfigMapRef *corev1.ObjectReference `json:"configRef,omitempty"`
+	ConfigMapRef *corev1.ObjectReference `json:"configMapRef,omitempty"`
 	Gates        *ChannelGate            `json:"gates,omitempty"`
 	// +listType=set
 	SourceNamespaces []string `json:"sourceNamespaces,omitempty"`
