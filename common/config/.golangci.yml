@@ -38,6 +38,7 @@ linters:
     - scopelint
     - funlen
     - bodyclose
+    - gomnd
   fast: false
 
 linters-settings:
@@ -61,7 +62,7 @@ linters-settings:
   goimports:
     # put imports beginning with prefix after 3rd-party packages;
     # it's a comma-separated list of prefixes
-    local-prefixes: github.com/IBM/
+    local-prefixes: github.com/open-cluster-management/
   maligned:
     # print struct with more effective memory layout or not, false by default
     suggest-new: true

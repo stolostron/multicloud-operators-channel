@@ -12,15 +12,13 @@
 
 - [Overview](#overview)
 - [Quick Start](#quick-start)
-  - [Setting up a channel to sync resouce between your hub cluster and a object store](#setting-up-a-channel-to-sync-resouce-between-your-hub-cluster-and-a-object-store)
+  - [Setting up a channel to sync resourcese between your hub cluster and a object bucket](#setting-up-a-channel-to-sync-resourcese-between-your-hub-cluster-and-a-object-bucket)
   - [Trouble shooting](#trouble-shooting)
 - [Community, discussion, contribution, and support](#community-discussion-contribution-and-support)
 - [References](#references)
   - [multicloud-operators repositories](#multicloud-operators-repositories)
 
 <!-- END doctoc generated TOC please keep comment here to allow auto update -->
-
-
 ## Overview
 
 ------
@@ -31,7 +29,7 @@ Channel controller sync and promote resources from the target source to a channe
 
 ------
 
-### Setting up a channel to sync resourcese between your hub cluster and a object store 
+### Setting up a channel to sync resourcese between your hub cluster and a object bucket
 
 - Clone the subscription operator repository
 
