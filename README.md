@@ -10,13 +10,13 @@
 <!-- DON'T EDIT THIS SECTION, INSTEAD RE-RUN doctoc TO UPDATE -->
 **Table of Contents**  *generated with [DocToc](https://github.com/thlorenz/doctoc)*
 
-- [Overview](#overview)
+<!-- - [Overview](#overview)
 - [Quick Start](#quick-start)
   - [Setting up a channel to sync resourcese between your hub cluster and a object bucket](#setting-up-a-channel-to-sync-resourcese-between-your-hub-cluster-and-a-object-bucket)
   - [Trouble shooting](#trouble-shooting)
 - [Community, discussion, contribution, and support](#community-discussion-contribution-and-support)
 - [References](#references)
-  - [multicloud-operators repositories](#multicloud-operators-repositories)
+  - [multicloud-operators repositories](#multicloud-operators-repositories) -->
 
 <!-- END doctoc generated TOC please keep comment here to allow auto update -->
 ## Overview
