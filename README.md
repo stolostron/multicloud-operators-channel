@@ -1,11 +1,10 @@
 # multicloud-operators-channel
 
 [![Build](https://travis-ci.com/open-cluster-management/multicloud-operators-channel.svg?branch=master)](https://travis-ci.com/open-cluster-management/multicloud-operators-channel.svg?branch=master)
+[![Go Report Card](https://goreportcard.com/badge/github.com/open-cluster-management/multicloud-operators-channel)](https://goreportcard.com/report/github.com/open-cluster-management/multicloud-operators-channel)
+[![GoDoc](https://godoc.org/github.com/open-cluster-management/multicloud-operators-channel?status.svg)](https://godoc.org/github.com/open-cluster-management/multicloud-operators-channel?status.svg)
+[![Code Coverage](https://codecov.io/gh/open-cluster-management/multicloud-operators-channel/branch/master/graphs/badge.svg?branch=master)](https://codecov.io/gh/open-cluster-management/multicloud-operators-channel?branch=master)
 [![License](https://img.shields.io/:license-apache-blue.svg)](http://www.apache.org/licenses/LICENSE-2.0.html)
-<!-- [![GoDoc](https://godoc.org/github.com/IBM/multicloud-operators-channel?status.svg)](https://godoc.org/github.com/IBM/multicloud-operators-channel) -->
-<!-- [![Go Report Card](https://goreportcard.com/badge/github.com/IBM/multicloud-operators-channel)](https://goreportcard.com/report/github.com/IBM/multicloud-operators-channel)
-[![Code Coverage](https://codecov.io/gh/IBM/multicloud-operators-channel/branch/master/graphs/badge.svg?branch=master)](https://codecov.io/gh/IBM/multicloud-operators-channel?branch=master) -->
-
 
 <!-- START doctoc generated TOC please keep comment here to allow auto update -->
 <!-- DON'T EDIT THIS SECTION, INSTEAD RE-RUN doctoc TO UPDATE -->
