@@ -38,9 +38,9 @@ Channel controller sync and promote resources from the target source to a channe
 
 % cd "$GOPATH"/src/github.com/open-cluster-management
 
-% git clone https://github.com/open-cluster-management/multicloud-operators-subscription.git
+% git clone https://github.com/open-cluster-management/multicloud-operators-channel.git
 
-% cd "$GOPATH"/src/github.com/open-cluster-management/multicloud-operators-subscription
+% cd "$GOPATH"/src/github.com/open-cluster-management/multicloud-operators-channel
 ```
 
 - Setup environment and deploy subscription operator
