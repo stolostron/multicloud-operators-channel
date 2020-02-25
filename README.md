@@ -10,28 +10,34 @@
 <!-- DON'T EDIT THIS SECTION, INSTEAD RE-RUN doctoc TO UPDATE -->
 **Table of Contents**  *generated with [DocToc](https://github.com/thlorenz/doctoc)*
 
-<!-- - [Overview](#overview)
+- [Overview](#overview)
 - [Quick Start](#quick-start)
   - [Setting up a channel to sync resourcese between your hub cluster and a object bucket](#setting-up-a-channel-to-sync-resourcese-between-your-hub-cluster-and-a-object-bucket)
   - [Trouble shooting](#trouble-shooting)
 - [Community, discussion, contribution, and support](#community-discussion-contribution-and-support)
 - [References](#references)
-  - [multicloud-operators repositories](#multicloud-operators-repositories) -->
+  - [multicloud-operators repositories](#multicloud-operators-repositories)
 
 <!-- END doctoc generated TOC please keep comment here to allow auto update -->
 ## Overview
 
 ------
 
-Channel controller sync and promote resources from the target source to a channel namespace on your hub cluster or a host(such as object bucket). Then your subscription can consume these resources.
+Channel controller sync and promote resources from the target source to a channel namespace on your hub cluster or to a host(such as object bucket). Then your subscription can consume these resources from the channel directly.
 
 ## Quick Start
+
+For a quick start, we are going to create a namespace channel, meaning you can put the resouce to a namespace, which is watching by our channel operator, then the operator will promote this resoucre to the channel namespace, which should be the namesapce the channel operator sits.
+
+The following example is tested on a minikube, so that you can play with this operator with out worrying too much extra stuff, such as secrity for a real cluster.
+
+*Note: please adjust the image setting of the operator at `./deploy/standalone/operator.yaml`, at least make sure, it's using the correct image tag and image policy.*
 
 ------
 
 ### Setting up a channel to sync resourcese between your hub cluster and a object bucket
 
-- Clone the subscription operator repository
+- Clone the channel operator repository
 
 ```shell
 % mkdir -p "$GOPATH"/src/github.com/open-cluster-management
@@ -43,7 +49,7 @@ Channel controller sync and promote resources from the target source to a channe
 % cd "$GOPATH"/src/github.com/open-cluster-management/multicloud-operators-channel
 ```
 
-- Setup environment and deploy subscription operator
+- Setup environment and deploy channel operator
 
 ```shell
 # apply all the necessary CRDs
@@ -53,28 +59,37 @@ Channel controller sync and promote resources from the target source to a channe
 % kubectl apply -f ./deploy/standalone
 ```
 
-- Create a Channel and Subscription
+- Create a Channel and deploy the payload(the resource you want channel operator to help you move/promote around)
 
 ```shell
 # a simple namespace type channel example
 % kubectl apply -f ./examples/channel-alone
 ```
 
-- Subscribe!
+As a result, a config map wrapped by `deployable`,  at default namespace. At the meantime, it will also deploy a `channel` resource at the `ch-ns` namespace.
 
-```shell
-$ kubectl patch subscriptions.app.ibm.com simple --type='json' -p='[{"op": "replace", "path": "/spec/placement/local", "value": true}]'
+```
+% kubectl get deployables.multicloud-apps.io
+
+NAME                            TEMPLATE-KIND   TEMPLATE-APIVERSION   AGE   STATUS
+payload-cfg-namespace-channel   ConfigMap       v1                    9s
+
 ```
 
-Find the nginx pods deployed to current namespace, and the number of backend pods is overrided to 3
+```
+% kubectl get channel -n ch-ns
+
+NAME   TYPE        PATHNAME   AGE
+ns     Namespace   ch-ns      20s
+```
+
+Resouces got moved to it destination, and `subscription` can take over from here, deploying this resource(it will be the configmap deployed) to your managed cluster. 
 
 ```shell
-% kubectl get pods -l app=nginx-ingress
-NAME                                             READY   STATUS    RESTARTS   AGE
-nginx-ingress-controller-857f44797-7fx7c         1/1     Running   0          96s
-nginx-ingress-default-backend-6b8dc9d88f-97pxz   1/1     Running   0          96s
-nginx-ingress-default-backend-6b8dc9d88f-drt7c   1/1     Running   0          96s
-nginx-ingress-default-backend-6b8dc9d88f-n26ls   1/1     Running   0          96s
+% kubectl get deployables.multicloud-apps.io -n ch-ns
+
+NAME                                  TEMPLATE-KIND   TEMPLATE-APIVERSION   AGE   STATUS
+payload-cfg-namespace-channel-gt47s   ConfigMap       v1                    37s
 ```
 
 Check the [Getting Started](docs/getting_started.md) doc for more details
@@ -85,57 +100,73 @@ Check the [Getting Started](docs/getting_started.md) doc for more details
 
 ```shell
 % kubectl get deploy,pods
-NAME                                                READY     UP-TO-DATE   AVAILABLE   AGE
-deployment.apps/multicloud-operators-subscription   1/1       1            1           99m
+NAME                                           READY   UP-TO-DATE   AVAILABLE   AGE
+deployment.apps/multicloud-operators-channel   1/1     1            1           41m
 
-NAME                                                     READY     STATUS    RESTARTS   AGE
-pod/multicloud-operators-subscription-557c676479-dh2fg   1/1       Running   0          24s
+NAME                                               READY   STATUS    RESTARTS   AGE
+pod/multicloud-operators-channel-f4fbbb9d9-6mcql   1/1     Running   0          13m
 ```
 
-- Check Subscription and its status
+- Check Channel and its status
 
 ```shell
-% kubectl describe appsub simple
-Name:         simple
-Namespace:    default
+% kubectl describe channel ns -n ch-ns
+
+Name:         ns
+Namespace:    ch-ns
 Labels:       <none>
 Annotations:  kubectl.kubernetes.io/last-applied-configuration:
-                {"apiVersion":"app.ibm.com/v1alpha1","kind":"Subscription","metadata":{"annotations":{},"name":"simple","namespace":"default"},"spec":{"ch...
+                {"apiVersion":"app.ibm.com/v1alpha1","kind":"Channel","metadata":{"annotations":{},"name":"ns","namespace":"ch-ns"},"spec":{"pathname":"ch...
 API Version:  app.ibm.com/v1alpha1
-Kind:         Subscription
+Kind:         Channel
 Metadata:
-  Creation Timestamp:  2019-11-21T04:01:47Z
-  Generation:          2
-  Resource Version:    24045
-  Self Link:           /apis/app.ibm.com/v1alpha1/namespaces/default/subscriptions/simple
-  UID:                 a35b6ef5-0c13-11ea-b4e7-00000a100ef8
+  Creation Timestamp:  2020-02-25T16:05:08Z
+  Generation:          1
+  Resource Version:    10126
+  Self Link:           /apis/app.ibm.com/v1alpha1/namespaces/ch-ns/channels/ns
+  UID:                 6796d764-1f89-4747-9e2c-e49533ecd8dd
 Spec:
-  Channel:  dev/dev-helmrepo
-  Name:     nginx-ingress
-  Package Overrides:
-    Package Alias:  nginx-ingress-alias
-    Package Name:  nginx-ingress
-    Package Overrides:
-      Path:   spec.values
-      Value:  defaultBackend:
-  replicaCount: 3
+  Pathname:  ch-ns
+  Source Namespaces:
+    default
+  Type:  Namespace
+Events:
+  Type    Reason  Age   From     Message
+  ----    ------  ----  ----     -------
+  Normal  Deploy  59s   channel  Depolyable ch-ns/payload-cfg-namespace-channel-gt47s created in the channel, Status: Success, Channel: ch-ns/ns>
 
-  Placement:
-    Local:  true
-Status:
-  Last Update Time:  2019-11-21T04:02:38Z
-  Phase:             Subscribed
-  Statuses:
-    /:
-      Packages:
-        dev-helmrepo-nginx-ingress-1.25.0:
-          Last Update Time:  2019-11-21T04:02:38Z
-          Phase:             Subscribed
-          Resource Status:
-            Last Update:  2019-11-21T04:02:24Z
-            Phase:        Success
-Events:                   <none>
 ```
+- Check Channel operator's log
+
+```shell
+% kubectl logs multicloud-operators-channel-f4fbbb9d9-6mcql
+
+I0225 15:47:46.659919       1 manager.go:65] Go Version: go1.13
+I0225 15:47:46.660006       1 manager.go:66] Go OS/Arch: linux/amd64
+I0225 15:47:46.660012       1 manager.go:67] Version of operator-sdk: v0.12.0
+I0225 15:47:48.705442       1 manager.go:148] Registering Components.
+I0225 15:47:48.705517       1 manager.go:151] setting up scheme
+I0225 15:47:48.706721       1 manager.go:171] Setting up controller
+I0225 15:47:48.707552       1 manager.go:178] setting up webhooks
+time="2020-02-25T15:47:50Z" level=info msg="Could not create ServiceMonitor objecterrorno ServiceMonitor registered with the API" source="manager.go:216"
+I0225 15:47:50.748181       1 manager.go:220] Install prometheus-operator in your cluster to create ServiceMonitor objectserrorno ServiceMonitor registered with the API
+I0225 15:47:50.748663       1 manager.go:224] Starting the Cmd.
+I0225 15:47:50.850112       1 synchronizer.go:78] Housekeeping loop ...
+I0225 15:47:50.850377       1 synchronizer.go:125] Housekeeping loop ...
+I0225 15:48:00.850993       1 synchronizer.go:78] Housekeeping loop ...
+I0225 15:48:00.851535       1 synchronizer.go:125] Housekeeping loop ...
+I0225 15:48:10.851468       1 synchronizer.go:78] Housekeeping loop ...
+I0225 15:48:10.851723       1 synchronizer.go:125] Housekeeping loop ...
+I0225 15:48:20.852381       1 synchronizer.go:125] Housekeeping loop ...
+I0225 15:48:20.852529       1 synchronizer.go:78] Housekeeping loop ...
+
+....
+
+
+I0225 16:00:19.424095       1 deployable_controller.go:293] Creating deployable in channel{{ } { payload-cfg-namespace-channel- ch-ns    0 0001-01-01 00:00:00 +0000 UTC <nil> <nil> map[] map[app.ibm.com/channel:ch-ns/ns app.ibm.com/hosting-deployable:default/payload-cfg-namespace-channel app.ibm.com/is-local-deployable:false kubectl.kubernetes.io/last-applied-configuration:{"apiVersion":"multicloud-apps.io/v1alpha1","kind":"Deployable","metadata":{"annotations":{"app.ibm.com/is-local-deployable":"false"},"name":"payload-cfg-namespace-channel","namespace":"default"},"spec":{"channels":["ns"],"template":{"apiVersion":"v1","data":{"database":"mongodb"},"kind":"ConfigMap","metadata":{"name":"cfg-from-ch-qa"}}}}
+
+```
+
 
 Please refer to [Trouble shooting documentation](docs/trouble_shooting.md) for further info.
 
