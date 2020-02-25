@@ -1,10 +1,11 @@
 # multicloud-operators-channel
 
-[![Build](http://35.227.205.240/badge.svg?jobs=images_multicloud-operators-channel_postsubmit)](http://35.227.205.240/badge.svg?jobs=images_multicloud-operators-channel_postsubmit)
-[![GoDoc](https://godoc.org/github.com/IBM/multicloud-operators-channel?status.svg)](https://godoc.org/github.com/IBM/multicloud-operators-channel)
-[![Go Report Card](https://goreportcard.com/badge/github.com/IBM/multicloud-operators-channel)](https://goreportcard.com/report/github.com/IBM/multicloud-operators-channel)
-[![Code Coverage](https://codecov.io/gh/IBM/multicloud-operators-channel/branch/master/graphs/badge.svg?branch=master)](https://codecov.io/gh/IBM/multicloud-operators-channel?branch=master)
+[![Build](https://travis-ci.com/open-cluster-management/multicloud-operators-channel.svg?branch=master)](https://travis-ci.com/open-cluster-management/multicloud-operators-channel.svg?branch=master)
 [![License](https://img.shields.io/:license-apache-blue.svg)](http://www.apache.org/licenses/LICENSE-2.0.html)
+<!-- [![GoDoc](https://godoc.org/github.com/IBM/multicloud-operators-channel?status.svg)](https://godoc.org/github.com/IBM/multicloud-operators-channel) -->
+<!-- [![Go Report Card](https://goreportcard.com/badge/github.com/IBM/multicloud-operators-channel)](https://goreportcard.com/report/github.com/IBM/multicloud-operators-channel)
+[![Code Coverage](https://codecov.io/gh/IBM/multicloud-operators-channel/branch/master/graphs/badge.svg?branch=master)](https://codecov.io/gh/IBM/multicloud-operators-channel?branch=master) -->
+
 
 <!-- START doctoc generated TOC please keep comment here to allow auto update -->
 <!-- DON'T EDIT THIS SECTION, INSTEAD RE-RUN doctoc TO UPDATE -->
@@ -136,7 +137,9 @@ Events:
   Normal  Deploy  59s   channel  Depolyable ch-ns/payload-cfg-namespace-channel-gt47s created in the channel, Status: Success, Channel: ch-ns/ns>
 
 ```
-- Check Channel operator's log
+- Check Channel operator log
+
+Normally, we care the reconcile trace. For each flow, it should at least have a valid reconcile log for the deployable.
 
 ```shell
 % kubectl logs multicloud-operators-channel-f4fbbb9d9-6mcql
