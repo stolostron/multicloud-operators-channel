@@ -42,7 +42,7 @@ spec:
         spec:
           description: ChannelSpec defines the desired state of Channel
           properties:
-            configRef:
+            configMapRef:
               description: ObjectReference contains enough information to let you
                 inspect or modify the referred object.
               properties:
