@@ -59,7 +59,7 @@ jobs:
         - |
           make
           make component/test/unit
-          # make sonar/go
+          make sonar/go
     - stage: build
       name: "Build the image and run unit tests"
       script:
