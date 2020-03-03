@@ -21,19 +21,18 @@ import (
 	"strings"
 	"sync"
 
+	chv1 "github.com/open-cluster-management/multicloud-operators-channel/pkg/apis/multicloudapps/v1"
 	"github.com/pkg/errors"
 	"gopkg.in/yaml.v2"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/klog"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-
-	chnv1alpha1 "github.com/open-cluster-management/multicloud-operators-channel/pkg/apis/app/v1alpha1"
 )
 
 // ChannelDescription contains channel and its object store information
 type ChannelDescription struct {
-	Channel *chnv1alpha1.Channel
+	Channel *chv1.Channel
 	Bucket  string
 	ObjectStore
 }
@@ -54,7 +53,7 @@ func CreateObjectStorageChannelDescriptor() (*ChannelDescriptor, error) {
 }
 
 // ValidateChannel validates and makes channel object store connection
-func (desc *ChannelDescriptor) ValidateChannel(chn *chnv1alpha1.Channel, kubeClient client.Client, objStoreHandler ...ObjectStore) error {
+func (desc *ChannelDescriptor) ValidateChannel(chn *chv1.Channel, kubeClient client.Client, objStoreHandler ...ObjectStore) error {
 	var storageHanler ObjectStore
 
 	if len(objStoreHandler) == 0 || objStoreHandler[0] == nil {
@@ -129,7 +128,7 @@ func getCredentialFromKube(secretRef *corev1.ObjectReference, defaultNs string, 
 	return accessKeyID, secretAccessKey, nil
 }
 
-func (desc *ChannelDescriptor) initChannelDescription(chn *chnv1alpha1.Channel, accessKeyID, secretAccessKey string, objStoreHandler ObjectStore) error {
+func (desc *ChannelDescriptor) initChannelDescription(chn *chv1.Channel, accessKeyID, secretAccessKey string, objStoreHandler ObjectStore) error {
 	chndesc := &ChannelDescription{}
 
 	pathName := chn.Spec.Pathname

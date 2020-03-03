@@ -30,7 +30,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
-	chnv1alpha1 "github.com/open-cluster-management/multicloud-operators-channel/pkg/apis/app/v1alpha1"
+	chv1 "github.com/open-cluster-management/multicloud-operators-channel/pkg/apis/multicloudapps/v1"
 	"github.com/open-cluster-management/multicloud-operators-channel/pkg/utils"
 	dplv1alpha1 "github.com/open-cluster-management/multicloud-operators-deployable/pkg/apis/multicloudapps/v1alpha1"
 )
@@ -179,8 +179,8 @@ func (r *ReconcileDeployable) reconcileForChannel(deployable *dplv1alpha1.Deploy
 	return reconcile.Result{}, nil
 }
 
-func (r *ReconcileDeployable) getChannelForNamespace(namespace string) (*chnv1alpha1.Channel, error) {
-	dplchnlist := &chnv1alpha1.ChannelList{}
+func (r *ReconcileDeployable) getChannelForNamespace(namespace string) (*chv1.Channel, error) {
+	dplchnlist := &chv1.ChannelList{}
 
 	err := r.KubeClient.List(context.TODO(), dplchnlist, &client.ListOptions{Namespace: namespace})
 	if err != nil {
@@ -193,14 +193,14 @@ func (r *ReconcileDeployable) getChannelForNamespace(namespace string) (*chnv1al
 
 	dplchn := dplchnlist.Items[0].DeepCopy()
 
-	if !strings.EqualFold(string(dplchn.Spec.Type), chnv1alpha1.ChannelTypeObjectBucket) {
+	if !strings.EqualFold(string(dplchn.Spec.Type), chv1.ChannelTypeObjectBucket) {
 		return nil, errors.New("wrong channel type")
 	}
 
 	return dplchn, nil
 }
 
-func (r *ReconcileDeployable) validateChannel(dplchn *chnv1alpha1.Channel) error {
+func (r *ReconcileDeployable) validateChannel(dplchn *chv1.Channel) error {
 	_, ok := r.ChannelDescriptor.Get(dplchn.Name)
 	if !ok {
 		klog.Info("Syncing channel ", dplchn.Name)
@@ -221,7 +221,7 @@ func (r *ReconcileDeployable) validateChannel(dplchn *chnv1alpha1.Channel) error
 
 // sync channel info with channel namespace. For ObjectBucket channel, namespace is source of truth
 // WARNNING: if channel is deleted during controller outage, bucket won't be cleaned up
-func (r *ReconcileDeployable) syncChannel(dplchn *chnv1alpha1.Channel) error {
+func (r *ReconcileDeployable) syncChannel(dplchn *chv1.Channel) error {
 	err := r.ChannelDescriptor.ValidateChannel(dplchn, r.KubeClient)
 	if err != nil {
 		return errors.Wrap(err, fmt.Sprintf("failed to validate channel %v", dplchn.Name))

@@ -28,7 +28,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
-	chnv1alpha1 "github.com/open-cluster-management/multicloud-operators-channel/pkg/apis/app/v1alpha1"
+	chv1 "github.com/open-cluster-management/multicloud-operators-channel/pkg/apis/multicloudapps/v1"
 	"github.com/open-cluster-management/multicloud-operators-deployable/pkg/apis"
 )
 
@@ -42,7 +42,7 @@ func TestMain(m *testing.M) {
 	}
 
 	apis.AddToScheme(scheme.Scheme)
-	chnv1alpha1.AddToScheme(scheme.Scheme)
+	chv1.AddToScheme(scheme.Scheme)
 
 	var err error
 	if cfg, err = t.Start(); err != nil {

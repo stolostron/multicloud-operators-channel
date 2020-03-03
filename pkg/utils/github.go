@@ -30,10 +30,9 @@ import (
 	"k8s.io/helm/pkg/chartutil"
 	"k8s.io/helm/pkg/repo"
 
+	chv1 "github.com/open-cluster-management/multicloud-operators-channel/pkg/apis/multicloudapps/v1"
 	corev1 "k8s.io/api/core/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-
-	chnv1alpha1 "github.com/open-cluster-management/multicloud-operators-channel/pkg/apis/app/v1alpha1"
 )
 
 const (
@@ -44,7 +43,7 @@ const (
 )
 
 // CloneGitRepo clones the GitHub repo
-func CloneGitRepo(chn *chnv1alpha1.Channel, kubeClient client.Client) (*repo.IndexFile, map[string]string, error) {
+func CloneGitRepo(chn *chv1.Channel, kubeClient client.Client) (*repo.IndexFile, map[string]string, error) {
 	options := &git.CloneOptions{
 		URL:               chn.Spec.Pathname,
 		Depth:             1,

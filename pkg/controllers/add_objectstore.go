@@ -15,10 +15,10 @@
 package controller
 
 import (
-	"github.com/open-cluster-management/multicloud-operators-channel/pkg/controller/helmrepo"
+	"github.com/open-cluster-management/multicloud-operators-channel/pkg/controllers/objectstore"
 )
 
 func init() {
 	// AddToManagerFuncs is a list of functions to create controllers and add them to a manager.
-	AddToManagerFuncs = append(AddToManagerFuncs, helmrepo.Add)
+	AddToManagerFuncs = append(AddToManagerFuncs, objectstore.Add)
 }

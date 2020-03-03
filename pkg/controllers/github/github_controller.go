@@ -12,20 +12,21 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package helmrepo
+package github
 
 import (
 	"context"
 	"strings"
 
-	chnv1alpha1 "github.com/open-cluster-management/multicloud-operators-channel/pkg/apis/app/v1alpha1"
+	"k8s.io/klog"
+
+	chv1 "github.com/open-cluster-management/multicloud-operators-channel/pkg/apis/multicloudapps/v1"
 	gitsync "github.com/open-cluster-management/multicloud-operators-channel/pkg/synchronizer/githubsynchronizer"
 	helmsync "github.com/open-cluster-management/multicloud-operators-channel/pkg/synchronizer/helmreposynchronizer"
 	"github.com/open-cluster-management/multicloud-operators-channel/pkg/utils"
 
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/client-go/tools/record"
-	"k8s.io/klog"
 
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
@@ -47,27 +48,27 @@ const debugLevel = klog.Level(10)
 func Add(mgr manager.Manager, recorder record.EventRecorder,
 	channelDescriptor *utils.ChannelDescriptor, sync *helmsync.ChannelSynchronizer,
 	gsync *gitsync.ChannelSynchronizer) error {
-	return add(mgr, newReconciler(mgr, sync))
+	return add(mgr, newReconciler(mgr, gsync))
 }
 
 // newReconciler returns a new reconcile.Reconciler
-func newReconciler(mgr manager.Manager, sync *helmsync.ChannelSynchronizer) reconcile.Reconciler {
+func newReconciler(mgr manager.Manager, gsync *gitsync.ChannelSynchronizer) reconcile.Reconciler {
 	return &ReconcileChannel{
 		KubeClient:          mgr.GetClient(),
-		ChannelSynchronizer: sync,
+		ChannelSynchronizer: gsync,
 	}
 }
 
 // add adds a new Controller to mgr with r as the reconcile.Reconciler
 func add(mgr manager.Manager, r reconcile.Reconciler) error {
 	// Create a new controller
-	c, err := controller.New("helmrepo-controller", mgr, controller.Options{Reconciler: r})
+	c, err := controller.New("github-controller", mgr, controller.Options{Reconciler: r})
 	if err != nil {
 		return err
 	}
 
 	// Watch for changes to Channels
-	err = c.Watch(&source.Kind{Type: &chnv1alpha1.Channel{}}, &handler.EnqueueRequestForObject{})
+	err = c.Watch(&source.Kind{Type: &chv1.Channel{}}, &handler.EnqueueRequestForObject{})
 	if err != nil {
 		return err
 	}
@@ -80,19 +81,18 @@ var _ reconcile.Reconciler = &ReconcileChannel{}
 // ReconcileChannel reconciles a Deployable object
 type ReconcileChannel struct {
 	KubeClient          client.Client
-	ChannelSynchronizer *helmsync.ChannelSynchronizer
+	ChannelSynchronizer *gitsync.ChannelSynchronizer
 }
 
 // Reconcile reads that state of the cluster for a Deployable object and makes changes based on the state read
 // and what is in the Deployable.Spec
-// ===todo(user): Modify this Reconcile function to implement your Controller logic.  The scaffolding writes
 // a Deployment as an example
 // Automatically generate RBAC rules to allow the Controller to read and write Deployments
 // +kubebuilder:rbac:groups=app.ibm.com,resources=deployables,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups=app.ibm.com,resources=deployables/status,verbs=get;update;patch
 func (r *ReconcileChannel) Reconcile(request reconcile.Request) (reconcile.Result, error) {
 	// Fetch the Deployable instance
-	instance := &chnv1alpha1.Channel{}
+	instance := &chv1.Channel{}
 	err := r.KubeClient.Get(context.TODO(), request.NamespacedName, instance)
 	klog.Info("Reconciling channel:", request.NamespacedName, " with Get err:", err)
 
@@ -109,7 +109,7 @@ func (r *ReconcileChannel) Reconcile(request reconcile.Request) (reconcile.Resul
 		return reconcile.Result{}, err
 	}
 
-	if !strings.EqualFold(string(instance.Spec.Type), chnv1alpha1.ChannelTypeHelmRepo) {
+	if !strings.EqualFold(string(instance.Spec.Type), chv1.ChannelTypeGitHub) {
 		klog.V(debugLevel).Info("Ignoring type ", instance.Spec.Type)
 		return reconcile.Result{}, nil
 	}

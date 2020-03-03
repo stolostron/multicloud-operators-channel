@@ -15,10 +15,10 @@
 package controller
 
 import (
-	"github.com/open-cluster-management/multicloud-operators-channel/pkg/controller/channel"
+	chv1 "github.com/open-cluster-management/multicloud-operators-channel/pkg/controllers/channel"
 )
 
 func init() {
 	// AddToManagerFuncs is a list of functions to create controllers and add them to a manager.
-	AddToManagerFuncs = append(AddToManagerFuncs, channel.Add)
+	AddToManagerFuncs = append(AddToManagerFuncs, chv1.Add)
 }

@@ -38,7 +38,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 
-	chnv1alpha1 "github.com/open-cluster-management/multicloud-operators-channel/pkg/apis/app/v1alpha1"
+	chv1 "github.com/open-cluster-management/multicloud-operators-channel/pkg/apis/multicloudapps/v1"
 	"github.com/open-cluster-management/multicloud-operators-channel/pkg/utils"
 	dplv1alpha1 "github.com/open-cluster-management/multicloud-operators-deployable/pkg/apis/multicloudapps/v1alpha1"
 	deputils "github.com/open-cluster-management/multicloud-operators-deployable/pkg/utils"
@@ -54,7 +54,7 @@ type ChannelSynchronizer struct {
 	kubeClient   client.Client
 	Signal       <-chan struct{}
 	SyncInterval int
-	ChannelMap   map[types.NamespacedName]*chnv1alpha1.Channel
+	ChannelMap   map[types.NamespacedName]*chv1.Channel
 }
 
 type helmTemplate struct {
@@ -147,7 +147,7 @@ func (sync *ChannelSynchronizer) syncChannelsWithGitRepo() {
 	}
 }
 
-func (sync *ChannelSynchronizer) processYamlFile(chn *chnv1alpha1.Channel, files []os.FileInfo, dir string, newDplList map[string]*dplv1alpha1.Deployable) {
+func (sync *ChannelSynchronizer) processYamlFile(chn *chv1.Channel, files []os.FileInfo, dir string, newDplList map[string]*dplv1alpha1.Deployable) {
 	for _, f := range files {
 		// If YAML or YML,
 		if f.Mode().IsRegular() {
@@ -174,7 +174,7 @@ func (sync *ChannelSynchronizer) processYamlFile(chn *chnv1alpha1.Channel, files
 }
 
 func (sync *ChannelSynchronizer) handleSingleDeployable(
-	chn *chnv1alpha1.Channel,
+	chn *chv1.Channel,
 	fileinfo os.FileInfo,
 	filecontent []byte,
 	t kubeResource,
@@ -218,7 +218,7 @@ func (sync *ChannelSynchronizer) handleSingleDeployable(
 	return nil
 }
 
-func (sync *ChannelSynchronizer) syncChannel(chn *chnv1alpha1.Channel) {
+func (sync *ChannelSynchronizer) syncChannel(chn *chv1.Channel) {
 	if chn == nil {
 		return
 	}
@@ -288,7 +288,7 @@ func (sync *ChannelSynchronizer) syncChannel(chn *chnv1alpha1.Channel) {
 
 func (sync *ChannelSynchronizer) handleResourceDeployable(
 	dpl dplv1alpha1.Deployable,
-	chn *chnv1alpha1.Channel,
+	chn *chv1.Channel,
 	newDplList map[string]*dplv1alpha1.Deployable) error {
 	klog.V(debugLevel).Infof("Synchronizing kube resource deployable %v", dpl.Name)
 
@@ -345,7 +345,7 @@ func (sync *ChannelSynchronizer) handleResourceDeployable(
 	return nil
 }
 
-func (sync *ChannelSynchronizer) handleHelmDeployable(dpl dplv1alpha1.Deployable, chn *chnv1alpha1.Channel, generalmap map[string]map[string]bool) error {
+func (sync *ChannelSynchronizer) handleHelmDeployable(dpl dplv1alpha1.Deployable, chn *chv1.Channel, generalmap map[string]map[string]bool) error {
 	klog.V(debugLevel).Infof("Synchronizing helm release deployable %v", dpl.Name)
 
 	obj := &helmTemplate{}
@@ -401,7 +401,7 @@ func (sync *ChannelSynchronizer) handleHelmDeployable(dpl dplv1alpha1.Deployable
 	return nil
 }
 
-func (sync *ChannelSynchronizer) processGeneralMap(idx *repo.IndexFile, chn *chnv1alpha1.Channel,
+func (sync *ChannelSynchronizer) processGeneralMap(idx *repo.IndexFile, chn *chv1.Channel,
 	majorversion map[string]string, generalmap map[string]map[string]bool) {
 	for k, charts := range generalmap {
 		mv := majorversion[k]
