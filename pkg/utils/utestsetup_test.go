@@ -39,7 +39,7 @@ func TestMain(m *testing.M) {
 	log.Printf("Enter TestMain\n")
 
 	testEnv := &envtest.Environment{
-		CRDDirectoryPaths: []string{filepath.Join("..", "..", "..", "..", "deploy", "crds"), filepath.Join("..", "..", "..", "..", "deploy", "dependent-crds")},
+		CRDDirectoryPaths: []string{filepath.Join("..", "..", "deploy", "crds"), filepath.Join("..", "..", "deploy", "dependent-crds")},
 	}
 
 	s := scheme.Scheme
