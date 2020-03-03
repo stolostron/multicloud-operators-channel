@@ -25,7 +25,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	chnv1alpha1 "github.com/open-cluster-management/multicloud-operators-channel/pkg/apis/app/v1alpha1"
+	chv1 "github.com/open-cluster-management/multicloud-operators-channel/pkg/apis/multicloudapps/v1"
 	"github.com/open-cluster-management/multicloud-operators-channel/pkg/utils"
 )
 
@@ -113,20 +113,20 @@ func TestValidateChannel(t *testing.T) {
 
 	testCases := []struct {
 		desc       string
-		chn        *chnv1alpha1.Channel
+		chn        *chv1.Channel
 		kubeClient client.Client
 		myStorage  *myObjectStore
 		wanted     *myObjectStore
 	}{
 		{
 			desc: "channel without referred secret",
-			chn: &chnv1alpha1.Channel{
+			chn: &chv1.Channel{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      testCh,
 					Namespace: testNs,
 				},
-				Spec: chnv1alpha1.ChannelSpec{
-					Type:     chnv1alpha1.ChannelTypeGitHub,
+				Spec: chv1.ChannelSpec{
+					Type:     chv1.ChannelTypeGitHub,
 					Pathname: "",
 				},
 			},
@@ -136,13 +136,13 @@ func TestValidateChannel(t *testing.T) {
 		},
 		{
 			desc: "channel with referred secret",
-			chn: &chnv1alpha1.Channel{
+			chn: &chv1.Channel{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      testCh,
 					Namespace: testNs,
 				},
-				Spec: chnv1alpha1.ChannelSpec{
-					Type:     chnv1alpha1.ChannelTypeGitHub,
+				Spec: chv1.ChannelSpec{
+					Type:     chv1.ChannelTypeGitHub,
 					Pathname: "",
 					SecretRef: &v1.ObjectReference{
 						Kind:      "Secret",
@@ -157,13 +157,13 @@ func TestValidateChannel(t *testing.T) {
 		},
 		{
 			desc: "channel with referred secret and correct pathname with empty storage",
-			chn: &chnv1alpha1.Channel{
+			chn: &chv1.Channel{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      testCh,
 					Namespace: testNs,
 				},
-				Spec: chnv1alpha1.ChannelSpec{
-					Type:     chnv1alpha1.ChannelTypeGitHub,
+				Spec: chv1.ChannelSpec{
+					Type:     chv1.ChannelTypeGitHub,
 					Pathname: "https://www.google.com/" + testBucket + "/",
 					SecretRef: &v1.ObjectReference{
 						Kind:      "Secret",

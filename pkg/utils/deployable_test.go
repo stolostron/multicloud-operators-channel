@@ -29,7 +29,7 @@ import (
 	"github.com/google/go-cmp/cmp"
 	"github.com/onsi/gomega"
 
-	appv1alpha1 "github.com/open-cluster-management/multicloud-operators-channel/pkg/apis/app/v1alpha1"
+	chv1 "github.com/open-cluster-management/multicloud-operators-channel/pkg/apis/multicloudapps/v1"
 	"github.com/open-cluster-management/multicloud-operators-channel/pkg/utils"
 	dplv1alpha1 "github.com/open-cluster-management/multicloud-operators-deployable/pkg/apis/multicloudapps/v1alpha1"
 )
@@ -193,7 +193,7 @@ func TestValidateDeployableInChannel(t *testing.T) {
 	testCases := []struct {
 		desc string
 		dpl  *dplv1alpha1.Deployable
-		ch   *appv1alpha1.Channel
+		ch   *chv1.Channel
 		want bool
 	}{
 		{
@@ -222,7 +222,7 @@ func TestValidateDeployableInChannel(t *testing.T) {
 					Template: &runtime.RawExtension{},
 				},
 			},
-			ch: &appv1alpha1.Channel{
+			ch: &chv1.Channel{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      testCh,
 					Namespace: testNamespace,
@@ -242,7 +242,7 @@ func TestValidateDeployableInChannel(t *testing.T) {
 					Template: &runtime.RawExtension{},
 				},
 			},
-			ch: &appv1alpha1.Channel{
+			ch: &chv1.Channel{
 				ObjectMeta: metav1.ObjectMeta{
 					Name: testCh,
 				},
@@ -261,13 +261,13 @@ func TestValidateDeployableInChannel(t *testing.T) {
 					Template: &runtime.RawExtension{},
 				},
 			},
-			ch: &appv1alpha1.Channel{
+			ch: &chv1.Channel{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      testCh,
 					Namespace: testNamespace,
 				},
-				Spec: appv1alpha1.ChannelSpec{
-					Gates: &appv1alpha1.ChannelGate{
+				Spec: chv1.ChannelSpec{
+					Gates: &chv1.ChannelGate{
 						Annotations: theAnno,
 					},
 				},
@@ -285,13 +285,13 @@ func TestValidateDeployableInChannel(t *testing.T) {
 					Template: &runtime.RawExtension{},
 				},
 			},
-			ch: &appv1alpha1.Channel{
+			ch: &chv1.Channel{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      testCh,
 					Namespace: testNamespace,
 				},
-				Spec: appv1alpha1.ChannelSpec{
-					Gates: &appv1alpha1.ChannelGate{
+				Spec: chv1.ChannelSpec{
+					Gates: &chv1.ChannelGate{
 						Annotations: theAnno,
 					},
 				},
@@ -310,13 +310,13 @@ func TestValidateDeployableInChannel(t *testing.T) {
 					Template: &runtime.RawExtension{},
 				},
 			},
-			ch: &appv1alpha1.Channel{
+			ch: &chv1.Channel{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      testCh,
 					Namespace: testNamespace,
 				},
-				Spec: appv1alpha1.ChannelSpec{
-					Gates: &appv1alpha1.ChannelGate{
+				Spec: chv1.ChannelSpec{
+					Gates: &chv1.ChannelGate{
 						Annotations: theAnno,
 					},
 				},
@@ -345,7 +345,7 @@ func TestValidateDeployableToChannel(t *testing.T) {
 	testCases := []struct {
 		desc string
 		dpl  *dplv1alpha1.Deployable
-		ch   *appv1alpha1.Channel
+		ch   *chv1.Channel
 		want bool
 	}{
 		{
@@ -360,7 +360,7 @@ func TestValidateDeployableToChannel(t *testing.T) {
 					Template: &runtime.RawExtension{},
 				},
 			},
-			ch: &appv1alpha1.Channel{
+			ch: &chv1.Channel{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      testCh,
 					Namespace: testNamespace,
@@ -380,13 +380,13 @@ func TestValidateDeployableToChannel(t *testing.T) {
 					Template: &runtime.RawExtension{},
 				},
 			},
-			ch: &appv1alpha1.Channel{
+			ch: &chv1.Channel{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      testCh,
 					Namespace: testNamespace,
 				},
-				Spec: appv1alpha1.ChannelSpec{
-					Gates: &appv1alpha1.ChannelGate{
+				Spec: chv1.ChannelSpec{
+					Gates: &chv1.ChannelGate{
 						Annotations: theAnno,
 					},
 				},
@@ -406,7 +406,7 @@ func TestValidateDeployableToChannel(t *testing.T) {
 					Channels: []string{testCh},
 				},
 			},
-			ch: &appv1alpha1.Channel{
+			ch: &chv1.Channel{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      testCh,
 					Namespace: testNamespace,
@@ -427,13 +427,13 @@ func TestValidateDeployableToChannel(t *testing.T) {
 					Channels: []string{testCh},
 				},
 			},
-			ch: &appv1alpha1.Channel{
+			ch: &chv1.Channel{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      testCh,
 					Namespace: testNamespace,
 				},
-				Spec: appv1alpha1.ChannelSpec{
-					Gates: &appv1alpha1.ChannelGate{
+				Spec: chv1.ChannelSpec{
+					Gates: &chv1.ChannelGate{
 						Annotations: theAnno,
 					},
 				},
@@ -453,13 +453,13 @@ func TestValidateDeployableToChannel(t *testing.T) {
 					Channels: []string{testCh},
 				},
 			},
-			ch: &appv1alpha1.Channel{
+			ch: &chv1.Channel{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      testCh,
 					Namespace: testNamespace,
 				},
-				Spec: appv1alpha1.ChannelSpec{
-					Gates: &appv1alpha1.ChannelGate{
+				Spec: chv1.ChannelSpec{
+					Gates: &chv1.ChannelGate{
 						Annotations: theAnno,
 					},
 					SourceNamespaces: []string{testNamespace},
@@ -567,8 +567,8 @@ func TestGenerateDeployableForChannel(t *testing.T) {
 
 	targetAnno := theAnnoA
 	targetAnno[dplv1alpha1.AnnotationLocal] = "false"
-	targetAnno[appv1alpha1.KeyChannel] = chkey.String()
-	targetAnno[appv1alpha1.KeyChannelSource] = types.NamespacedName{Name: testDplName, Namespace: testNamespace}.String()
+	targetAnno[chv1.KeyChannel] = chkey.String()
+	targetAnno[chv1.KeyChannelSource] = types.NamespacedName{Name: testDplName, Namespace: testNamespace}.String()
 	targetAnno[dplv1alpha1.AnnotationIsGenerated] = "true"
 
 	testCases := []struct {

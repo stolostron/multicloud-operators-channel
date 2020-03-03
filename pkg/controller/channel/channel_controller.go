@@ -19,7 +19,7 @@ import (
 	"reflect"
 	"strings"
 
-	appv1alpha1 "github.com/open-cluster-management/multicloud-operators-channel/pkg/apis/app/v1alpha1"
+	chv1 "github.com/open-cluster-management/multicloud-operators-channel/pkg/apis/multicloudapps/v1"
 	gitsync "github.com/open-cluster-management/multicloud-operators-channel/pkg/synchronizer/githubsynchronizer"
 	helmsync "github.com/open-cluster-management/multicloud-operators-channel/pkg/synchronizer/helmreposynchronizer"
 	"github.com/open-cluster-management/multicloud-operators-channel/pkg/utils"
@@ -99,7 +99,7 @@ func add(mgr manager.Manager, r reconcile.Reconciler) error {
 	}
 
 	// Watch for changes to Channel
-	err = c.Watch(&source.Kind{Type: &appv1alpha1.Channel{}}, &handler.EnqueueRequestForObject{})
+	err = c.Watch(&source.Kind{Type: &chv1.Channel{}}, &handler.EnqueueRequestForObject{})
 	if err != nil {
 		return err
 	}
@@ -130,7 +130,7 @@ func (mapper *clusterMapper) Map(obj handler.MapObject) []reconcile.Request {
 
 	klog.Info("In cluster Mapper for ", cname)
 
-	plList := &appv1alpha1.ChannelList{}
+	plList := &chv1.ChannelList{}
 
 	listopts := &client.ListOptions{}
 	err := mapper.List(context.TODO(), plList, listopts)
@@ -181,7 +181,7 @@ func (r *ReconcileChannel) Reconcile(request reconcile.Request) (reconcile.Resul
 
 	klog.Info("Reconciling:", request.NamespacedName)
 
-	instance := &appv1alpha1.Channel{}
+	instance := &chv1.Channel{}
 
 	err := r.Get(context.TODO(), request.NamespacedName, instance)
 	if err != nil {
@@ -200,7 +200,7 @@ func (r *ReconcileChannel) Reconcile(request reconcile.Request) (reconcile.Resul
 		return reconcile.Result{}, err
 	}
 
-	if (strings.EqualFold(string(instance.Spec.Type), appv1alpha1.ChannelTypeNamespace)) && (instance.Spec.Pathname != instance.GetNamespace()) {
+	if (strings.EqualFold(string(instance.Spec.Type), chv1.ChannelTypeNamespace)) && (instance.Spec.Pathname != instance.GetNamespace()) {
 		instance.Spec.Pathname = instance.GetNamespace()
 
 		err := r.Update(context.TODO(), instance)
@@ -237,7 +237,7 @@ func (r *ReconcileChannel) Reconcile(request reconcile.Request) (reconcile.Resul
 				localLabels = make(map[string]string)
 			}
 
-			localLabels[appv1alpha1.ServingChannel] = "true"
+			localLabels[chv1.ServingChannel] = "true"
 			secrectInstance.SetLabels(localLabels)
 
 			err = r.Update(context.TODO(), secrectInstance)
@@ -255,7 +255,7 @@ func (r *ReconcileChannel) Reconcile(request reconcile.Request) (reconcile.Resul
 	return reconcile.Result{}, nil
 }
 
-func (r *ReconcileChannel) updateConfigMap(instance *appv1alpha1.Channel) {
+func (r *ReconcileChannel) updateConfigMap(instance *chv1.Channel) {
 	if instance.Spec.ConfigMapRef != nil && instance.Spec.ConfigMapRef.Name > "" {
 		configName := instance.Spec.ConfigMapRef.Name
 		configNamespace := instance.Spec.ConfigMapRef.Namespace
@@ -275,7 +275,7 @@ func (r *ReconcileChannel) updateConfigMap(instance *appv1alpha1.Channel) {
 				localLabels = make(map[string]string)
 			}
 
-			localLabels[appv1alpha1.ServingChannel] = "true"
+			localLabels[chv1.ServingChannel] = "true"
 			configInstance.SetLabels(localLabels)
 
 			err = r.Update(context.TODO(), configInstance)
@@ -285,7 +285,7 @@ func (r *ReconcileChannel) updateConfigMap(instance *appv1alpha1.Channel) {
 	}
 }
 
-func (r *ReconcileChannel) syncSecrectAnnotation(channel *appv1alpha1.Channel, channelKey types.NamespacedName) {
+func (r *ReconcileChannel) syncSecrectAnnotation(channel *chv1.Channel, channelKey types.NamespacedName) {
 	if klog.V(debugLevel) {
 		fnName := dplutils.GetFnName()
 		klog.Infof("Entering: %v()", fnName)
@@ -298,7 +298,7 @@ func (r *ReconcileChannel) syncSecrectAnnotation(channel *appv1alpha1.Channel, c
 	secListOptions := &client.ListOptions{}
 
 	secLabel := make(map[string]string)
-	secLabel[appv1alpha1.ServingChannel] = "true"
+	secLabel[chv1.ServingChannel] = "true"
 	labelSelector := &metav1.LabelSelector{
 		MatchLabels: secLabel,
 	}
@@ -324,21 +324,21 @@ func (r *ReconcileChannel) syncSecrectAnnotation(channel *appv1alpha1.Channel, c
 			annotations = make(map[string]string)
 		}
 
-		newServingChannel := annotations[appv1alpha1.ServingChannel]
+		newServingChannel := annotations[chv1.ServingChannel]
 
 		if channel != nil && channel.Spec.SecretRef != nil {
 			if secret.Name == channel.Spec.SecretRef.Name && channel.Namespace == secret.Namespace {
-				newServingChannel = utils.UpdateServingChannel(annotations[appv1alpha1.ServingChannel], channelKey.String(), "add")
+				newServingChannel = utils.UpdateServingChannel(annotations[chv1.ServingChannel], channelKey.String(), "add")
 				annotations[DeployableAnnotation] = "true"
 			}
 		} else {
-			newServingChannel = utils.UpdateServingChannel(annotations[appv1alpha1.ServingChannel], channelKey.String(), "remove")
+			newServingChannel = utils.UpdateServingChannel(annotations[chv1.ServingChannel], channelKey.String(), "remove")
 		}
 
 		if newServingChannel > "" {
-			annotations[appv1alpha1.ServingChannel] = newServingChannel
+			annotations[chv1.ServingChannel] = newServingChannel
 		} else {
-			delete(annotations, appv1alpha1.ServingChannel)
+			delete(annotations, chv1.ServingChannel)
 		}
 
 		secret.SetAnnotations(annotations)
@@ -348,7 +348,7 @@ func (r *ReconcileChannel) syncSecrectAnnotation(channel *appv1alpha1.Channel, c
 	}
 }
 
-func (r *ReconcileChannel) syncConfigAnnotation(channel *appv1alpha1.Channel, channelKey types.NamespacedName) {
+func (r *ReconcileChannel) syncConfigAnnotation(channel *chv1.Channel, channelKey types.NamespacedName) {
 	if klog.V(debugLevel) {
 		fnName := dplutils.GetFnName()
 		klog.Infof("Entering: %v()", fnName)
@@ -361,7 +361,7 @@ func (r *ReconcileChannel) syncConfigAnnotation(channel *appv1alpha1.Channel, ch
 	configListOptions := &client.ListOptions{}
 
 	configLabel := make(map[string]string)
-	configLabel[appv1alpha1.ServingChannel] = "true"
+	configLabel[chv1.ServingChannel] = "true"
 	labelSelector := &metav1.LabelSelector{
 		MatchLabels: configLabel,
 	}
@@ -382,20 +382,20 @@ func (r *ReconcileChannel) syncConfigAnnotation(channel *appv1alpha1.Channel, ch
 
 	for _, config := range configList.Items {
 		annotations := config.GetAnnotations()
-		newServingChannel := annotations[appv1alpha1.ServingChannel]
+		newServingChannel := annotations[chv1.ServingChannel]
 
 		if channel != nil && channel.Spec.ConfigMapRef != nil && channel.Spec.ConfigMapRef.Name > "" && channel.Spec.ConfigMapRef.Namespace > "" {
 			if config.Name == channel.Spec.ConfigMapRef.Name && config.Namespace == channel.Spec.ConfigMapRef.Namespace {
-				newServingChannel = utils.UpdateServingChannel(annotations[appv1alpha1.ServingChannel], channelKey.String(), "add")
+				newServingChannel = utils.UpdateServingChannel(annotations[chv1.ServingChannel], channelKey.String(), "add")
 			}
 		} else {
-			newServingChannel = utils.UpdateServingChannel(annotations[appv1alpha1.ServingChannel], channelKey.String(), "remove")
+			newServingChannel = utils.UpdateServingChannel(annotations[chv1.ServingChannel], channelKey.String(), "remove")
 		}
 
 		if newServingChannel > "" {
-			annotations[appv1alpha1.ServingChannel] = newServingChannel
+			annotations[chv1.ServingChannel] = newServingChannel
 		} else {
-			delete(annotations, appv1alpha1.ServingChannel)
+			delete(annotations, chv1.ServingChannel)
 		}
 
 		config.SetAnnotations(annotations)
@@ -405,7 +405,7 @@ func (r *ReconcileChannel) syncConfigAnnotation(channel *appv1alpha1.Channel, ch
 	}
 }
 
-func (r *ReconcileChannel) validateClusterRBAC(instance *appv1alpha1.Channel) error {
+func (r *ReconcileChannel) validateClusterRBAC(instance *chv1.Channel) error {
 	if klog.V(debugLevel) {
 		fnName := dplutils.GetFnName()
 		klog.Infof("Entering: %v()", fnName)
@@ -489,7 +489,7 @@ func (r *ReconcileChannel) validateClusterRBAC(instance *appv1alpha1.Channel) er
 	return err
 }
 
-func (r *ReconcileChannel) setupRole(instance *appv1alpha1.Channel, role *rbac.Role) error {
+func (r *ReconcileChannel) setupRole(instance *chv1.Channel, role *rbac.Role) error {
 	err := r.Get(context.TODO(), types.NamespacedName{Name: instance.Name, Namespace: instance.Namespace}, role)
 	if err != nil {
 		if errors.IsNotFound(err) {

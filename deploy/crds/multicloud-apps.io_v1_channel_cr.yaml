@@ -1,0 +1,7 @@
+apiVersion: multicloud-apps.io/v1
+kind: Channel
+metadata:
+  name: example-channel
+spec:
+  # Add fields here
+  size: 3
