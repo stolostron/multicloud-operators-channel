@@ -12,10 +12,10 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package controllers
+package controller
 
 import (
-	chv1 "github.com/open-cluster-management/multicloud-operators-channel/pkg/controllers/channel"
+	chv1 "github.com/open-cluster-management/multicloud-operators-channel/pkg/controller/channel"
 )
 
 func init() {

@@ -43,7 +43,7 @@ import (
 	"k8s.io/klog"
 
 	"github.com/open-cluster-management/multicloud-operators-channel/pkg/apis"
-	"github.com/open-cluster-management/multicloud-operators-channel/pkg/controllers"
+	"github.com/open-cluster-management/multicloud-operators-channel/pkg/controller"
 	"github.com/open-cluster-management/multicloud-operators-channel/pkg/utils"
 	"github.com/open-cluster-management/multicloud-operators-channel/pkg/webhook"
 
@@ -170,7 +170,7 @@ func RunManager(sig <-chan struct{}) {
 	// Setup all Controllers
 	klog.Info("Setting up controller")
 
-	if err := controllers.AddToManager(mgr, recorder, chdesc, hsync, gsync); err != nil {
+	if err := controller.AddToManager(mgr, recorder, chdesc, hsync, gsync); err != nil {
 		klog.Error(err, "unable to register controllers to the manager")
 		os.Exit(exitCode)
 	}

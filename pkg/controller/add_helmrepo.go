@@ -12,13 +12,13 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package controllers
+package controller
 
 import (
-	"github.com/open-cluster-management/multicloud-operators-channel/pkg/controllers/objectstore"
+	"github.com/open-cluster-management/multicloud-operators-channel/pkg/controller/helmrepo"
 )
 
 func init() {
 	// AddToManagerFuncs is a list of functions to create controllers and add them to a manager.
-	AddToManagerFuncs = append(AddToManagerFuncs, objectstore.Add)
+	AddToManagerFuncs = append(AddToManagerFuncs, helmrepo.Add)
 }
