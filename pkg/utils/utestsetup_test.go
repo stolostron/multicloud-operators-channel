@@ -21,14 +21,14 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/open-cluster-management/multicloud-operators-channel/pkg/apis"
-
-	chv1 "github.com/open-cluster-management/multicloud-operators-channel/pkg/apis/multicloudapps/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/client-go/rest"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/envtest"
+
+	"github.com/open-cluster-management/multicloud-operators-channel/pkg/apis"
+	chv1 "github.com/open-cluster-management/multicloud-operators-channel/pkg/apis/multicloudapps/v1"
 )
 
 var cfg *rest.Config

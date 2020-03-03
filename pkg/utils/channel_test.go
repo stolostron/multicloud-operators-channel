@@ -21,10 +21,11 @@ import (
 
 	"github.com/google/go-cmp/cmp"
 	"github.com/onsi/gomega"
-	chv1 "github.com/open-cluster-management/multicloud-operators-channel/pkg/apis/multicloudapps/v1"
-	"github.com/open-cluster-management/multicloud-operators-channel/pkg/utils"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
+
+	chv1 "github.com/open-cluster-management/multicloud-operators-channel/pkg/apis/multicloudapps/v1"
+	"github.com/open-cluster-management/multicloud-operators-channel/pkg/utils"
 )
 
 // this is mainly testing if a Channel resource can be created or not
