@@ -25,6 +25,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/envtest"
 
 	"github.com/open-cluster-management/multicloud-operators-channel/pkg/apis"
+	chv1 "github.com/open-cluster-management/multicloud-operators-channel/pkg/apis/multicloudapps/v1"
 )
 
 var cfg *rest.Config
@@ -35,6 +36,7 @@ func TestMain(m *testing.M) {
 	}
 
 	apis.AddToScheme(scheme.Scheme)
+	chv1.AddToScheme(scheme.Scheme)
 
 	var err error
 	if cfg, err = t.Start(); err != nil {

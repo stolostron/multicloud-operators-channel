@@ -28,8 +28,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
-	apischv1 "github.com/open-cluster-management/multicloud-operators-channel/pkg/apis"
-	"github.com/open-cluster-management/multicloud-operators-deployable/pkg/apis"
+	"github.com/open-cluster-management/multicloud-operators-channel/pkg/apis"
+	chv1 "github.com/open-cluster-management/multicloud-operators-channel/pkg/apis/multicloudapps/v1"
 )
 
 var cfg *rest.Config
@@ -42,7 +42,7 @@ func TestMain(m *testing.M) {
 	}
 
 	apis.AddToScheme(scheme.Scheme)
-	apischv1.AddToScheme(scheme.Scheme)
+	chv1.AddToScheme(scheme.Scheme)
 
 	var err error
 	if cfg, err = t.Start(); err != nil {
