@@ -34,7 +34,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
-	appv1alpha1 "github.com/open-cluster-management/multicloud-operators-channel/pkg/apis/app/v1alpha1"
+	chv1 "github.com/open-cluster-management/multicloud-operators-channel/pkg/apis/multicloudapps/v1"
 	dplv1alpha1 "github.com/open-cluster-management/multicloud-operators-deployable/pkg/apis/multicloudapps/v1alpha1"
 )
 
@@ -44,7 +44,7 @@ var targetNamespace = "default"
 
 var targetChannelName = "channl-deployable-reconcile"
 
-var targetChannelType = appv1alpha1.ChannelType("namespace")
+var targetChannelType = chv1.ChannelType("namespace")
 
 var targetDeployableName = "t-deployable"
 var expectedRequest = reconcile.Request{NamespacedName: types.NamespacedName{Name: targetDeployableName, Namespace: targetNamespace}}
@@ -54,11 +54,11 @@ const timeout = time.Second * 5
 func TestDeployableReconcile(t *testing.T) {
 	g := gomega.NewGomegaWithT(t)
 
-	channelInstance := &appv1alpha1.Channel{
+	channelInstance := &chv1.Channel{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      targetChannelName,
 			Namespace: targetNamespace},
-		Spec: appv1alpha1.ChannelSpec{
+		Spec: chv1.ChannelSpec{
 			Type:     targetChannelType,
 			Pathname: targetNamespace,
 		},

@@ -21,14 +21,14 @@ import (
 
 	"k8s.io/klog"
 
-	appv1alpha1 "github.com/open-cluster-management/multicloud-operators-channel/pkg/apis/app/v1alpha1"
+	chv1 "github.com/open-cluster-management/multicloud-operators-channel/pkg/apis/multicloudapps/v1"
 	dplutils "github.com/open-cluster-management/multicloud-operators-deployable/pkg/utils"
 
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 // GenerateChannelMap finds all channels and build map with key of channel name
-func GenerateChannelMap(cl client.Client) (map[string]*appv1alpha1.Channel, error) {
+func GenerateChannelMap(cl client.Client) (map[string]*chv1.Channel, error) {
 	if klog.V(debugLevel) {
 		fnName := dplutils.GetFnName()
 		klog.Infof("Entering: %v()", fnName)
@@ -36,14 +36,14 @@ func GenerateChannelMap(cl client.Client) (map[string]*appv1alpha1.Channel, erro
 		defer klog.Infof("Exiting: %v()", fnName)
 	}
 	// try to load channelmap if it is empty
-	chlist := &appv1alpha1.ChannelList{}
+	chlist := &chv1.ChannelList{}
 	err := cl.List(context.TODO(), chlist, &client.ListOptions{})
 
 	if err != nil {
 		return nil, err
 	}
 
-	chmap := make(map[string]*appv1alpha1.Channel)
+	chmap := make(map[string]*chv1.Channel)
 
 	for _, ch := range chlist.Items {
 		klog.V(debugLevel).Infof("Channel namespacedname: %v/%v,  type: %v, sourceNamespaces: %v, gates: %#v",
@@ -56,7 +56,7 @@ func GenerateChannelMap(cl client.Client) (map[string]*appv1alpha1.Channel, erro
 }
 
 // LocateChannel finds channel by name
-func LocateChannel(cl client.Client, name string) (*appv1alpha1.Channel, error) {
+func LocateChannel(cl client.Client, name string) (*chv1.Channel, error) {
 	if klog.V(debugLevel) {
 		fnName := dplutils.GetFnName()
 		klog.Infof("Entering: %v()", fnName)
@@ -64,7 +64,7 @@ func LocateChannel(cl client.Client, name string) (*appv1alpha1.Channel, error) 
 		defer klog.Infof("Exiting: %v()", fnName)
 	}
 	// try to load channelmap if it is empty
-	chlist := &appv1alpha1.ChannelList{}
+	chlist := &chv1.ChannelList{}
 	err := cl.List(context.TODO(), chlist, &client.ListOptions{})
 
 	if err != nil {

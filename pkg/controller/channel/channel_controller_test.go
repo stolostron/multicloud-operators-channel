@@ -32,14 +32,14 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
-	appv1alpha1 "github.com/open-cluster-management/multicloud-operators-channel/pkg/apis/app/v1alpha1"
+	chv1 "github.com/open-cluster-management/multicloud-operators-channel/pkg/apis/multicloudapps/v1"
 )
 
 var c client.Client
 
 var targetNamespace = "default"
 var tragetChannelName = "foo"
-var targetChannelType = appv1alpha1.ChannelType("namespace")
+var targetChannelType = chv1.ChannelType("namespace")
 
 var expectedRequest = reconcile.Request{NamespacedName: types.NamespacedName{Name: tragetChannelName, Namespace: targetNamespace}}
 
@@ -48,9 +48,9 @@ const timeout = time.Second * 5
 func TestChannelControllerReconcile(t *testing.T) {
 	g := gomega.NewGomegaWithT(t)
 
-	channelInstance := &appv1alpha1.Channel{
+	channelInstance := &chv1.Channel{
 		ObjectMeta: metav1.ObjectMeta{Name: tragetChannelName, Namespace: targetNamespace},
-		Spec: appv1alpha1.ChannelSpec{
+		Spec: chv1.ChannelSpec{
 			Type:     targetChannelType,
 			Pathname: targetNamespace,
 		},

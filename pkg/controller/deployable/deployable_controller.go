@@ -21,7 +21,7 @@ import (
 
 	"k8s.io/klog"
 
-	appv1alpha1 "github.com/open-cluster-management/multicloud-operators-channel/pkg/apis/app/v1alpha1"
+	chv1 "github.com/open-cluster-management/multicloud-operators-channel/pkg/apis/multicloudapps/v1"
 	gitsync "github.com/open-cluster-management/multicloud-operators-channel/pkg/synchronizer/githubsynchronizer"
 	helmsync "github.com/open-cluster-management/multicloud-operators-channel/pkg/synchronizer/helmreposynchronizer"
 	"github.com/open-cluster-management/multicloud-operators-channel/pkg/utils"
@@ -105,7 +105,7 @@ func add(mgr manager.Manager, r reconcile.Reconciler) error {
 	}
 
 	// watch for changes to channel too
-	return c.Watch(&source.Kind{Type: &appv1alpha1.Channel{}}, &handler.EnqueueRequestsFromMapFunc{ToRequests: &channelMapper{mgr.GetClient()}})
+	return c.Watch(&source.Kind{Type: &chv1.Channel{}}, &handler.EnqueueRequestsFromMapFunc{ToRequests: &channelMapper{mgr.GetClient()}})
 }
 
 var _ reconcile.Reconciler = &ReconcileDeployable{}
@@ -117,7 +117,7 @@ type ReconcileDeployable struct {
 	Recorder record.EventRecorder
 }
 
-func (r *ReconcileDeployable) appendEvent(rootInstance *appv1alpha1.Channel, dplkey types.NamespacedName, derror error, reason, addtionalMsg string) error {
+func (r *ReconcileDeployable) appendEvent(rootInstance *chv1.Channel, dplkey types.NamespacedName, derror error, reason, addtionalMsg string) error {
 	phost := types.NamespacedName{Namespace: rootInstance.GetNamespace(), Name: rootInstance.GetName()}
 	klog.V(debugLevel).Info("Promoted deployable: ", dplkey, ", channel: ", phost, ", message: ", addtionalMsg)
 
@@ -177,7 +177,7 @@ func (r *ReconcileDeployable) Reconcile(request reconcile.Request) (reconcile.Re
 			return reconcile.Result{}, nil
 		}
 
-		channelmap = make(map[string]*appv1alpha1.Channel)
+		channelmap = make(map[string]*chv1.Channel)
 	}
 
 	channelNsMap := make(map[string]string)
@@ -220,7 +220,7 @@ func (r *ReconcileDeployable) handleOrphanDeployable(dplmap map[string]*dplv1alp
 		dplkey := types.NamespacedName{Name: dpl.GetName(), Namespace: dpl.GetNamespace()}
 		addtionalMsg := "Depolyable " + dplkey.String() + " removed from the channel"
 
-		dplchannel := &appv1alpha1.Channel{}
+		dplchannel := &chv1.Channel{}
 
 		parsedstr := strings.Split(chstr, "/")
 		if len(parsedstr) != 2 {
@@ -244,7 +244,7 @@ func (r *ReconcileDeployable) handleOrphanDeployable(dplmap map[string]*dplv1alp
 }
 
 func (r *ReconcileDeployable) propagateDeployableToChannel(deployable *dplv1alpha1.Deployable,
-	dplmap map[string]*dplv1alpha1.Deployable, channel *appv1alpha1.Channel) error {
+	dplmap map[string]*dplv1alpha1.Deployable, channel *chv1.Channel) error {
 	if klog.V(debugLevel) {
 		fnName := dplutils.GetFnName()
 		klog.Infof("Entering: %v()", fnName)
@@ -334,11 +334,11 @@ func (r *ReconcileDeployable) propagateDeployableToChannel(deployable *dplv1alph
 func (r *ReconcileDeployable) updateDeployableRelationWithChannel(
 	instance *dplv1alpha1.Deployable, dplmap map[string]*dplv1alpha1.Deployable,
 	parent *dplv1alpha1.Deployable, channelNsMap map[string]string,
-	channelmap map[string]*appv1alpha1.Channel) (map[string]*dplv1alpha1.Deployable, error) {
+	channelmap map[string]*chv1.Channel) (map[string]*dplv1alpha1.Deployable, error) {
 	if len(instance.GetFinalizers()) == 0 {
 		annotations := instance.Annotations
-		if channelNsMap[instance.Namespace] != "" && annotations != nil && annotations[appv1alpha1.KeyChannelSource] != "" && parent == nil {
-			klog.V(debugLevel).Infof("Delete instance: The parent of the instance not found: %#v, %#v", annotations[appv1alpha1.KeyChannelSource], instance)
+		if channelNsMap[instance.Namespace] != "" && annotations != nil && annotations[chv1.KeyChannelSource] != "" && parent == nil {
+			klog.V(debugLevel).Infof("Delete instance: The parent of the instance not found: %#v, %#v", annotations[chv1.KeyChannelSource], instance)
 			return nil, r.Client.Delete(context.TODO(), instance)
 		}
 

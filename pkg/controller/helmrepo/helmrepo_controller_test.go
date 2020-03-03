@@ -26,7 +26,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
-	appv1alpha1 "github.com/open-cluster-management/multicloud-operators-channel/pkg/apis/app/v1alpha1"
+	chv1 "github.com/open-cluster-management/multicloud-operators-channel/pkg/apis/multicloudapps/v1"
 	synchronizer "github.com/open-cluster-management/multicloud-operators-channel/pkg/synchronizer/helmreposynchronizer"
 )
 
@@ -36,7 +36,7 @@ var targetNamespace = "default"
 
 var targetChannelName = "foo"
 
-var targetChannelType = appv1alpha1.ChannelType("Namespace")
+var targetChannelType = chv1.ChannelType("Namespace")
 
 var expectedRequest = reconcile.Request{
 	NamespacedName: types.NamespacedName{
@@ -48,11 +48,11 @@ func TestHelmRepoReconcile(t *testing.T) {
 	g := gomega.NewGomegaWithT(t)
 
 	// Create new channelInstance
-	channelInstance := &appv1alpha1.Channel{
+	channelInstance := &chv1.Channel{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      targetChannelName,
 			Namespace: targetNamespace},
-		Spec: appv1alpha1.ChannelSpec{
+		Spec: chv1.ChannelSpec{
 			Type:     targetChannelType,
 			Pathname: targetNamespace,
 		},

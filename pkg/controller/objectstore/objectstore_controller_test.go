@@ -26,7 +26,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
-	chnv1alpha1 "github.com/open-cluster-management/multicloud-operators-channel/pkg/apis/app/v1alpha1"
+	chv1 "github.com/open-cluster-management/multicloud-operators-channel/pkg/apis/multicloudapps/v1"
 	"github.com/open-cluster-management/multicloud-operators-channel/pkg/utils"
 	dplv1alpha1 "github.com/open-cluster-management/multicloud-operators-deployable/pkg/apis/multicloudapps/v1alpha1"
 )
@@ -115,9 +115,9 @@ func Test_getChannelForNamespace(t *testing.T) {
 	testCases := []struct {
 		desc   string
 		tRec   *ReconcileDeployable
-		dfChan *chnv1alpha1.Channel
+		dfChan *chv1.Channel
 		tName  string
-		wantCh *chnv1alpha1.Channel
+		wantCh *chv1.Channel
 	}{
 		{
 			desc: "none channel at hub",
@@ -134,7 +134,7 @@ func Test_getChannelForNamespace(t *testing.T) {
 				KubeClient:        c,
 				ChannelDescriptor: &utils.ChannelDescriptor{},
 			},
-			dfChan: &chnv1alpha1.Channel{
+			dfChan: &chv1.Channel{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:        testCh,
 					Namespace:   testNamespace,
@@ -150,25 +150,25 @@ func Test_getChannelForNamespace(t *testing.T) {
 				KubeClient:        c,
 				ChannelDescriptor: &utils.ChannelDescriptor{},
 			},
-			dfChan: &chnv1alpha1.Channel{
+			dfChan: &chv1.Channel{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:        testCh,
 					Namespace:   testNamespace,
 					Annotations: map[string]string{},
 				},
-				Spec: chnv1alpha1.ChannelSpec{
-					Type: chnv1alpha1.ChannelTypeObjectBucket,
+				Spec: chv1.ChannelSpec{
+					Type: chv1.ChannelTypeObjectBucket,
 				},
 			},
 			tName: testNamespace,
-			wantCh: &chnv1alpha1.Channel{
+			wantCh: &chv1.Channel{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:        testCh,
 					Namespace:   testNamespace,
 					Annotations: map[string]string{},
 				},
-				Spec: chnv1alpha1.ChannelSpec{
-					Type: chnv1alpha1.ChannelTypeObjectBucket,
+				Spec: chv1.ChannelSpec{
+					Type: chv1.ChannelTypeObjectBucket,
 				},
 			},
 		},
@@ -178,14 +178,14 @@ func Test_getChannelForNamespace(t *testing.T) {
 				KubeClient:        c,
 				ChannelDescriptor: &utils.ChannelDescriptor{},
 			},
-			dfChan: &chnv1alpha1.Channel{
+			dfChan: &chv1.Channel{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:        testCh,
 					Namespace:   testNamespace,
 					Annotations: map[string]string{},
 				},
-				Spec: chnv1alpha1.ChannelSpec{
-					Type: chnv1alpha1.ChannelTypeGitHub,
+				Spec: chv1.ChannelSpec{
+					Type: chv1.ChannelTypeGitHub,
 				},
 			},
 			tName:  testNamespace,
@@ -206,7 +206,7 @@ func Test_getChannelForNamespace(t *testing.T) {
 	}
 }
 
-func assertChannelObject(t *testing.T, want, got *chnv1alpha1.Channel) {
+func assertChannelObject(t *testing.T, want, got *chv1.Channel) {
 	t.Helper()
 
 	if want == nil && got == nil {

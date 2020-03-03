@@ -24,7 +24,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 
-	appv1alpha1 "github.com/open-cluster-management/multicloud-operators-channel/pkg/apis/app/v1alpha1"
+	chv1 "github.com/open-cluster-management/multicloud-operators-channel/pkg/apis/multicloudapps/v1"
 	"github.com/open-cluster-management/multicloud-operators-channel/pkg/utils"
 )
 
@@ -37,7 +37,7 @@ func TestGenerateChannelMap(t *testing.T) {
 		Name:      chName,
 		Namespace: chNs,
 	}
-	chObj := &appv1alpha1.Channel{
+	chObj := &chv1.Channel{
 		TypeMeta: metav1.TypeMeta{
 			Kind:       "app.ibm.com",
 			APIVersion: "v1alpha1",
@@ -46,8 +46,8 @@ func TestGenerateChannelMap(t *testing.T) {
 			Name:      chName,
 			Namespace: chNs,
 		},
-		Spec: appv1alpha1.ChannelSpec{
-			Type: appv1alpha1.ChannelType("namespace"),
+		Spec: chv1.ChannelSpec{
+			Type: chv1.ChannelType("namespace"),
 		},
 	}
 
@@ -57,11 +57,11 @@ func TestGenerateChannelMap(t *testing.T) {
 	g.Expect(c.Create(ctx, chObj)).NotTo(gomega.HaveOccurred())
 	defer c.Delete(ctx, chObj)
 
-	fetched := &appv1alpha1.Channel{}
+	fetched := &chv1.Channel{}
 	g.Expect(c.Get(ctx, key, fetched)).NotTo(gomega.HaveOccurred())
 
 	got, _ := utils.GenerateChannelMap(c)
-	want := map[string]*appv1alpha1.Channel{chName: fetched}
+	want := map[string]*chv1.Channel{chName: fetched}
 
 	// test cases
 	g.Expect(got[chName].Spec).To(gomega.Equal(want[chName].Spec))
@@ -72,7 +72,7 @@ func TestLocateChannel(t *testing.T) {
 	chName := "qa"
 	chNs := "ch-qa"
 
-	chObj := &appv1alpha1.Channel{
+	chObj := &chv1.Channel{
 		TypeMeta: metav1.TypeMeta{
 			Kind:       "app.ibm.com",
 			APIVersion: "v1alpha1",
@@ -81,8 +81,8 @@ func TestLocateChannel(t *testing.T) {
 			Name:      chName,
 			Namespace: chNs,
 		},
-		Spec: appv1alpha1.ChannelSpec{
-			Type: appv1alpha1.ChannelType("namespace"),
+		Spec: chv1.ChannelSpec{
+			Type: chv1.ChannelType("namespace"),
 		},
 	}
 

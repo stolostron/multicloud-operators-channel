@@ -21,13 +21,13 @@ import (
 	"k8s.io/klog"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	appv1alpha1 "github.com/open-cluster-management/multicloud-operators-channel/pkg/apis/app/v1alpha1"
+	chv1 "github.com/open-cluster-management/multicloud-operators-channel/pkg/apis/multicloudapps/v1"
 	dplv1alpha1 "github.com/open-cluster-management/multicloud-operators-deployable/pkg/apis/multicloudapps/v1alpha1"
 	dplutils "github.com/open-cluster-management/multicloud-operators-deployable/pkg/utils"
 )
 
 // ValidateDeployableInChannel check if a deployable rightfully in channel
-func ValidateDeployableInChannel(deployable *dplv1alpha1.Deployable, channel *appv1alpha1.Channel) bool {
+func ValidateDeployableInChannel(deployable *dplv1alpha1.Deployable, channel *chv1.Channel) bool {
 	if klog.V(debugLevel) {
 		fnName := dplutils.GetFnName()
 		klog.Infof("Entering: %v()", fnName)
@@ -78,7 +78,7 @@ func ValidateDeployableInChannel(deployable *dplv1alpha1.Deployable, channel *ap
 // // b.1.1 dpl doesn't have annotation, then fail
 
 // ValidateDeployableToChannel check if a deployable can be promoted to channel
-func ValidateDeployableToChannel(deployable *dplv1alpha1.Deployable, channel *appv1alpha1.Channel) bool {
+func ValidateDeployableToChannel(deployable *dplv1alpha1.Deployable, channel *chv1.Channel) bool {
 	if klog.V(debugLevel) {
 		fnName := dplutils.GetFnName()
 		klog.Infof("Entering: %v()", fnName)
@@ -169,7 +169,7 @@ func FindDeployableForChannelsInMap(cl client.Client, deployable *dplv1alpha1.De
 	annotations := deployable.GetAnnotations()
 
 	if annotations != nil {
-		parentkey = annotations[appv1alpha1.KeyChannelSource]
+		parentkey = annotations[chv1.KeyChannelSource]
 	}
 
 	parentDplGen := DplGenerateNameStr(deployable)
@@ -186,10 +186,10 @@ func FindDeployableForChannelsInMap(cl client.Client, deployable *dplv1alpha1.De
 
 		if dpl.GetGenerateName() == parentDplGen && channelnsMap[dpl.Namespace] != "" {
 			dplanno := dpl.GetAnnotations()
-			if dplanno != nil && dplanno[appv1alpha1.KeyChannelSource] == dplkey.String() {
+			if dplanno != nil && dplanno[chv1.KeyChannelSource] == dplkey.String() {
 				klog.V(debugLevel).Infof("adding dpl: %v to children dpl map", dplkey.String())
 
-				dplmap[dplanno[appv1alpha1.KeyChannel]] = dpl.DeepCopy()
+				dplmap[dplanno[chv1.KeyChannel]] = dpl.DeepCopy()
 			}
 		}
 	}
@@ -284,14 +284,14 @@ func GenerateDeployableForChannel(deployable *dplv1alpha1.Deployable, channel ty
 			chdplannotations[k] = v
 		}
 
-		if chdplannotations[appv1alpha1.KeyChannelSource] != "" {
-			chsrc = chdplannotations[appv1alpha1.KeyChannelSource]
+		if chdplannotations[chv1.KeyChannelSource] != "" {
+			chsrc = chdplannotations[chv1.KeyChannelSource]
 		}
 	}
 
 	chdplannotations[dplv1alpha1.AnnotationLocal] = "false"
-	chdplannotations[appv1alpha1.KeyChannelSource] = chsrc
-	chdplannotations[appv1alpha1.KeyChannel] = types.NamespacedName{Name: channel.Name, Namespace: channel.Namespace}.String()
+	chdplannotations[chv1.KeyChannelSource] = chsrc
+	chdplannotations[chv1.KeyChannel] = types.NamespacedName{Name: channel.Name, Namespace: channel.Namespace}.String()
 	chdplannotations[dplv1alpha1.AnnotationIsGenerated] = "true"
 
 	if v, ok := annotations[dplv1alpha1.AnnotationDeployableVersion]; ok {

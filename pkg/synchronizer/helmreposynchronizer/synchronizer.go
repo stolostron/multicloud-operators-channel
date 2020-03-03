@@ -30,7 +30,7 @@ import (
 
 	"github.com/pkg/errors"
 
-	chnv1alpha1 "github.com/open-cluster-management/multicloud-operators-channel/pkg/apis/app/v1alpha1"
+	chv1 "github.com/open-cluster-management/multicloud-operators-channel/pkg/apis/multicloudapps/v1"
 	"github.com/open-cluster-management/multicloud-operators-channel/pkg/utils"
 	dplv1alpha1 "github.com/open-cluster-management/multicloud-operators-deployable/pkg/apis/multicloudapps/v1alpha1"
 	deputils "github.com/open-cluster-management/multicloud-operators-deployable/pkg/utils"
@@ -42,7 +42,7 @@ type ChannelSynchronizer struct {
 	kubeClient   client.Client
 	Signal       <-chan struct{}
 	SyncInterval int
-	ChannelMap   map[types.NamespacedName]*chnv1alpha1.Channel
+	ChannelMap   map[types.NamespacedName]*chv1.Channel
 }
 
 // CreateSynchronizer - creates an instance of ChannelSynchronizer
@@ -56,7 +56,7 @@ func CreateHelmrepoSynchronizer(config *rest.Config, scheme *runtime.Scheme, syn
 	s := &ChannelSynchronizer{
 		Scheme:       scheme,
 		kubeClient:   client,
-		ChannelMap:   make(map[types.NamespacedName]*chnv1alpha1.Channel),
+		ChannelMap:   make(map[types.NamespacedName]*chv1.Channel),
 		SyncInterval: syncInterval,
 	}
 
@@ -100,7 +100,7 @@ func (sync *ChannelSynchronizer) syncChannelsWithHelmRepo() {
 	}
 }
 
-func (sync *ChannelSynchronizer) syncChannel(chn *chnv1alpha1.Channel) {
+func (sync *ChannelSynchronizer) syncChannel(chn *chv1.Channel) {
 	if chn == nil {
 		return
 	}
@@ -198,7 +198,7 @@ func (sync *ChannelSynchronizer) syncChannel(chn *chnv1alpha1.Channel) {
 	}
 }
 
-func (sync *ChannelSynchronizer) processDeployable(chn *chnv1alpha1.Channel,
+func (sync *ChannelSynchronizer) processDeployable(chn *chv1.Channel,
 	dpl dplv1alpha1.Deployable, generalmap map[string]map[string]bool) {
 	klog.V(10).Info("synching dpl ", dpl.Name)
 

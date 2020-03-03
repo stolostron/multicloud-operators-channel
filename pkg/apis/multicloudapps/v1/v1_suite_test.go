@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package v1alpha1
+package v1
 
 import (
 	stdlog "log"
@@ -34,7 +34,7 @@ var c client.Client
 
 func TestMain(m *testing.M) {
 	t := &envtest.Environment{
-		CRDDirectoryPaths: []string{filepath.Join("..", "..", "..", "..", "deploy", "crds")},
+		CRDDirectoryPaths: []string{filepath.Join("..", "..", "..", "..", "deploy", "crds"), filepath.Join("..", "..", "..", "..", "deploy", "dependent-crds")},
 	}
 
 	err := SchemeBuilder.AddToScheme(scheme.Scheme)

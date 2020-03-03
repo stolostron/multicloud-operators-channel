@@ -18,7 +18,7 @@ import (
 	"context"
 	"strings"
 
-	chnv1alpha1 "github.com/open-cluster-management/multicloud-operators-channel/pkg/apis/app/v1alpha1"
+	chv1 "github.com/open-cluster-management/multicloud-operators-channel/pkg/apis/multicloudapps/v1"
 	gitsync "github.com/open-cluster-management/multicloud-operators-channel/pkg/synchronizer/githubsynchronizer"
 	helmsync "github.com/open-cluster-management/multicloud-operators-channel/pkg/synchronizer/helmreposynchronizer"
 	"github.com/open-cluster-management/multicloud-operators-channel/pkg/utils"
@@ -67,7 +67,7 @@ func add(mgr manager.Manager, r reconcile.Reconciler) error {
 	}
 
 	// Watch for changes to Channels
-	err = c.Watch(&source.Kind{Type: &chnv1alpha1.Channel{}}, &handler.EnqueueRequestForObject{})
+	err = c.Watch(&source.Kind{Type: &chv1.Channel{}}, &handler.EnqueueRequestForObject{})
 	if err != nil {
 		return err
 	}
@@ -92,7 +92,7 @@ type ReconcileChannel struct {
 // +kubebuilder:rbac:groups=app.ibm.com,resources=deployables/status,verbs=get;update;patch
 func (r *ReconcileChannel) Reconcile(request reconcile.Request) (reconcile.Result, error) {
 	// Fetch the Deployable instance
-	instance := &chnv1alpha1.Channel{}
+	instance := &chv1.Channel{}
 	err := r.KubeClient.Get(context.TODO(), request.NamespacedName, instance)
 	klog.Info("Reconciling channel:", request.NamespacedName, " with Get err:", err)
 
@@ -109,7 +109,7 @@ func (r *ReconcileChannel) Reconcile(request reconcile.Request) (reconcile.Resul
 		return reconcile.Result{}, err
 	}
 
-	if !strings.EqualFold(string(instance.Spec.Type), chnv1alpha1.ChannelTypeHelmRepo) {
+	if !strings.EqualFold(string(instance.Spec.Type), chv1.ChannelTypeHelmRepo) {
 		klog.V(debugLevel).Info("Ignoring type ", instance.Spec.Type)
 		return reconcile.Result{}, nil
 	}

@@ -32,7 +32,7 @@ import (
 	"k8s.io/klog"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	chnv1alpha1 "github.com/open-cluster-management/multicloud-operators-channel/pkg/apis/app/v1alpha1"
+	chv1 "github.com/open-cluster-management/multicloud-operators-channel/pkg/apis/multicloudapps/v1"
 	"github.com/open-cluster-management/multicloud-operators-channel/pkg/utils"
 	dplv1alpha1 "github.com/open-cluster-management/multicloud-operators-deployable/pkg/apis/multicloudapps/v1alpha1"
 	dplutils "github.com/open-cluster-management/multicloud-operators-deployable/pkg/utils"
@@ -105,7 +105,7 @@ func (sync *ChannelSynchronizer) syncWithObjectStore() error {
 }
 
 func (sync *ChannelSynchronizer) syncChannelsWithObjStore() error {
-	chlist := &chnv1alpha1.ChannelList{}
+	chlist := &chv1.ChannelList{}
 	err := sync.kubeClient.List(context.TODO(), chlist, &client.ListOptions{})
 
 	if err != nil {
@@ -115,7 +115,7 @@ func (sync *ChannelSynchronizer) syncChannelsWithObjStore() error {
 
 	for _, ch := range chlist.Items {
 		// Syncying objectbucket channel types only
-		if !strings.EqualFold(string(ch.Spec.Type), chnv1alpha1.ChannelTypeObjectBucket) {
+		if !strings.EqualFold(string(ch.Spec.Type), chv1.ChannelTypeObjectBucket) {
 			continue
 		}
 
@@ -127,7 +127,7 @@ func (sync *ChannelSynchronizer) syncChannelsWithObjStore() error {
 	return nil
 }
 
-func (sync *ChannelSynchronizer) syncChannel(chn *chnv1alpha1.Channel) error {
+func (sync *ChannelSynchronizer) syncChannel(chn *chv1.Channel) error {
 	if err := sync.ChannelDescriptor.ValidateChannel(chn, sync.kubeClient); err != nil {
 		return errors.Wrap(err, fmt.Sprintf("failed to validate channel %v", chn.Name))
 	}
@@ -217,7 +217,7 @@ func (sync *ChannelSynchronizer) syncChannel(chn *chnv1alpha1.Channel) error {
 
 func (sync *ChannelSynchronizer) updateSynchronizerWithDeployable(
 	tplmap map[string]*unstructured.Unstructured, dpl dplv1alpha1.Deployable,
-	chn *chnv1alpha1.Channel) error {
+	chn *chv1.Channel) error {
 	dpltpl, err := getUnstructuredTemplateFromDeployable(&dpl)
 	if err != nil {
 		delete(tplmap, dpl.Name)

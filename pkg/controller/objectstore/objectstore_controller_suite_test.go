@@ -29,21 +29,19 @@ import (
 
 	"github.com/onsi/gomega"
 
-	chnv1alpha1 "github.com/open-cluster-management/multicloud-operators-channel/pkg/apis/app/v1alpha1"
-	"github.com/open-cluster-management/multicloud-operators-deployable/pkg/apis"
+	"github.com/open-cluster-management/multicloud-operators-channel/pkg/apis"
+	chv1 "github.com/open-cluster-management/multicloud-operators-channel/pkg/apis/multicloudapps/v1"
 )
 
 var cfg *rest.Config
 
 func TestMain(m *testing.M) {
 	t := &envtest.Environment{
-		CRDDirectoryPaths: []string{
-			filepath.Join("..", "..", "..", "deploy", "crds"),
-		},
+		CRDDirectoryPaths: []string{filepath.Join("..", "..", "..", "deploy", "crds"), filepath.Join("..", "..", "..", "deploy", "dependent-crds")},
 	}
 
 	apis.AddToScheme(scheme.Scheme)
-	chnv1alpha1.AddToScheme(scheme.Scheme)
+	chv1.AddToScheme(scheme.Scheme)
 
 	var err error
 	if cfg, err = t.Start(); err != nil {
