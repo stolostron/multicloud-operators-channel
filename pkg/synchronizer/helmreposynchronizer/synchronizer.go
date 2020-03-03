@@ -56,7 +56,7 @@ func CreateHelmrepoSynchronizer(config *rest.Config, scheme *runtime.Scheme, syn
 	s := &ChannelSynchronizer{
 		Scheme:       scheme,
 		kubeClient:   client,
-		ChannelMap:   make(map[types.NamespacedName]*chnv1alpha1.Channel),
+		ChannelMap:   make(map[types.NamespacedName]*chv1.Channel),
 		SyncInterval: syncInterval,
 	}
 

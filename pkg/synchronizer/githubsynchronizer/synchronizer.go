@@ -103,7 +103,7 @@ func CreateGithubSynchronizer(config *rest.Config, scheme *runtime.Scheme, syncI
 	s := &ChannelSynchronizer{
 		Scheme:       scheme,
 		kubeClient:   client,
-		ChannelMap:   make(map[types.NamespacedName]*chnv1alpha1.Channel),
+		ChannelMap:   make(map[types.NamespacedName]*chv1.Channel),
 		SyncInterval: syncInterval,
 	}
 
@@ -383,7 +383,7 @@ func (sync *ChannelSynchronizer) handleHelmDeployable(dpl dplv1alpha1.Deployable
 	} else {
 		chmap[cver] = true
 		var crepo string
-		if strings.EqualFold(string(chn.Spec.Type), chnv1alpha1.ChannelTypeGitHub) {
+		if strings.EqualFold(string(chn.Spec.Type), chv1.ChannelTypeGitHub) {
 			crepo = obj.Spec.Source.GitHub.URLs[0]
 		} else {
 			crepo = obj.Spec.Source.HelmRepo.URLs[0]
@@ -420,13 +420,13 @@ func (sync *ChannelSynchronizer) processGeneralMap(idx *repo.IndexFile, chn *chv
 
 		src := &source{}
 
-		if strings.EqualFold(string(chn.Spec.Type), chnv1alpha1.ChannelTypeGitHub) {
-			src.Type = chnv1alpha1.ChannelTypeGitHub
+		if strings.EqualFold(string(chn.Spec.Type), chv1.ChannelTypeGitHub) {
+			src.Type = chv1.ChannelTypeGitHub
 			src.GitHub = sourceurls
 			chartVersion, _ := idx.Get(k, mv)
 			src.GitHub.ChartPath = chartVersion.URLs[0]
 		} else {
-			src.Type = chnv1alpha1.ChannelTypeHelmRepo
+			src.Type = chv1.ChannelTypeHelmRepo
 			src.HelmRepo = sourceurls
 		}
 
