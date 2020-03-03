@@ -15,7 +15,10 @@
 // NOTE: Boilerplate only.  Ignore this file.
 
 // Package v1 contains API Schema definitions for the multicloud-apps v1 API group
+// +k8s:openapi-gen=true
 // +k8s:deepcopy-gen=package,register
+// +k8s:conversion-gen=github.ibm.com/open-cluster-management/channel/pkg/apis/multicloudapps
+// +k8s:defaulter-gen=TypeMeta
 // +groupName=multicloud-apps.io
 package v1
 

@@ -26,6 +26,8 @@ import (
 func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenAPIDefinition {
 	return map[string]common.OpenAPIDefinition{
 		"github.com/open-cluster-management/multicloud-operators-channel/pkg/apis/multicloudapps/v1.Channel":       schema_pkg_apis_multicloudapps_v1_Channel(ref),
+		"github.com/open-cluster-management/multicloud-operators-channel/pkg/apis/multicloudapps/v1.ChannelGate":   schema_pkg_apis_multicloudapps_v1_ChannelGate(ref),
+		"github.com/open-cluster-management/multicloud-operators-channel/pkg/apis/multicloudapps/v1.ChannelList":   schema_pkg_apis_multicloudapps_v1_ChannelList(ref),
 		"github.com/open-cluster-management/multicloud-operators-channel/pkg/apis/multicloudapps/v1.ChannelSpec":   schema_pkg_apis_multicloudapps_v1_ChannelSpec(ref),
 		"github.com/open-cluster-management/multicloud-operators-channel/pkg/apis/multicloudapps/v1.ChannelStatus": schema_pkg_apis_multicloudapps_v1_ChannelStatus(ref),
 	}
@@ -36,6 +38,90 @@ func schema_pkg_apis_multicloudapps_v1_Channel(ref common.ReferenceCallback) com
 		Schema: spec.Schema{
 			SchemaProps: spec.SchemaProps{
 				Description: "Channel is the Schema for the channels API",
+				Type:        []string{"object"},
+				Properties: map[string]spec.Schema{
+					"status": {
+						SchemaProps: spec.SchemaProps{
+							Ref: ref("github.com/open-cluster-management/multicloud-operators-channel/pkg/apis/multicloudapps/v1.ChannelStatus"),
+						},
+					},
+					"metadata": {
+						SchemaProps: spec.SchemaProps{
+							Ref: ref("k8s.io/apimachinery/pkg/apis/meta/v1.ObjectMeta"),
+						},
+					},
+					"spec": {
+						SchemaProps: spec.SchemaProps{
+							Ref: ref("github.com/open-cluster-management/multicloud-operators-channel/pkg/apis/multicloudapps/v1.ChannelSpec"),
+						},
+					},
+					"kind": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Kind is a string value representing the REST resource this object represents. Servers may infer this from the endpoint the client submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/api-conventions.md#types-kinds",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+					"apiVersion": {
+						SchemaProps: spec.SchemaProps{
+							Description: "APIVersion defines the versioned schema of this representation of an object. Servers should convert recognized schemas to the latest internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/api-conventions.md#resources",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+				},
+			},
+		},
+		Dependencies: []string{
+			"github.com/open-cluster-management/multicloud-operators-channel/pkg/apis/multicloudapps/v1.ChannelSpec", "github.com/open-cluster-management/multicloud-operators-channel/pkg/apis/multicloudapps/v1.ChannelStatus", "k8s.io/apimachinery/pkg/apis/meta/v1.ObjectMeta"},
+	}
+}
+
+func schema_pkg_apis_multicloudapps_v1_ChannelGate(ref common.ReferenceCallback) common.OpenAPIDefinition {
+	return common.OpenAPIDefinition{
+		Schema: spec.Schema{
+			SchemaProps: spec.SchemaProps{
+				Description: "ChannelGate defines criteria for promote to channel",
+				Type:        []string{"object"},
+				Properties: map[string]spec.Schema{
+					"name": {
+						SchemaProps: spec.SchemaProps{
+							Type:   []string{"string"},
+							Format: "",
+						},
+					},
+					"labelSelector": {
+						SchemaProps: spec.SchemaProps{
+							Ref: ref("k8s.io/apimachinery/pkg/apis/meta/v1.LabelSelector"),
+						},
+					},
+					"annotations": {
+						SchemaProps: spec.SchemaProps{
+							Type: []string{"object"},
+							AdditionalProperties: &spec.SchemaOrBool{
+								Allows: true,
+								Schema: &spec.Schema{
+									SchemaProps: spec.SchemaProps{
+										Type:   []string{"string"},
+										Format: "",
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+		},
+		Dependencies: []string{
+			"k8s.io/apimachinery/pkg/apis/meta/v1.LabelSelector"},
+	}
+}
+
+func schema_pkg_apis_multicloudapps_v1_ChannelList(ref common.ReferenceCallback) common.OpenAPIDefinition {
+	return common.OpenAPIDefinition{
+		Schema: spec.Schema{
+			SchemaProps: spec.SchemaProps{
+				Description: "ChannelList contains a list of Channel",
 				Type:        []string{"object"},
 				Properties: map[string]spec.Schema{
 					"kind": {
@@ -54,24 +140,32 @@ func schema_pkg_apis_multicloudapps_v1_Channel(ref common.ReferenceCallback) com
 					},
 					"metadata": {
 						SchemaProps: spec.SchemaProps{
-							Ref: ref("k8s.io/apimachinery/pkg/apis/meta/v1.ObjectMeta"),
+							Ref: ref("k8s.io/apimachinery/pkg/apis/meta/v1.ListMeta"),
 						},
 					},
-					"spec": {
-						SchemaProps: spec.SchemaProps{
-							Ref: ref("github.com/open-cluster-management/multicloud-operators-channel/pkg/apis/multicloudapps/v1.ChannelSpec"),
+					"items": {
+						VendorExtensible: spec.VendorExtensible{
+							Extensions: spec.Extensions{
+								"x-kubernetes-list-type": "set",
+							},
 						},
-					},
-					"status": {
 						SchemaProps: spec.SchemaProps{
-							Ref: ref("github.com/open-cluster-management/multicloud-operators-channel/pkg/apis/multicloudapps/v1.ChannelStatus"),
+							Type: []string{"array"},
+							Items: &spec.SchemaOrArray{
+								Schema: &spec.Schema{
+									SchemaProps: spec.SchemaProps{
+										Ref: ref("github.com/open-cluster-management/multicloud-operators-channel/pkg/apis/multicloudapps/v1.Channel"),
+									},
+								},
+							},
 						},
 					},
 				},
+				Required: []string{"items"},
 			},
 		},
 		Dependencies: []string{
-			"github.com/open-cluster-management/multicloud-operators-channel/pkg/apis/multicloudapps/v1.ChannelSpec", "github.com/open-cluster-management/multicloud-operators-channel/pkg/apis/multicloudapps/v1.ChannelStatus", "k8s.io/apimachinery/pkg/apis/meta/v1.ObjectMeta"},
+			"github.com/open-cluster-management/multicloud-operators-channel/pkg/apis/multicloudapps/v1.Channel", "k8s.io/apimachinery/pkg/apis/meta/v1.ListMeta"},
 	}
 }
 
@@ -81,8 +175,59 @@ func schema_pkg_apis_multicloudapps_v1_ChannelSpec(ref common.ReferenceCallback)
 			SchemaProps: spec.SchemaProps{
 				Description: "ChannelSpec defines the desired state of Channel",
 				Type:        []string{"object"},
+				Properties: map[string]spec.Schema{
+					"type": {
+						SchemaProps: spec.SchemaProps{
+							Description: "INSERT ADDITIONAL SPEC FIELDS - desired state of cluster Important: Run \"make\" to regenerate code after modifying this file",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+					"pathname": {
+						SchemaProps: spec.SchemaProps{
+							Type:   []string{"string"},
+							Format: "",
+						},
+					},
+					"secretRef": {
+						SchemaProps: spec.SchemaProps{
+							Ref: ref("k8s.io/api/core/v1.ObjectReference"),
+						},
+					},
+					"configMapRef": {
+						SchemaProps: spec.SchemaProps{
+							Ref: ref("k8s.io/api/core/v1.ObjectReference"),
+						},
+					},
+					"gates": {
+						SchemaProps: spec.SchemaProps{
+							Ref: ref("github.com/open-cluster-management/multicloud-operators-channel/pkg/apis/multicloudapps/v1.ChannelGate"),
+						},
+					},
+					"sourceNamespaces": {
+						VendorExtensible: spec.VendorExtensible{
+							Extensions: spec.Extensions{
+								"x-kubernetes-list-type": "set",
+							},
+						},
+						SchemaProps: spec.SchemaProps{
+							Type: []string{"array"},
+							Items: &spec.SchemaOrArray{
+								Schema: &spec.Schema{
+									SchemaProps: spec.SchemaProps{
+										Type:   []string{"string"},
+										Format: "",
+									},
+								},
+							},
+						},
+					},
+				},
+				Required: []string{"type", "pathname"},
 			},
 		},
+		Dependencies: []string{
+			"github.com/open-cluster-management/multicloud-operators-channel/pkg/apis/multicloudapps/v1.ChannelGate", "k8s.io/api/core/v1.ObjectReference"},
 	}
 }
 
