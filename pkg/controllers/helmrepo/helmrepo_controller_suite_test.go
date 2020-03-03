@@ -28,7 +28,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
-	chv1 "github.com/open-cluster-management/multicloud-operators-channel/pkg/apis/multicloudapps/v1"
+	apischv1 "github.com/open-cluster-management/multicloud-operators-channel/pkg/apis"
 	"github.com/open-cluster-management/multicloud-operators-deployable/pkg/apis"
 )
 
@@ -37,12 +37,12 @@ var cfg *rest.Config
 func TestMain(m *testing.M) {
 	t := &envtest.Environment{
 		CRDDirectoryPaths: []string{
-			filepath.Join("..", "..", "..", "deploy", "crds"),
+			CRDDirectoryPaths: []string{filepath.Join("..", "..", "..", "..", "deploy", "crds"), filepath.Join("..", "..", "..", "..", "deploy", "dependent-crds")},
 		},
 	}
 
 	apis.AddToScheme(scheme.Scheme)
-	chv1.AddToScheme(scheme.Scheme)
+	apischv1.AddToScheme(scheme.Scheme)
 
 	var err error
 	if cfg, err = t.Start(); err != nil {
