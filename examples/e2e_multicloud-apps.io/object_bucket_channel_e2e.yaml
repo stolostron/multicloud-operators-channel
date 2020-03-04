@@ -1,5 +1,5 @@
 --- 
-apiVersion: multicloud-apps.io/v1
+apiVersion: apps.open-cluster-management.io/v1
 kind: Deployable
 metadata: 
   name: payload-cfg-obj-channel
@@ -22,7 +22,7 @@ kind: Namespace
 metadata:
   name: ch-obj
 ---
-apiVersion: multicloud-apps.io/v1
+apiVersion: apps.open-cluster-management.io/v1
 kind: Channel
 metadata:
   name: dev
@@ -49,7 +49,7 @@ kind: Namespace
 metadata:
   name: obj-sub-ns
 ---
-apiVersion: multicloud-apps.io/v1
+apiVersion: apps.open-cluster-management.io/v1
 kind: PlacementRule
 metadata:
   name: towhichcluster
@@ -60,7 +60,7 @@ spec:
     matchLabels:
       name: gamp
 ---
-apiVersion: multicloud-apps.io/v1
+apiVersion: apps.open-cluster-management.io/v1
 kind: Subscription
 metadata:
   name: obj-sub
