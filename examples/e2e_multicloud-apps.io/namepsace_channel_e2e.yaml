@@ -32,3 +32,31 @@ spec:
   pathname: ch-ns
   sourceNamespaces:
     - default
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: ns-sub-ns
+---
+apiVersion: multicloud-apps.io/v1
+kind: PlacementRule
+metadata:
+  name: towhichcluster
+  namespace: ns-sub-ns
+spec:
+  clusterReplicas: 1
+  clusterLabels:
+    matchLabels:
+      name: gamp
+---
+apiVersion: multicloud-apps.io/v1
+kind: Subscription
+metadata:
+  name: ns-sub
+  namespace: ns-sub-ns
+spec:
+  channel: ch-ns/ns
+  placement:
+    placementRef: 
+      name: towhichcluster
+      kind: PlacementRule

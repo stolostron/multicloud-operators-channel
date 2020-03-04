@@ -31,7 +31,7 @@ import (
 
 	chv1 "github.com/open-cluster-management/multicloud-operators-channel/pkg/apis/multicloudapps/v1"
 	"github.com/open-cluster-management/multicloud-operators-channel/pkg/utils"
-	dplv1alpha1 "github.com/open-cluster-management/multicloud-operators-deployable/pkg/apis/multicloudapps/v1alpha1"
+	dplv1 "github.com/open-cluster-management/multicloud-operators-deployable/pkg/apis/multicloudapps/v1"
 )
 
 type dplElements struct {
@@ -47,8 +47,8 @@ var configmap, _ = json.Marshal(v1.ConfigMap{
 	},
 })
 
-func dplGenerator(dpl dplElements) *dplv1alpha1.Deployable {
-	return &dplv1alpha1.Deployable{
+func dplGenerator(dpl dplElements) *dplv1.Deployable {
+	return &dplv1.Deployable{
 		TypeMeta: metav1.TypeMeta{
 			Kind:       "app.ibm.com",
 			APIVersion: "v1alpha1",
@@ -57,7 +57,7 @@ func dplGenerator(dpl dplElements) *dplv1alpha1.Deployable {
 			Name:      dpl.name,
 			Namespace: dpl.ns,
 		},
-		Spec: dplv1alpha1.DeployableSpec{
+		Spec: dplv1.DeployableSpec{
 			Template: &runtime.RawExtension{Raw: configmap},
 			Channels: []string{dpl.ch},
 		},
@@ -70,13 +70,13 @@ const dplChild = "dplchild"
 const dplOrphan = "dplorphan"
 
 // create some pre-define dpl obj to test the relationship
-func initObjQueue() ([]*dplv1alpha1.Deployable, map[string]*dplv1alpha1.Deployable) {
+func initObjQueue() ([]*dplv1.Deployable, map[string]*dplv1.Deployable) {
 	dplNs := "default"
 	chName := "qa"
 
-	var initObjs []*dplv1alpha1.Deployable
+	var initObjs []*dplv1.Deployable
 
-	TestDpls := make(map[string]*dplv1alpha1.Deployable)
+	TestDpls := make(map[string]*dplv1.Deployable)
 
 	dpls := []dplElements{
 		{name: dplNode, ns: dplNs, ch: chName},
@@ -98,13 +98,13 @@ func initObjQueue() ([]*dplv1alpha1.Deployable, map[string]*dplv1alpha1.Deployab
 	return initObjs, TestDpls
 }
 
-func deploybObjects(ctx context.Context, c client.Client, objs []*dplv1alpha1.Deployable) {
+func deploybObjects(ctx context.Context, c client.Client, objs []*dplv1.Deployable) {
 	for _, obj := range objs {
 		c.Create(ctx, obj)
 	}
 }
 
-func deleteObjects(ctx context.Context, c client.Client, objs []*dplv1alpha1.Deployable) {
+func deleteObjects(ctx context.Context, c client.Client, objs []*dplv1.Deployable) {
 	for _, obj := range objs {
 		c.Delete(ctx, obj)
 	}
@@ -128,7 +128,7 @@ func TestFindDeployableForChannelsInMap(t *testing.T) {
 
 	testCases := []struct {
 		desc   string
-		dpl    *dplv1alpha1.Deployable
+		dpl    *dplv1.Deployable
 		ch     map[string]string
 		expect Expected
 	}{
@@ -149,7 +149,7 @@ func TestFindDeployableForChannelsInMap(t *testing.T) {
 }
 
 func listDplObj(cl client.Client) {
-	dpllist := &dplv1alpha1.DeployableList{}
+	dpllist := &dplv1.DeployableList{}
 	err := cl.List(context.TODO(), dpllist, &client.ListOptions{})
 
 	if err != nil {
@@ -164,7 +164,7 @@ func listDplObj(cl client.Client) {
 	log.Printf("In total %v dpl is found", len(dpllist.Items))
 }
 
-func assertDpls(expect Expected, cname string, pdpls *dplv1alpha1.Deployable, dpls *dplv1alpha1.Deployable, err error) bool {
+func assertDpls(expect Expected, cname string, pdpls *dplv1.Deployable, dpls *dplv1.Deployable, err error) bool {
 	klog.Infof("expected %v, cname %v", expect, cname)
 
 	if expect.err != err {
@@ -192,19 +192,19 @@ func TestValidateDeployableInChannel(t *testing.T) {
 
 	testCases := []struct {
 		desc string
-		dpl  *dplv1alpha1.Deployable
+		dpl  *dplv1.Deployable
 		ch   *chv1.Channel
 		want bool
 	}{
 		{
 			desc: "empty channel",
-			dpl: &dplv1alpha1.Deployable{
+			dpl: &dplv1.Deployable{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:        testDplName,
 					Namespace:   testNamespace,
 					Annotations: theAnno,
 				},
-				Spec: dplv1alpha1.DeployableSpec{
+				Spec: dplv1.DeployableSpec{
 					Template: &runtime.RawExtension{},
 				},
 			},
@@ -212,13 +212,13 @@ func TestValidateDeployableInChannel(t *testing.T) {
 		},
 		{
 			desc: "without gate channel and deployable due to same namespace",
-			dpl: &dplv1alpha1.Deployable{
+			dpl: &dplv1.Deployable{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:        testDplName,
 					Namespace:   testNamespace,
 					Annotations: theAnnoA,
 				},
-				Spec: dplv1alpha1.DeployableSpec{
+				Spec: dplv1.DeployableSpec{
 					Template: &runtime.RawExtension{},
 				},
 			},
@@ -232,13 +232,13 @@ func TestValidateDeployableInChannel(t *testing.T) {
 		},
 		{
 			desc: "without gate channel and deployable doesn't match",
-			dpl: &dplv1alpha1.Deployable{
+			dpl: &dplv1.Deployable{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:        testDplName,
 					Namespace:   testNamespace,
 					Annotations: theAnnoB,
 				},
-				Spec: dplv1alpha1.DeployableSpec{
+				Spec: dplv1.DeployableSpec{
 					Template: &runtime.RawExtension{},
 				},
 			},
@@ -251,13 +251,13 @@ func TestValidateDeployableInChannel(t *testing.T) {
 		},
 		{
 			desc: "with gate channel and deployable doesn't match anno",
-			dpl: &dplv1alpha1.Deployable{
+			dpl: &dplv1.Deployable{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:        testDplName,
 					Namespace:   testNamespace,
 					Annotations: theAnnoB,
 				},
-				Spec: dplv1alpha1.DeployableSpec{
+				Spec: dplv1.DeployableSpec{
 					Template: &runtime.RawExtension{},
 				},
 			},
@@ -276,12 +276,12 @@ func TestValidateDeployableInChannel(t *testing.T) {
 		},
 		{
 			desc: "with gate channel and deployable doesn't match anno",
-			dpl: &dplv1alpha1.Deployable{
+			dpl: &dplv1.Deployable{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      testDplName,
 					Namespace: testNamespace,
 				},
-				Spec: dplv1alpha1.DeployableSpec{
+				Spec: dplv1.DeployableSpec{
 					Template: &runtime.RawExtension{},
 				},
 			},
@@ -300,13 +300,13 @@ func TestValidateDeployableInChannel(t *testing.T) {
 		},
 		{
 			desc: "with gate channel and deployable match",
-			dpl: &dplv1alpha1.Deployable{
+			dpl: &dplv1.Deployable{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:        testDplName,
 					Namespace:   testNamespace,
 					Annotations: theAnnoA,
 				},
-				Spec: dplv1alpha1.DeployableSpec{
+				Spec: dplv1.DeployableSpec{
 					Template: &runtime.RawExtension{},
 				},
 			},
@@ -344,19 +344,19 @@ func TestValidateDeployableToChannel(t *testing.T) {
 
 	testCases := []struct {
 		desc string
-		dpl  *dplv1alpha1.Deployable
+		dpl  *dplv1.Deployable
 		ch   *chv1.Channel
 		want bool
 	}{
 		{
 			desc: "deployable can be deployed to channel",
-			dpl: &dplv1alpha1.Deployable{
+			dpl: &dplv1.Deployable{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:        testDplName,
 					Namespace:   testNamespace,
 					Annotations: theAnnoA,
 				},
-				Spec: dplv1alpha1.DeployableSpec{
+				Spec: dplv1.DeployableSpec{
 					Template: &runtime.RawExtension{},
 				},
 			},
@@ -370,13 +370,13 @@ func TestValidateDeployableToChannel(t *testing.T) {
 		},
 		{
 			desc: "cant due to miss channel sourcenamespace",
-			dpl: &dplv1alpha1.Deployable{
+			dpl: &dplv1.Deployable{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:        testDplName,
 					Namespace:   testNamespace,
 					Annotations: theAnnoA,
 				},
-				Spec: dplv1alpha1.DeployableSpec{
+				Spec: dplv1.DeployableSpec{
 					Template: &runtime.RawExtension{},
 				},
 			},
@@ -395,13 +395,13 @@ func TestValidateDeployableToChannel(t *testing.T) {
 		},
 		{
 			desc: "can deploy channel dont have gate",
-			dpl: &dplv1alpha1.Deployable{
+			dpl: &dplv1.Deployable{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:        testDplName,
 					Namespace:   testNamespace,
 					Annotations: theAnnoA,
 				},
-				Spec: dplv1alpha1.DeployableSpec{
+				Spec: dplv1.DeployableSpec{
 					Template: &runtime.RawExtension{},
 					Channels: []string{testCh},
 				},
@@ -416,13 +416,13 @@ func TestValidateDeployableToChannel(t *testing.T) {
 		},
 		{
 			desc: "can deploy due to channel gate is equal to deployable",
-			dpl: &dplv1alpha1.Deployable{
+			dpl: &dplv1.Deployable{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:        testDplName,
 					Namespace:   testNamespace,
 					Annotations: theAnnoA,
 				},
-				Spec: dplv1alpha1.DeployableSpec{
+				Spec: dplv1.DeployableSpec{
 					Template: &runtime.RawExtension{},
 					Channels: []string{testCh},
 				},
@@ -442,13 +442,13 @@ func TestValidateDeployableToChannel(t *testing.T) {
 		},
 		{
 			desc: "can deploy due to channel point to the sourcenamespace of  deployable and gate is disabled",
-			dpl: &dplv1alpha1.Deployable{
+			dpl: &dplv1.Deployable{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:        testDplName,
 					Namespace:   testNamespace,
 					Annotations: theAnnoA,
 				},
-				Spec: dplv1alpha1.DeployableSpec{
+				Spec: dplv1.DeployableSpec{
 					Template: &runtime.RawExtension{},
 					Channels: []string{testCh},
 				},
@@ -484,24 +484,24 @@ func TestCleanupDeployables(t *testing.T) {
 	testDplName := "t-dpl"
 	theAnnoA := map[string]string{"who": "bear", "what": "beer"}
 
-	dplObj := &dplv1alpha1.Deployable{
+	dplObj := &dplv1.Deployable{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:        testDplName,
 			Namespace:   testNamespace,
 			Annotations: theAnnoA},
-		Spec: dplv1alpha1.DeployableSpec{
+		Spec: dplv1.DeployableSpec{
 			Template: &runtime.RawExtension{
 				Object: &v1.ConfigMap{},
 			},
 		},
 	}
 
-	dplObj1 := &dplv1alpha1.Deployable{
+	dplObj1 := &dplv1.Deployable{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:        testDplName + "1",
 			Namespace:   testNamespace,
 			Annotations: theAnnoA},
-		Spec: dplv1alpha1.DeployableSpec{
+		Spec: dplv1.DeployableSpec{
 			Template: &runtime.RawExtension{
 				Object: &v1.ConfigMap{},
 			},
@@ -527,7 +527,7 @@ func TestCleanupDeployables(t *testing.T) {
 		},
 	}
 
-	dplList := []*dplv1alpha1.Deployable{dplObj, dplObj1}
+	dplList := []*dplv1.Deployable{dplObj, dplObj1}
 	delFuncs := []func(){}
 
 	g := gomega.NewGomegaWithT(t)
@@ -566,39 +566,39 @@ func TestGenerateDeployableForChannel(t *testing.T) {
 	chkey := types.NamespacedName{Name: testCh, Namespace: testNamespace}
 
 	targetAnno := theAnnoA
-	targetAnno[dplv1alpha1.AnnotationLocal] = "false"
+	targetAnno[dplv1.AnnotationLocal] = "false"
 	targetAnno[chv1.KeyChannel] = chkey.String()
 	targetAnno[chv1.KeyChannelSource] = types.NamespacedName{Name: testDplName, Namespace: testNamespace}.String()
-	targetAnno[dplv1alpha1.AnnotationIsGenerated] = "true"
+	targetAnno[dplv1.AnnotationIsGenerated] = "true"
 
 	testCases := []struct {
 		desc  string
-		dpl   *dplv1alpha1.Deployable
+		dpl   *dplv1.Deployable
 		chKey types.NamespacedName
-		want  *dplv1alpha1.Deployable
+		want  *dplv1.Deployable
 	}{
 		{
 			desc: "copy over all the fields and adding annotations from channel",
-			dpl: &dplv1alpha1.Deployable{
+			dpl: &dplv1.Deployable{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:        testDplName,
 					Namespace:   testNamespace,
 					Labels:      labels,
 					Annotations: theAnnoA},
-				Spec: dplv1alpha1.DeployableSpec{
+				Spec: dplv1.DeployableSpec{
 					Template: &runtime.RawExtension{
 						Object: &v1.ConfigMap{},
 					},
 				},
 			},
 			chKey: chkey,
-			want: &dplv1alpha1.Deployable{
+			want: &dplv1.Deployable{
 				ObjectMeta: metav1.ObjectMeta{
 					GenerateName: testDplName + "-",
 					Labels:       labels,
 					Namespace:    testNamespace,
 					Annotations:  targetAnno},
-				Spec: dplv1alpha1.DeployableSpec{
+				Spec: dplv1.DeployableSpec{
 					Template: &runtime.RawExtension{
 						Object: &v1.ConfigMap{},
 					},

@@ -32,7 +32,7 @@ import (
 
 	chv1 "github.com/open-cluster-management/multicloud-operators-channel/pkg/apis/multicloudapps/v1"
 	"github.com/open-cluster-management/multicloud-operators-channel/pkg/utils"
-	dplv1alpha1 "github.com/open-cluster-management/multicloud-operators-deployable/pkg/apis/multicloudapps/v1alpha1"
+	dplv1 "github.com/open-cluster-management/multicloud-operators-deployable/pkg/apis/multicloudapps/v1"
 	deputils "github.com/open-cluster-management/multicloud-operators-deployable/pkg/utils"
 )
 
@@ -135,7 +135,7 @@ func (sync *ChannelSynchronizer) syncChannel(chn *chv1.Channel) {
 
 	// retrieve deployable list in current channel namespace
 	listopt := &client.ListOptions{Namespace: chn.Namespace}
-	dpllist := &dplv1alpha1.DeployableList{}
+	dpllist := &dplv1.DeployableList{}
 
 	err = sync.kubeClient.List(context.TODO(), dpllist, listopt)
 	if err != nil {
@@ -163,7 +163,7 @@ func (sync *ChannelSynchronizer) syncChannel(chn *chv1.Channel) {
 		klog.V(10).Info("Object: ", obj.Object)
 
 		if synced := charts[mv]; !synced {
-			dpl := &dplv1alpha1.Deployable{}
+			dpl := &dplv1.Deployable{}
 			dpl.Name = chn.GetName() + "-" + obj.GetName() + "-" + mv
 			dpl.Namespace = chn.GetNamespace()
 
@@ -174,9 +174,9 @@ func (sync *ChannelSynchronizer) syncChannel(chn *chv1.Channel) {
 			}
 
 			dplanno := make(map[string]string)
-			dplanno[dplv1alpha1.AnnotationExternalSource] = k
-			dplanno[dplv1alpha1.AnnotationLocal] = "false"
-			dplanno[dplv1alpha1.AnnotationDeployableVersion] = mv
+			dplanno[dplv1.AnnotationExternalSource] = k
+			dplanno[dplv1.AnnotationLocal] = "false"
+			dplanno[dplv1.AnnotationDeployableVersion] = mv
 
 			dpl.SetAnnotations(dplanno)
 			dpl.Spec.Template = &runtime.RawExtension{}
@@ -199,7 +199,7 @@ func (sync *ChannelSynchronizer) syncChannel(chn *chv1.Channel) {
 }
 
 func (sync *ChannelSynchronizer) processDeployable(chn *chv1.Channel,
-	dpl dplv1alpha1.Deployable, generalmap map[string]map[string]bool) {
+	dpl dplv1.Deployable, generalmap map[string]map[string]bool) {
 	klog.V(10).Info("synching dpl ", dpl.Name)
 
 	obj := &unstructured.Unstructured{}

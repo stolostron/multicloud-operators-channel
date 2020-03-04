@@ -54,7 +54,7 @@ The following example is tested on a minikube, so that you can play with this op
 ```shell
 # apply all the necessary CRDs
 % kubectl apply -f ./deploy/crds
-% kubectl apply -f ./deploy/dependent-crdse
+% kubectl apply -f ./deploy/dependent-crds
 
 
 # deploy the channel controller to your cluster via a deployment, also grant access to the controller

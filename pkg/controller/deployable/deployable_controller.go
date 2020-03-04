@@ -25,7 +25,7 @@ import (
 	gitsync "github.com/open-cluster-management/multicloud-operators-channel/pkg/synchronizer/githubsynchronizer"
 	helmsync "github.com/open-cluster-management/multicloud-operators-channel/pkg/synchronizer/helmreposynchronizer"
 	"github.com/open-cluster-management/multicloud-operators-channel/pkg/utils"
-	dplv1alpha1 "github.com/open-cluster-management/multicloud-operators-deployable/pkg/apis/multicloudapps/v1alpha1"
+	dplv1 "github.com/open-cluster-management/multicloud-operators-deployable/pkg/apis/multicloudapps/v1"
 	dplutils "github.com/open-cluster-management/multicloud-operators-deployable/pkg/utils"
 
 	v1 "k8s.io/api/core/v1"
@@ -74,7 +74,7 @@ func (mapper *channelMapper) Map(obj handler.MapObject) []reconcile.Request {
 		defer klog.Infof("Exiting: %v()", fnName)
 	}
 
-	dpllist := &dplv1alpha1.DeployableList{}
+	dpllist := &dplv1.DeployableList{}
 
 	err := mapper.List(context.TODO(), dpllist, &client.ListOptions{})
 	if err != nil {
@@ -99,7 +99,7 @@ func add(mgr manager.Manager, r reconcile.Reconciler) error {
 	}
 
 	// Watch for changes to Deployable
-	err = c.Watch(&source.Kind{Type: &dplv1alpha1.Deployable{}}, &handler.EnqueueRequestForObject{})
+	err = c.Watch(&source.Kind{Type: &dplv1.Deployable{}}, &handler.EnqueueRequestForObject{})
 	if err != nil {
 		return err
 	}
@@ -156,7 +156,7 @@ func (r *ReconcileDeployable) Reconcile(request reconcile.Request) (reconcile.Re
 
 	klog.Info("Reconciling:", request.NamespacedName)
 
-	instance := &dplv1alpha1.Deployable{}
+	instance := &dplv1.Deployable{}
 	err := r.Get(context.TODO(), request.NamespacedName, instance)
 
 	if err != nil {
@@ -203,7 +203,7 @@ func (r *ReconcileDeployable) Reconcile(request reconcile.Request) (reconcile.Re
 	return reconcile.Result{}, err
 }
 
-func (r *ReconcileDeployable) handleOrphanDeployable(dplmap map[string]*dplv1alpha1.Deployable) {
+func (r *ReconcileDeployable) handleOrphanDeployable(dplmap map[string]*dplv1.Deployable) {
 	if dplmap == nil {
 		return
 	}
@@ -243,8 +243,8 @@ func (r *ReconcileDeployable) handleOrphanDeployable(dplmap map[string]*dplv1alp
 	}
 }
 
-func (r *ReconcileDeployable) propagateDeployableToChannel(deployable *dplv1alpha1.Deployable,
-	dplmap map[string]*dplv1alpha1.Deployable, channel *chv1.Channel) error {
+func (r *ReconcileDeployable) propagateDeployableToChannel(deployable *dplv1.Deployable,
+	dplmap map[string]*dplv1.Deployable, channel *chv1.Channel) error {
 	if klog.V(debugLevel) {
 		fnName := dplutils.GetFnName()
 		klog.Infof("Entering: %v()", fnName)
@@ -332,9 +332,9 @@ func (r *ReconcileDeployable) propagateDeployableToChannel(deployable *dplv1alph
 }
 
 func (r *ReconcileDeployable) updateDeployableRelationWithChannel(
-	instance *dplv1alpha1.Deployable, dplmap map[string]*dplv1alpha1.Deployable,
-	parent *dplv1alpha1.Deployable, channelNsMap map[string]string,
-	channelmap map[string]*chv1.Channel) (map[string]*dplv1alpha1.Deployable, error) {
+	instance *dplv1.Deployable, dplmap map[string]*dplv1.Deployable,
+	parent *dplv1.Deployable, channelNsMap map[string]string,
+	channelmap map[string]*chv1.Channel) (map[string]*dplv1.Deployable, error) {
 	if len(instance.GetFinalizers()) == 0 {
 		annotations := instance.Annotations
 		if channelNsMap[instance.Namespace] != "" && annotations != nil && annotations[chv1.KeyChannelSource] != "" && parent == nil {

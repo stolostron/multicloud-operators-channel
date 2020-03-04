@@ -22,12 +22,12 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	chv1 "github.com/open-cluster-management/multicloud-operators-channel/pkg/apis/multicloudapps/v1"
-	dplv1alpha1 "github.com/open-cluster-management/multicloud-operators-deployable/pkg/apis/multicloudapps/v1alpha1"
+	dplv1 "github.com/open-cluster-management/multicloud-operators-deployable/pkg/apis/multicloudapps/v1"
 	dplutils "github.com/open-cluster-management/multicloud-operators-deployable/pkg/utils"
 )
 
 // ValidateDeployableInChannel check if a deployable rightfully in channel
-func ValidateDeployableInChannel(deployable *dplv1alpha1.Deployable, channel *chv1.Channel) bool {
+func ValidateDeployableInChannel(deployable *dplv1.Deployable, channel *chv1.Channel) bool {
 	if klog.V(debugLevel) {
 		fnName := dplutils.GetFnName()
 		klog.Infof("Entering: %v()", fnName)
@@ -78,7 +78,7 @@ func ValidateDeployableInChannel(deployable *dplv1alpha1.Deployable, channel *ch
 // // b.1.1 dpl doesn't have annotation, then fail
 
 // ValidateDeployableToChannel check if a deployable can be promoted to channel
-func ValidateDeployableToChannel(deployable *dplv1alpha1.Deployable, channel *chv1.Channel) bool {
+func ValidateDeployableToChannel(deployable *dplv1.Deployable, channel *chv1.Channel) bool {
 	if klog.V(debugLevel) {
 		fnName := dplutils.GetFnName()
 		klog.Infof("Entering: %v()", fnName)
@@ -136,9 +136,9 @@ func ValidateDeployableToChannel(deployable *dplv1alpha1.Deployable, channel *ch
 
 // FindDeployableForChannelsInMap check all deployables in certain namespace delete all has the channel set the given channel namespace
 // channelnsMap is a set(), which is used to check up if the dpl is within a channel or not
-func FindDeployableForChannelsInMap(cl client.Client, deployable *dplv1alpha1.Deployable,
-	channelnsMap map[string]string) (*dplv1alpha1.Deployable,
-	map[string]*dplv1alpha1.Deployable, error) {
+func FindDeployableForChannelsInMap(cl client.Client, deployable *dplv1.Deployable,
+	channelnsMap map[string]string) (*dplv1.Deployable,
+	map[string]*dplv1.Deployable, error) {
 	if klog.V(debugLevel) {
 		fnName := dplutils.GetFnName()
 		klog.Infof("Entering: %v()", fnName)
@@ -150,9 +150,9 @@ func FindDeployableForChannelsInMap(cl client.Client, deployable *dplv1alpha1.De
 		return nil, nil, nil
 	}
 
-	var parent *dplv1alpha1.Deployable
+	var parent *dplv1.Deployable
 
-	dpllist := &dplv1alpha1.DeployableList{}
+	dpllist := &dplv1.DeployableList{}
 	err := cl.List(context.TODO(), dpllist, &client.ListOptions{})
 
 	if err != nil {
@@ -160,7 +160,7 @@ func FindDeployableForChannelsInMap(cl client.Client, deployable *dplv1alpha1.De
 		return nil, nil, err
 	}
 
-	dplmap := make(map[string]*dplv1alpha1.Deployable)
+	dplmap := make(map[string]*dplv1.Deployable)
 
 	//cur dpl key
 	dplkey := types.NamespacedName{Name: deployable.Name, Namespace: deployable.Namespace}
@@ -219,7 +219,7 @@ func CleanupDeployables(cl client.Client, channel types.NamespacedName) error {
 		defer klog.Infof("Exiting: %v()", fnName)
 	}
 
-	dpllist := &dplv1alpha1.DeployableList{}
+	dpllist := &dplv1.DeployableList{}
 	err := cl.List(context.TODO(), dpllist, &client.ListOptions{Namespace: channel.Namespace})
 
 	if err != nil {
@@ -241,7 +241,7 @@ func CleanupDeployables(cl client.Client, channel types.NamespacedName) error {
 }
 
 // GenerateDeployableForChannel generate a copy of deployable for channel with label, annotation, template and channel info
-func GenerateDeployableForChannel(deployable *dplv1alpha1.Deployable, channel types.NamespacedName) (*dplv1alpha1.Deployable, error) {
+func GenerateDeployableForChannel(deployable *dplv1.Deployable, channel types.NamespacedName) (*dplv1.Deployable, error) {
 	if klog.V(debugLevel) {
 		fnName := dplutils.GetFnName()
 		klog.Infof("Entering: %v()", fnName)
@@ -253,7 +253,7 @@ func GenerateDeployableForChannel(deployable *dplv1alpha1.Deployable, channel ty
 		return nil, nil
 	}
 
-	chdpl := &dplv1alpha1.Deployable{}
+	chdpl := &dplv1.Deployable{}
 
 	chdpl.GenerateName = DplGenerateNameStr(deployable)
 
@@ -289,13 +289,13 @@ func GenerateDeployableForChannel(deployable *dplv1alpha1.Deployable, channel ty
 		}
 	}
 
-	chdplannotations[dplv1alpha1.AnnotationLocal] = "false"
+	chdplannotations[dplv1.AnnotationLocal] = "false"
 	chdplannotations[chv1.KeyChannelSource] = chsrc
 	chdplannotations[chv1.KeyChannel] = types.NamespacedName{Name: channel.Name, Namespace: channel.Namespace}.String()
-	chdplannotations[dplv1alpha1.AnnotationIsGenerated] = "true"
+	chdplannotations[dplv1.AnnotationIsGenerated] = "true"
 
-	if v, ok := annotations[dplv1alpha1.AnnotationDeployableVersion]; ok {
-		chdplannotations[dplv1alpha1.AnnotationDeployableVersion] = v
+	if v, ok := annotations[dplv1.AnnotationDeployableVersion]; ok {
+		chdplannotations[dplv1.AnnotationDeployableVersion] = v
 	}
 
 	chdpl.SetAnnotations(chdplannotations)
@@ -304,7 +304,7 @@ func GenerateDeployableForChannel(deployable *dplv1alpha1.Deployable, channel ty
 }
 
 //DplGenerateNameStr  will generate a string for the dpl generate name
-func DplGenerateNameStr(deployable *dplv1alpha1.Deployable) string {
+func DplGenerateNameStr(deployable *dplv1.Deployable) string {
 	if klog.V(debugLevel) {
 		fnName := dplutils.GetFnName()
 		klog.Infof("Entering: %v()", fnName)
