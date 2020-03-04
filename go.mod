@@ -8,8 +8,8 @@ require (
 	github.com/go-openapi/spec v0.19.0
 	github.com/google/go-cmp v0.3.1
 	github.com/onsi/gomega v1.5.0
-	github.com/open-cluster-management/multicloud-operators-deployable v0.0.0-20200222223552-26f855167607
-	github.com/open-cluster-management/multicloud-operators-placementrule v0.0.0-20200221060829-23a78b442412
+	github.com/open-cluster-management/multicloud-operators-deployable v0.0.0-20200304064056-f2752b575d0b
+	github.com/open-cluster-management/multicloud-operators-placementrule v0.0.0-20200304045849-06140380762f
 	github.com/operator-framework/operator-sdk v0.12.0
 	github.com/pkg/errors v0.8.1
 	github.com/prometheus/common v0.4.1

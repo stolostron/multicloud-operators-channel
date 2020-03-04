@@ -34,7 +34,7 @@ import (
 
 	chv1 "github.com/open-cluster-management/multicloud-operators-channel/pkg/apis/multicloudapps/v1"
 	"github.com/open-cluster-management/multicloud-operators-channel/pkg/utils"
-	dplv1alpha1 "github.com/open-cluster-management/multicloud-operators-deployable/pkg/apis/multicloudapps/v1alpha1"
+	dplv1 "github.com/open-cluster-management/multicloud-operators-deployable/pkg/apis/multicloudapps/v1"
 	dplutils "github.com/open-cluster-management/multicloud-operators-deployable/pkg/utils"
 )
 
@@ -162,7 +162,7 @@ func (sync *ChannelSynchronizer) syncChannel(chn *chv1.Channel) error {
 		tplmap[name] = objtpl
 	}
 
-	dpllist := &dplv1alpha1.DeployableList{}
+	dpllist := &dplv1.DeployableList{}
 	if err := sync.kubeClient.List(context.TODO(), dpllist, &client.ListOptions{Namespace: chn.GetNamespace()}); err != nil {
 		return errors.Wrap(err, "failed to list all deployables")
 	}
@@ -184,15 +184,15 @@ func (sync *ChannelSynchronizer) syncChannel(chn *chv1.Channel) error {
 		tplannotations := tpl.GetAnnotations()
 		if tplannotations == nil {
 			tplannotations = make(map[string]string)
-		} else if _, ok := tplannotations[dplv1alpha1.AnnotationHosting]; ok {
+		} else if _, ok := tplannotations[dplv1.AnnotationHosting]; ok {
 			continue
 		}
 		// Set AnnotationExternalSource
-		tplannotations[dplv1alpha1.AnnotationExternalSource] = chn.Spec.Pathname
-		tplannotations[dplv1alpha1.AnnotationLocal] = "false"
+		tplannotations[dplv1.AnnotationExternalSource] = chn.Spec.Pathname
+		tplannotations[dplv1.AnnotationLocal] = "false"
 		tpl.SetAnnotations(tplannotations)
 
-		dpl := &dplv1alpha1.Deployable{}
+		dpl := &dplv1.Deployable{}
 		dpl.Name = tplname
 		dpl.Namespace = chn.Namespace
 		dpl.Spec.Template = &runtime.RawExtension{}
@@ -216,7 +216,7 @@ func (sync *ChannelSynchronizer) syncChannel(chn *chv1.Channel) error {
 }
 
 func (sync *ChannelSynchronizer) updateSynchronizerWithDeployable(
-	tplmap map[string]*unstructured.Unstructured, dpl dplv1alpha1.Deployable,
+	tplmap map[string]*unstructured.Unstructured, dpl dplv1.Deployable,
 	chn *chv1.Channel) error {
 	dpltpl, err := getUnstructuredTemplateFromDeployable(&dpl)
 	if err != nil {
@@ -242,7 +242,7 @@ func (sync *ChannelSynchronizer) updateSynchronizerWithDeployable(
 		tplannotations = make(map[string]string)
 	}
 
-	tplannotations[dplv1alpha1.AnnotationExternalSource] = chn.Spec.Pathname
+	tplannotations[dplv1.AnnotationExternalSource] = chn.Spec.Pathname
 	tpl.SetAnnotations(tplannotations)
 
 	if !reflect.DeepEqual(tpl, dpltpl) {
@@ -265,7 +265,7 @@ func (sync *ChannelSynchronizer) updateSynchronizerWithDeployable(
 }
 
 // getUnstructuredTemplateFromDeployable return error if needed
-func getUnstructuredTemplateFromDeployable(dpl *dplv1alpha1.Deployable) (*unstructured.Unstructured, error) {
+func getUnstructuredTemplateFromDeployable(dpl *dplv1.Deployable) (*unstructured.Unstructured, error) {
 	dpltpl := &unstructured.Unstructured{}
 
 	if dpl.Spec.Template == nil {
@@ -286,7 +286,7 @@ func getUnstructuredTemplateFromDeployable(dpl *dplv1alpha1.Deployable) (*unstru
 		return nil, errors.New("Deployable is not created by this synchronizer:" + dpl.GetName())
 	}
 
-	if _, ok := dpltplannotations[dplv1alpha1.AnnotationExternalSource]; !ok {
+	if _, ok := dpltplannotations[dplv1.AnnotationExternalSource]; !ok {
 		return nil, errors.New("Deployable is not created by this synchronizer:" + dpl.GetName())
 	}
 
