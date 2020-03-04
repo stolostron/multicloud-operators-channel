@@ -143,8 +143,8 @@ func (r *ReconcileDeployable) appendEvent(rootInstance *chv1.Channel, dplkey typ
 // Automatically generate RBAC rules to allow the Controller to read and write Deployments
 // +kubebuilder:rbac:groups=apps,resources=deployments,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups=apps,resources=deployments/status,verbs=get;update;patch
-// +kubebuilder:rbac:groups=app.ibm.com,resources=channels,verbs=get;list;watch;create;update;patch;delete
-// +kubebuilder:rbac:groups=app.ibm.com,resources=channels/status,verbs=get;update;patch
+// +kubebuilder:rbac:groups=multicloud-apps.io,resources=channels,verbs=get;list;watch;create;update;patch;delete
+// +kubebuilder:rbac:groups=multicloud-apps.io,resources=channels/status,verbs=get;update;patch
 func (r *ReconcileDeployable) Reconcile(request reconcile.Request) (reconcile.Result, error) {
 	// Fetch the Channel instance
 	if klog.V(debugLevel) {
