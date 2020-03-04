@@ -33,8 +33,6 @@ For a quick start, we are going to create a namespace channel, meaning you can p
 
 The following example is tested on a minikube, so that you can play with this operator with out worrying too much extra stuff, such as secrity for a real cluster.
 
-*Note: please adjust the image setting of the operator at `./deploy/standalone/operator.yaml`, at least make sure, it's using the correct image tag and image policy.*
-
 ------
 
 ### Setting up a channel to sync resourcese between your hub cluster and a object bucket

@@ -11,7 +11,6 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
-
 package v1
 
 import (
@@ -77,7 +76,7 @@ type ChannelStatus struct {
 // Channel is the Schema for the channels API
 // +k8s:openapi-gen=true
 // +kubebuilder:printcolumn:name="Type",type="string",JSONPath=".spec.type",description="type of the channel"
-// +kubebuilder:printcolumn:name="PathName",type="string",JSONPath=".spec.pathname",description="pathname of the channel"
+// +kubebuilder:printcolumn:name="Pathname",type="string",JSONPath=".spec.pathname",description="pathname of the channel"
 // +kubebuilder:printcolumn:name="Age",type="date",JSONPath=".metadata.creationTimestamp"
 // +kubebuilder:resource:scope=Namespaced
 type Channel struct {
