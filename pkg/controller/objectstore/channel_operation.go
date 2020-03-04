@@ -32,7 +32,7 @@ import (
 
 	chv1 "github.com/open-cluster-management/multicloud-operators-channel/pkg/apis/multicloudapps/v1"
 	"github.com/open-cluster-management/multicloud-operators-channel/pkg/utils"
-	dplv1alpha1 "github.com/open-cluster-management/multicloud-operators-deployable/pkg/apis/multicloudapps/v1alpha1"
+	dplv1 "github.com/open-cluster-management/multicloud-operators-deployable/pkg/apis/multicloudapps/v1"
 )
 
 //
@@ -78,7 +78,7 @@ func (r *ReconcileDeployable) deleteDeployableInObjectStore(request types.Namesp
 		return reconcile.Result{}, nil
 	}
 
-	if _, ok := tplannotations[dplv1alpha1.AnnotationHosting]; !ok {
+	if _, ok := tplannotations[dplv1.AnnotationHosting]; !ok {
 		return reconcile.Result{}, nil
 	}
 
@@ -90,7 +90,7 @@ func (r *ReconcileDeployable) deleteDeployableInObjectStore(request types.Namesp
 }
 
 // reconcileForChannel populate object store with channel when turned on
-func (r *ReconcileDeployable) reconcileForChannel(deployable *dplv1alpha1.Deployable) (reconcile.Result, error) {
+func (r *ReconcileDeployable) reconcileForChannel(deployable *dplv1.Deployable) (reconcile.Result, error) {
 	dplchn, err := r.getChannelForNamespace(deployable.Namespace)
 	if dplchn == nil || err != nil {
 		return reconcile.Result{}, errors.Wrap(err, "failed to find channel deployables")
@@ -125,7 +125,7 @@ func (r *ReconcileDeployable) reconcileForChannel(deployable *dplv1alpha1.Deploy
 	tplannotations := template.GetAnnotations()
 	if tplannotations == nil {
 		tplannotations = make(map[string]string)
-	} else if _, ok := tplannotations[dplv1alpha1.AnnotationExternalSource]; ok {
+	} else if _, ok := tplannotations[dplv1.AnnotationExternalSource]; ok {
 		return reconcile.Result{}, errors.New("skip external deployable")
 	}
 	// carry deployable annotations
@@ -134,7 +134,7 @@ func (r *ReconcileDeployable) reconcileForChannel(deployable *dplv1alpha1.Deploy
 	}
 	// Set AnnotationHosting
 	hosting := types.NamespacedName{Name: deployable.GetName(), Namespace: deployable.GetNamespace()}.String()
-	tplannotations[dplv1alpha1.AnnotationHosting] = hosting
+	tplannotations[dplv1.AnnotationHosting] = hosting
 	template.SetAnnotations(tplannotations)
 
 	// carry deployable labels
@@ -170,7 +170,7 @@ func (r *ReconcileDeployable) reconcileForChannel(deployable *dplv1alpha1.Deploy
 		Name:         deployable.GetName(),
 		GenerateName: dplGenerateName,
 		Content:      tplb,
-		Version:      annotations[dplv1alpha1.AnnotationDeployableVersion],
+		Version:      annotations[dplv1.AnnotationDeployableVersion],
 	}
 	if err := chndesc.ObjectStore.Put(chndesc.Bucket, dplObj); err != nil {
 		return reconcile.Result{}, errors.Wrap(err, "failed to put to object bucket")
@@ -232,14 +232,14 @@ func (r *ReconcileDeployable) syncChannel(dplchn *chv1.Channel) error {
 		return errors.New(fmt.Sprintf("failed to get channel description for %v ", dplchn.Name))
 	}
 
-	dpllist := &dplv1alpha1.DeployableList{}
+	dpllist := &dplv1.DeployableList{}
 
 	err = r.KubeClient.List(context.TODO(), dpllist, &client.ListOptions{Namespace: dplchn.GetNamespace()})
 	if err != nil {
 		return errors.Wrap(err, "failed to list deployables")
 	}
 
-	chndplmap := make(map[string]*dplv1alpha1.Deployable)
+	chndplmap := make(map[string]*dplv1.Deployable)
 	for _, dpl := range dpllist.Items {
 		chndplmap[dpl.Name] = dpl.DeepCopy()
 	}
@@ -295,7 +295,7 @@ func (r *ReconcileDeployable) syncChannel(dplchn *chv1.Channel) error {
 			dplObj.Content = dplb
 
 			dpltplannotations := dpltpl.GetAnnotations()
-			dplObj.Version = dpltplannotations[dplv1alpha1.AnnotationDeployableVersion]
+			dplObj.Version = dpltplannotations[dplv1.AnnotationDeployableVersion]
 
 			err = chndesc.ObjectStore.Put(chndesc.Bucket, dplObj)
 			if err != nil {
@@ -313,14 +313,14 @@ func isValidObj(objtpl *unstructured.Unstructured) bool {
 		return false
 	}
 
-	if _, ok := tplannotations[dplv1alpha1.AnnotationHosting]; !ok {
+	if _, ok := tplannotations[dplv1.AnnotationHosting]; !ok {
 		return false
 	}
 
 	return true
 }
 
-func prepareDeployalbeTemplate(dpl *dplv1alpha1.Deployable) (*unstructured.Unstructured, error) {
+func prepareDeployalbeTemplate(dpl *dplv1.Deployable) (*unstructured.Unstructured, error) {
 	dpltpl := &unstructured.Unstructured{}
 
 	if dpl.Spec.Template == nil {
@@ -345,7 +345,7 @@ func prepareDeployalbeTemplate(dpl *dplv1alpha1.Deployable) (*unstructured.Unstr
 	}
 
 	hosting := types.NamespacedName{Name: dpl.GetName(), Namespace: dpl.GetNamespace()}.String()
-	dpltplannotations[dplv1alpha1.AnnotationHosting] = hosting
+	dpltplannotations[dplv1.AnnotationHosting] = hosting
 	dpltpl.SetAnnotations(dpltplannotations)
 
 	// Update template labels from deployable labels

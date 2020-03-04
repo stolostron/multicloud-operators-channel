@@ -35,7 +35,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	chv1 "github.com/open-cluster-management/multicloud-operators-channel/pkg/apis/multicloudapps/v1"
-	dplv1alpha1 "github.com/open-cluster-management/multicloud-operators-deployable/pkg/apis/multicloudapps/v1alpha1"
+	dplv1 "github.com/open-cluster-management/multicloud-operators-deployable/pkg/apis/multicloudapps/v1"
 )
 
 var c client.Client
@@ -64,12 +64,12 @@ func TestDeployableReconcile(t *testing.T) {
 		},
 	}
 
-	deployableInstance := &dplv1alpha1.Deployable{
+	deployableInstance := &dplv1.Deployable{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      targetDeployableName,
 			Namespace: targetNamespace,
 		},
-		Spec: dplv1alpha1.DeployableSpec{
+		Spec: dplv1.DeployableSpec{
 			Template: &runtime.RawExtension{
 				Object: &v1.ConfigMap{},
 			},

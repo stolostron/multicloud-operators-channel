@@ -40,7 +40,7 @@ import (
 
 	chv1 "github.com/open-cluster-management/multicloud-operators-channel/pkg/apis/multicloudapps/v1"
 	"github.com/open-cluster-management/multicloud-operators-channel/pkg/utils"
-	dplv1alpha1 "github.com/open-cluster-management/multicloud-operators-deployable/pkg/apis/multicloudapps/v1alpha1"
+	dplv1 "github.com/open-cluster-management/multicloud-operators-deployable/pkg/apis/multicloudapps/v1"
 	deputils "github.com/open-cluster-management/multicloud-operators-deployable/pkg/utils"
 )
 
@@ -147,7 +147,7 @@ func (sync *ChannelSynchronizer) syncChannelsWithGitRepo() {
 	}
 }
 
-func (sync *ChannelSynchronizer) processYamlFile(chn *chv1.Channel, files []os.FileInfo, dir string, newDplList map[string]*dplv1alpha1.Deployable) {
+func (sync *ChannelSynchronizer) processYamlFile(chn *chv1.Channel, files []os.FileInfo, dir string, newDplList map[string]*dplv1.Deployable) {
 	for _, f := range files {
 		// If YAML or YML,
 		if f.Mode().IsRegular() {
@@ -178,7 +178,7 @@ func (sync *ChannelSynchronizer) handleSingleDeployable(
 	fileinfo os.FileInfo,
 	filecontent []byte,
 	t kubeResource,
-	newDplList map[string]*dplv1alpha1.Deployable) error {
+	newDplList map[string]*dplv1.Deployable) error {
 	klog.V(debugLevel).Info("Kubernetes resource of kind ", t.Kind, " Creating a deployable.")
 
 	obj := &unstructured.Unstructured{}
@@ -187,7 +187,7 @@ func (sync *ChannelSynchronizer) handleSingleDeployable(
 		return errors.Wrap(err, "failed to unmarshal Kubernetes resource")
 	}
 
-	dpl := &dplv1alpha1.Deployable{}
+	dpl := &dplv1.Deployable{}
 	dpl.Name = strings.ToLower(chn.GetName() + "-" + t.APIVersion + "-" + t.Kind + "-" + t.Metadata.Namespace + "-" + t.Metadata.Name)
 	dpl.Namespace = chn.GetNamespace()
 
@@ -196,9 +196,9 @@ func (sync *ChannelSynchronizer) handleSingleDeployable(
 	}
 
 	dplanno := make(map[string]string)
-	dplanno[dplv1alpha1.AnnotationExternalSource] = fileinfo.Name()
-	dplanno[dplv1alpha1.AnnotationLocal] = "false"
-	dplanno[dplv1alpha1.AnnotationDeployableVersion] = t.APIVersion
+	dplanno[dplv1.AnnotationExternalSource] = fileinfo.Name()
+	dplanno[dplv1.AnnotationLocal] = "false"
+	dplanno[dplv1.AnnotationDeployableVersion] = t.APIVersion
 	dpl.SetAnnotations(dplanno)
 	dpl.Spec.Template = &runtime.RawExtension{}
 
@@ -233,7 +233,7 @@ func (sync *ChannelSynchronizer) syncChannel(chn *chv1.Channel) {
 	klog.V(debugLevel).Info("There are ", len(idx.Entries), " entries in the index.yaml")
 	klog.V(debugLevel).Info("There are ", len(resourceDirs), " non-helm directories.")
 
-	newDplList := make(map[string]*dplv1alpha1.Deployable)
+	newDplList := make(map[string]*dplv1.Deployable)
 	// sync kube resource deployables
 	for _, dir := range resourceDirs {
 		files, err := ioutil.ReadDir(dir)
@@ -265,7 +265,7 @@ func (sync *ChannelSynchronizer) syncChannel(chn *chv1.Channel) {
 
 	// retrieve deployable list in current channel namespace
 	listopt := &client.ListOptions{Namespace: chn.Namespace}
-	dpllist := &dplv1alpha1.DeployableList{}
+	dpllist := &dplv1.DeployableList{}
 
 	err = sync.kubeClient.List(context.TODO(), dpllist, listopt)
 	if err != nil {
@@ -287,9 +287,9 @@ func (sync *ChannelSynchronizer) syncChannel(chn *chv1.Channel) {
 }
 
 func (sync *ChannelSynchronizer) handleResourceDeployable(
-	dpl dplv1alpha1.Deployable,
+	dpl dplv1.Deployable,
 	chn *chv1.Channel,
-	newDplList map[string]*dplv1alpha1.Deployable) error {
+	newDplList map[string]*dplv1.Deployable) error {
 	klog.V(debugLevel).Infof("Synchronizing kube resource deployable %v", dpl.Name)
 
 	if dpl.Spec.Template == nil {
@@ -345,7 +345,7 @@ func (sync *ChannelSynchronizer) handleResourceDeployable(
 	return nil
 }
 
-func (sync *ChannelSynchronizer) handleHelmDeployable(dpl dplv1alpha1.Deployable, chn *chv1.Channel, generalmap map[string]map[string]bool) error {
+func (sync *ChannelSynchronizer) handleHelmDeployable(dpl dplv1.Deployable, chn *chv1.Channel, generalmap map[string]map[string]bool) error {
 	klog.V(debugLevel).Infof("Synchronizing helm release deployable %v", dpl.Name)
 
 	obj := &helmTemplate{}
@@ -437,7 +437,7 @@ func (sync *ChannelSynchronizer) processGeneralMap(idx *repo.IndexFile, chn *chv
 		if synced := charts[mv]; !synced {
 			klog.Info("generating deployable")
 
-			dpl := &dplv1alpha1.Deployable{}
+			dpl := &dplv1.Deployable{}
 			dpl.Name = chn.GetName() + "-" + obj.GetName() + "-" + mv
 			dpl.Namespace = chn.GetNamespace()
 
@@ -448,9 +448,9 @@ func (sync *ChannelSynchronizer) processGeneralMap(idx *repo.IndexFile, chn *chv
 			}
 
 			dplanno := make(map[string]string)
-			dplanno[dplv1alpha1.AnnotationExternalSource] = k
-			dplanno[dplv1alpha1.AnnotationLocal] = "false"
-			dplanno[dplv1alpha1.AnnotationDeployableVersion] = mv
+			dplanno[dplv1.AnnotationExternalSource] = k
+			dplanno[dplv1.AnnotationLocal] = "false"
+			dplanno[dplv1.AnnotationDeployableVersion] = mv
 			dpl.SetAnnotations(dplanno)
 			dpl.Spec.Template = &runtime.RawExtension{}
 			dpl.Spec.Template.Raw, err = json.Marshal(obj)

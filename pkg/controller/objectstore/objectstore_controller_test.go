@@ -28,7 +28,7 @@ import (
 
 	chv1 "github.com/open-cluster-management/multicloud-operators-channel/pkg/apis/multicloudapps/v1"
 	"github.com/open-cluster-management/multicloud-operators-channel/pkg/utils"
-	dplv1alpha1 "github.com/open-cluster-management/multicloud-operators-deployable/pkg/apis/multicloudapps/v1alpha1"
+	dplv1 "github.com/open-cluster-management/multicloud-operators-deployable/pkg/apis/multicloudapps/v1"
 )
 
 const timeout = time.Second * 2
@@ -64,13 +64,13 @@ func TestObjstoreController(t *testing.T) {
 		mgrStopped.Wait()
 	}()
 
-	dpl := &dplv1alpha1.Deployable{
+	dpl := &dplv1.Deployable{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:        testDplName,
 			Namespace:   testNamespace,
 			Annotations: theAnno,
 		},
-		Spec: dplv1alpha1.DeployableSpec{
+		Spec: dplv1.DeployableSpec{
 			Template: &runtime.RawExtension{
 				Object: &v1.ConfigMap{},
 			},
