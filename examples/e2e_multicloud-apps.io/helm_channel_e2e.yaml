@@ -12,7 +12,7 @@ metadata:
 data:
   insecureSkipVerify: "true"
 ---
-apiVersion: multicloud-apps.io/v1
+apiVersion: apps.open-cluster-management.io/v1
 kind: Channel
 metadata:
   name: helm
@@ -30,7 +30,7 @@ kind: Namespace
 metadata:
   name: helm-sub-ns
 ---
-apiVersion: multicloud-apps.io/v1
+apiVersion: apps.open-cluster-management.io/v1
 kind: PlacementRule
 metadata:
   name: towhichcluster
@@ -41,7 +41,7 @@ spec:
     matchLabels:
       name: gamp
 ---
-apiVersion: multicloud-apps.io/v1
+apiVersion: apps.open-cluster-management.io/v1
 kind: Subscription
 metadata:
   name: helm-sub

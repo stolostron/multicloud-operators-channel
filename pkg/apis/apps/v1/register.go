@@ -14,12 +14,12 @@
 
 // NOTE: Boilerplate only.  Ignore this file.
 
-// Package v1 contains API Schema definitions for the multicloud-apps v1 API group
+// Package v1 contains API Schema definitions for the apps v1 API group
 // +k8s:openapi-gen=true
 // +k8s:deepcopy-gen=package,register
-// +k8s:conversion-gen=github.ibm.com/open-cluster-management/channel/pkg/apis/multicloudapps
+// +k8s:conversion-gen=github.ibm.com/open-cluster-management/channel/pkg/apis/apps
 // +k8s:defaulter-gen=TypeMeta
-// +groupName=multicloud-apps.io
+// +groupName=apps.open-cluster-management.io
 package v1
 
 import (
@@ -27,9 +27,11 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/scheme"
 )
 
+const apiGroup = "apps.open-cluster-management.io"
+
 var (
 	// SchemeGroupVersion is group version used to register these objects
-	SchemeGroupVersion = schema.GroupVersion{Group: "multicloud-apps.io", Version: "v1"}
+	SchemeGroupVersion = schema.GroupVersion{Group: apiGroup, Version: "v1"}
 
 	// SchemeBuilder is used to add go types to the GroupVersionKind scheme
 	SchemeBuilder = &scheme.Builder{GroupVersion: SchemeGroupVersion}

@@ -398,10 +398,10 @@ github.com/onsi/gomega v1.4.2/go.mod h1:ex+gbHU/CVuBBDIJjb2X0qEXbFg53c61hWP/1Cpa
 github.com/onsi/gomega v1.4.3/go.mod h1:ex+gbHU/CVuBBDIJjb2X0qEXbFg53c61hWP/1CpauHY=
 github.com/onsi/gomega v1.5.0 h1:izbySO9zDPmjJ8rDjLvkA2zJHIo+HkYXHnf7eN7SSyo=
 github.com/onsi/gomega v1.5.0/go.mod h1:ex+gbHU/CVuBBDIJjb2X0qEXbFg53c61hWP/1CpauHY=
-github.com/open-cluster-management/multicloud-operators-deployable v0.0.0-20200304064056-f2752b575d0b h1:97diy3O9A8ggEQCo6FpVGbT2smLt5zjuHjdYeq+q2VI=
-github.com/open-cluster-management/multicloud-operators-deployable v0.0.0-20200304064056-f2752b575d0b/go.mod h1:A85tKSN/lgYOOQMVG3CoTctmXK/96yX/QVWh95G3px4=
-github.com/open-cluster-management/multicloud-operators-placementrule v0.0.0-20200304045849-06140380762f h1:dYbz86f6jrpgViaqTT1NTzXMF1+lKctIxzTSYElOCNs=
-github.com/open-cluster-management/multicloud-operators-placementrule v0.0.0-20200304045849-06140380762f/go.mod h1:mgU+3nfxS4FgPcywx9VpQiQosWY+o0XXHhBJiT3fr2o=
+github.com/open-cluster-management/multicloud-operators-deployable v0.0.0-20200305002029-e8093169e4ff h1:P+n5gegjLmJKNZTi2eVEzJ9PyegxnPvA60giWlDdLgE=
+github.com/open-cluster-management/multicloud-operators-deployable v0.0.0-20200305002029-e8093169e4ff/go.mod h1:EZGLP0AoYX/GJF6m/a2yd+hqHYCYMCO6sUVP9BDo6dc=
+github.com/open-cluster-management/multicloud-operators-placementrule v0.0.0-20200304214605-e52bfdcb25bb h1:7R5H3ae+LH6OAYtkWX8OuyPfTSH2HxOiWQqtoKhoeFk=
+github.com/open-cluster-management/multicloud-operators-placementrule v0.0.0-20200304214605-e52bfdcb25bb/go.mod h1:mgU+3nfxS4FgPcywx9VpQiQosWY+o0XXHhBJiT3fr2o=
 github.com/opencontainers/go-digest v0.0.0-20170106003457-a6d0ee40d420/go.mod h1:cMLVZDEM3+U2I4VmLI6N8jQYUd2OVphdqWwCJHrFt2s=
 github.com/opencontainers/go-digest v1.0.0-rc1/go.mod h1:cMLVZDEM3+U2I4VmLI6N8jQYUd2OVphdqWwCJHrFt2s=
 github.com/opencontainers/image-spec v0.0.0-20170604055404-372ad780f634/go.mod h1:BtxoFyWECRxE4U/7sNtV5W15zMzWCbyJoFRP3s7yZA0=

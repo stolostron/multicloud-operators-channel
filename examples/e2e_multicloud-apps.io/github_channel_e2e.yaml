@@ -4,7 +4,7 @@ kind: Namespace
 metadata:
   name: ch-git
 ---
-apiVersion: multicloud-apps.io/v1
+apiVersion: apps.open-cluster-management.io/v1
 kind: Channel
 metadata:
   name: git
@@ -28,7 +28,7 @@ metadata:
   name: ibm-mongodb-dev-cm
   namespace: git-sub-ns
 ---
-apiVersion: multicloud-apps.io/v1
+apiVersion: apps.open-cluster-management.io/v1
 kind: PlacementRule
 metadata:
   name: towhichcluster
@@ -39,7 +39,7 @@ spec:
     matchLabels:
       name: gamp
 ---
-apiVersion: multicloud-apps.io/v1
+apiVersion: apps.open-cluster-management.io/v1
 kind: Subscription
 metadata:
   name: git-sub
