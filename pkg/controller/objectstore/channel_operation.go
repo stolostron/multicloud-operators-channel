@@ -210,7 +210,7 @@ func (r *ReconcileDeployable) validateChannel(dplchn *chv1.Channel) error {
 			return errors.Wrap(err, fmt.Sprintf("Failed to sync channel %v", dplchn.Name))
 		}
 	} else {
-		err := r.ChannelDescriptor.ValidateChannel(dplchn, r.KubeClient)
+		err := r.ChannelDescriptor.ConnectWithResourceHost(dplchn, r.KubeClient)
 		if err != nil {
 			return errors.Wrap(err, fmt.Sprintf("Failed to validate channel %v", dplchn.Name))
 		}
@@ -222,7 +222,7 @@ func (r *ReconcileDeployable) validateChannel(dplchn *chv1.Channel) error {
 // sync channel info with channel namespace. For ObjectBucket channel, namespace is source of truth
 // WARNNING: if channel is deleted during controller outage, bucket won't be cleaned up
 func (r *ReconcileDeployable) syncChannel(dplchn *chv1.Channel) error {
-	err := r.ChannelDescriptor.ValidateChannel(dplchn, r.KubeClient)
+	err := r.ChannelDescriptor.ConnectWithResourceHost(dplchn, r.KubeClient)
 	if err != nil {
 		return errors.Wrap(err, fmt.Sprintf("failed to validate channel %v", dplchn.Name))
 	}

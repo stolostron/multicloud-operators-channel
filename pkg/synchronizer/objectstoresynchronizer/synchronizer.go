@@ -78,7 +78,10 @@ func (sync *ChannelSynchronizer) Start(s <-chan struct{}) error {
 	sync.Signal = s
 
 	go wait.Until(func() {
-		_ = sync.syncWithObjectStore()
+		if err := sync.syncChannelsWithObjStore(); err != nil {
+			klog.Errorf("failed to run object store synchronizer err: %+v ", err)
+			return
+		}
 	}, time.Duration(sync.SyncInterval)*time.Second, sync.Signal)
 
 	<-sync.Signal
@@ -86,31 +89,10 @@ func (sync *ChannelSynchronizer) Start(s <-chan struct{}) error {
 	return nil
 }
 
-// Sync cluster namespace / objectbucket channels with object store
-func (sync *ChannelSynchronizer) syncWithObjectStore() error {
-	if klog.V(dplutils.QuiteLogLel) {
-		fnName := dplutils.GetFnName()
-		klog.Infof("Entering: %v()", fnName)
-
-		defer klog.Infof("Exiting: %v()", fnName)
-	}
-
-	err := sync.syncChannelsWithObjStore()
-	if err != nil {
-		klog.Error(err, "Sync - Failed to sync Channels With ObjectStore")
-		return err
-	}
-
-	return nil
-}
-
 func (sync *ChannelSynchronizer) syncChannelsWithObjStore() error {
 	chlist := &chv1.ChannelList{}
-	err := sync.kubeClient.List(context.TODO(), chlist, &client.ListOptions{})
-
-	if err != nil {
-		klog.Error(err, "Sync - Failed to list all channels ")
-		return nil
+	if err := sync.kubeClient.List(context.TODO(), chlist, &client.ListOptions{}); err != nil {
+		return errors.Wrap(err, "sync failed to list all channels")
 	}
 
 	for _, ch := range chlist.Items {
@@ -119,35 +101,53 @@ func (sync *ChannelSynchronizer) syncChannelsWithObjStore() error {
 			continue
 		}
 
-		if err := sync.syncChannel(&ch); err != nil {
-			klog.Error(errors.Cause(err).Error())
+		if err := sync.alginClusterResourceWithHost(&ch); err != nil {
+			klog.Errorf("failed to sync channel %v, err: %+v", ch.GetName(), err)
 		}
 	}
 
 	return nil
 }
 
-func (sync *ChannelSynchronizer) syncChannel(chn *chv1.Channel) error {
-	if err := sync.ChannelDescriptor.ValidateChannel(chn, sync.kubeClient); err != nil {
-		return errors.Wrap(err, fmt.Sprintf("failed to validate channel %v", chn.Name))
+func (sync *ChannelSynchronizer) alginClusterResourceWithHost(chn *chv1.Channel) error {
+	if err := sync.ChannelDescriptor.ConnectWithResourceHost(chn, sync.kubeClient); err != nil {
+		return errors.Wrap(err,
+			fmt.Sprintf("failed to connect channel %v to it's resources host %v",
+				chn.Name, sync.ChannelDescriptor.GetBucketNameByChannel(chn.GetName())))
 	}
 
+	//chndesc bundles channel and object bucket info and an objectstore interface
 	chndesc, ok := sync.ChannelDescriptor.Get(chn.Name)
 	if !ok {
 		return errors.New(fmt.Sprintf("failed to get channel description for %v", chn.Name))
 	}
 
-	objnames, err := chndesc.ObjectStore.List(chndesc.Bucket)
+	hostResMap, err := getResourceMapFromHost(chndesc.ObjectStore, chndesc.Bucket)
 	if err != nil {
-		return errors.Wrap(err, fmt.Sprintf("failed to list objects in bucket %v", chndesc.Bucket))
+		return errors.Wrap(err, "failed to get resources map from host")
 	}
 
-	tplmap := make(map[string]*unstructured.Unstructured)
+	// processed item from hostResMap will be deleted
+	if err := sync.deleteOrUpdateDeployableBasedOnHostResMap(chn, hostResMap); err != nil {
+		return errors.Wrap(err, "failed to deleteOrUpdateDeployableBasedOnHostMap")
+	}
 
+	sync.addNewResourceFromHostResMap(chn, hostResMap)
+
+	return nil
+}
+
+func getResourceMapFromHost(host utils.ObjectStore, bucketName string) (map[string]*unstructured.Unstructured, error) {
+	objnames, err := host.List(bucketName)
+	if err != nil {
+		return nil, errors.Wrap(err, fmt.Sprintf("failed to list objects in bucket %v", bucketName))
+	}
+
+	resMap := make(map[string]*unstructured.Unstructured)
 	for _, name := range objnames {
-		objb, err := chndesc.ObjectStore.Get(chndesc.Bucket, name)
+		objb, err := host.Get(bucketName, name)
 		if err != nil {
-			klog.Error("Sync - Failed to get object ", chndesc.Bucket, "/", name, " err:", err)
+			klog.Errorf("failed to get object %v/%v err: %v", bucketName, name, err)
 			continue
 		}
 
@@ -155,11 +155,18 @@ func (sync *ChannelSynchronizer) syncChannel(chn *chv1.Channel) error {
 		err = yaml.Unmarshal(objb.Content, objtpl)
 
 		if err != nil {
-			klog.Error("Sync - Failed to unmashall ", chndesc.Bucket, "/", name, " err:", err)
+			klog.Errorf("failed to unmashall %v/%v err: %v", bucketName, name, err)
 			continue
 		}
 
-		tplmap[name] = objtpl
+		resMap[name] = objtpl
+	}
+	return resMap, nil
+}
+
+func (sync *ChannelSynchronizer) deleteOrUpdateDeployableBasedOnHostResMap(chn *chv1.Channel, hostResMap map[string]*unstructured.Unstructured) error {
+	if chn == nil || len(hostResMap) == 0 {
+		return errors.New("failed to update deployable resources, nil of channel or hostResMap ")
 	}
 
 	dpllist := &dplv1.DeployableList{}
@@ -168,13 +175,20 @@ func (sync *ChannelSynchronizer) syncChannel(chn *chv1.Channel) error {
 	}
 
 	for _, dpl := range dpllist.Items {
-		if err := sync.updateSynchronizerWithDeployable(tplmap, dpl, chn); err != nil {
+		if err := sync.deleteOrUpdateDeployable(hostResMap, dpl, chn); err != nil {
 			klog.Error(errors.Cause(err).Error())
 		}
 	}
 
+	return nil
+}
+
+func (sync *ChannelSynchronizer) addNewResourceFromHostResMap(chn *chv1.Channel, hostResMap map[string]*unstructured.Unstructured) {
+	if len(hostResMap) == 0 {
+		return
+	}
 	// Add new resources to channel namespace
-	for tplname, tpl := range tplmap {
+	for tplname, tpl := range hostResMap {
 		if tpl == nil {
 			continue
 		}
@@ -193,33 +207,33 @@ func (sync *ChannelSynchronizer) syncChannel(chn *chv1.Channel) error {
 		tpl.SetAnnotations(tplannotations)
 
 		dpl := &dplv1.Deployable{}
+		var err error
 		dpl.Name = tplname
 		dpl.Namespace = chn.Namespace
 		dpl.Spec.Template = &runtime.RawExtension{}
 		dpl.Spec.Template.Raw, err = json.Marshal(tpl)
 
 		if err != nil {
-			klog.Info("Sync - Error in mashalling template ", tpl)
+			klog.Error("failed to mashall template ", tpl)
 			continue
 		}
 
-		klog.Info("Sync - Creating deployable ", tplname, " in channel ", chn.GetName())
+		klog.Infof("creating deployable %v in channel %v", tplname, chn.GetName())
 
-		err = sync.kubeClient.Create(context.TODO(), dpl)
-
-		if err != nil {
-			klog.Error("Sync - Failed to create deployable with error: ", err, " with ", dpl)
+		if err := sync.kubeClient.Create(context.TODO(), dpl); err != nil {
+			klog.Errorf("failed to create deployable %v from hostResMap with error: %v ", err, dpl)
 		}
 	}
 
-	return nil
+	return
 }
 
-func (sync *ChannelSynchronizer) updateSynchronizerWithDeployable(
+func (sync *ChannelSynchronizer) deleteOrUpdateDeployable(
 	tplmap map[string]*unstructured.Unstructured, dpl dplv1.Deployable,
 	chn *chv1.Channel) error {
 	dpltpl, err := getUnstructuredTemplateFromDeployable(&dpl)
 	if err != nil {
+		klog.Errorf("failed to get valid deployable template err %+v", err)
 		delete(tplmap, dpl.Name)
 		return nil
 	}
@@ -264,30 +278,28 @@ func (sync *ChannelSynchronizer) updateSynchronizerWithDeployable(
 	return nil
 }
 
-// getUnstructuredTemplateFromDeployable return error if needed
+// getUnstructuredTemplateFromDeployable tests if deployable has a valid teamplate and if it's created
+// by a synchronizer. If true, return the deployable template otherwise, error will be given to the caller
 func getUnstructuredTemplateFromDeployable(dpl *dplv1.Deployable) (*unstructured.Unstructured, error) {
 	dpltpl := &unstructured.Unstructured{}
 
 	if dpl.Spec.Template == nil {
-		return nil, errors.New("Processing deployable without template:" + dpl.GetName())
+		return nil, errors.New(fmt.Sprintf("skipped deployable %v due to empty template", dpl.GetName()))
 	}
 
-	err := json.Unmarshal(dpl.Spec.Template.Raw, dpltpl)
-
-	if err != nil {
-		klog.Error("Sync - Failed to unmarshal template with error: ", err, " with ", string(dpl.Spec.Template.Raw))
-		return nil, err
+	if err := json.Unmarshal(dpl.Spec.Template.Raw, dpltpl); err != nil {
+		return nil, errors.Errorf("failed to unmarshal %v template, err: %v", dpl.GetName(), err)
 	}
 
 	// Only sync (delete/update) deployables created by this synchronizer
 	// meaning AnnotationExternalSource must be set in their template
 	dpltplannotations := dpltpl.GetAnnotations()
 	if dpltplannotations == nil {
-		return nil, errors.New("Deployable is not created by this synchronizer:" + dpl.GetName())
+		return nil, errors.Errorf("skipped deployable %v since it is not created by this synchronizer", dpl.GetName())
 	}
 
 	if _, ok := dpltplannotations[dplv1.AnnotationExternalSource]; !ok {
-		return nil, errors.New("Deployable is not created by this synchronizer:" + dpl.GetName())
+		return nil, errors.Errorf("skipped deployable %v since it is not created by this synchronizer", dpl.GetName())
 	}
 
 	return dpltpl, nil
