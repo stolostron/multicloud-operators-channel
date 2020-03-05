@@ -78,7 +78,7 @@ The following example is tested on a minikube, so that you can play with this op
 As a result, a config map wrapped by `deployable`,  at default namespace. At the meantime, it will also deploy a `channel` resource at the `ch-ns` namespace.
 
 ```
-% kubectl get deployables.multicloud-apps.io
+% kubectl get deployables.apps.open-cluster-management.io
 
 NAME                            TEMPLATE-KIND   TEMPLATE-APIVERSION   AGE   STATUS
 payload-cfg-namespace-channel   ConfigMap       v1                    9s
@@ -95,7 +95,7 @@ ns     Namespace   ch-ns      20s
 Resouces got moved to it destination, and `subscription` can take over from here, deploying this resource(it will be the configmap deployed) to your managed cluster. 
 
 ```shell
-% kubectl get deployables.multicloud-apps.io -n ch-ns
+% kubectl get deployables.apps.open-cluster-management.io -n ch-ns
 
 NAME                                  TEMPLATE-KIND   TEMPLATE-APIVERSION   AGE   STATUS
 payload-cfg-namespace-channel-gt47s   ConfigMap       v1                    37s
@@ -110,10 +110,10 @@ Check the [Getting Started](docs/getting_started.md) doc for more details
 ```shell
 % kubectl get deploy,pods
 NAME                                           READY   UP-TO-DATE   AVAILABLE   AGE
-deployment.apps/multicloud-operators-channel   1/1     1            1           41m
+deployment.apps/multicloud-operators-channel   1/1     1            1           2m1s
 
-NAME                                               READY   STATUS    RESTARTS   AGE
-pod/multicloud-operators-channel-f4fbbb9d9-6mcql   1/1     Running   0          13m
+NAME                                                READY   STATUS    RESTARTS   AGE
+pod/multicloud-operators-channel-7cbd9fbd55-kjkpc   1/1     Running   0          2m
 ```
 
 - Check Channel and its status
@@ -125,15 +125,15 @@ Name:         ns
 Namespace:    ch-ns
 Labels:       <none>
 Annotations:  kubectl.kubernetes.io/last-applied-configuration:
-                {"apiVersion":"app.ibm.com/v1alpha1","kind":"Channel","metadata":{"annotations":{},"name":"ns","namespace":"ch-ns"},"spec":{"pathname":"ch...
-API Version:  app.ibm.com/v1alpha1
+                {"apiVersion":"apps.open-cluster-management.io/v1","kind":"Channel","metadata":{"annotations":{},"name":"ns","namespace":"ch-ns"},"spec":{...
+API Version:  apps.open-cluster-management.io/v1
 Kind:         Channel
 Metadata:
-  Creation Timestamp:  2020-02-25T16:05:08Z
+  Creation Timestamp:  2020-03-05T02:03:32Z
   Generation:          1
-  Resource Version:    10126
-  Self Link:           /apis/app.ibm.com/v1alpha1/namespaces/ch-ns/channels/ns
-  UID:                 6796d764-1f89-4747-9e2c-e49533ecd8dd
+  Resource Version:    861
+  Self Link:           /apis/apps.open-cluster-management.io/v1/namespaces/ch-ns/channels/ns
+  UID:                 fbec06b9-eedf-4fe0-8314-2e195e9bc192
 Spec:
   Pathname:  ch-ns
   Source Namespaces:
@@ -142,7 +142,7 @@ Spec:
 Events:
   Type    Reason  Age   From     Message
   ----    ------  ----  ----     -------
-  Normal  Deploy  59s   channel  Depolyable ch-ns/payload-cfg-namespace-channel-gt47s created in the channel, Status: Success, Channel: ch-ns/ns>
+  Normal  Deploy  117s  channel  Depolyable ch-ns/payload-cfg-namespace-channel-kglr8 created in the channel, Status: Success, Channel: ch-ns/ns
 
 ```
 - Check Channel operator log

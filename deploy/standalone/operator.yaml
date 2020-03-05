@@ -18,7 +18,7 @@ spec:
       containers:
         - name: multicloud-operators-channel
           imagePullPolicy: Never
-          image: quay.io/open-cluster-management/multicloud-operators-channel:3.5.0-PR28-77012221af3b934b07e7f987c2072472e95828ba
+          image: quay.io/open-cluster-management/multicloud-operators-channel:3.5.0-PR28-104a3af217dbff21b6f537a1f6ebabf9766a4013
           ports:
           - containerPort: 8443
           command:
