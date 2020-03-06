@@ -88,8 +88,8 @@ type ReconcileChannel struct {
 // and what is in the Deployable.Spec
 // a Deployment as an example
 // Automatically generate RBAC rules to allow the Controller to read and write Deployments
-// +kubebuilder:rbac:groups=multicloud-apps.io,resources=deployables,verbs=get;list;watch;create;update;patch;delete
-// +kubebuilder:rbac:groups=multicloud-apps.io,resources=deployables/status,verbs=get;update;patch
+// +kubebuilder:rbac:groups=apps.open-cluster-management.io,resources=deployables,verbs=get;list;watch;create;update;patch;delete
+// +kubebuilder:rbac:groups=apps.open-cluster-management.io,resources=deployables/status,verbs=get;update;patch
 func (r *ReconcileChannel) Reconcile(request reconcile.Request) (reconcile.Result, error) {
 	// Fetch the Deployable instance
 	instance := &chv1.Channel{}
