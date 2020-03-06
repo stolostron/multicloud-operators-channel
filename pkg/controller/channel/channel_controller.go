@@ -168,8 +168,8 @@ type ReconcileChannel struct {
 // Automatically generate RBAC rules to allow the Controller to read and write Deployments
 // +kubebuilder:rbac:groups=apps,resources=deployments,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups=apps,resources=deployments/status,verbs=get;update;patch
-// +kubebuilder:rbac:groups=app.ibm.com,resources=channels,verbs=get;list;watch;create;update;patch;delete
-// +kubebuilder:rbac:groups=app.ibm.com,resources=channels/status,verbs=get;update;patch
+// +kubebuilder:rbac:groups=apps.open-cluster-management.io,resources=channels,verbs=get;list;watch;create;update;patch;delete
+// +kubebuilder:rbac:groups=apps.open-cluster-management.io,resources=channels/status,verbs=get;update;patch
 func (r *ReconcileChannel) Reconcile(request reconcile.Request) (reconcile.Result, error) {
 	if klog.V(debugLevel) {
 		fnName := dplutils.GetFnName()
