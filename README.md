@@ -49,6 +49,7 @@ The following example is tested on a minikube, so that you can play with this op
 % cd "$GOPATH"/src/github.com/open-cluster-management/multicloud-operators-channel
 ```
 
+
 - Setup environment and deploy channel operator
 
 ```shell
