@@ -16,13 +16,19 @@ package objectstoresynchronizer
 
 import (
 	"context"
+	"encoding/json"
+	"fmt"
 	"testing"
 
 	"github.com/onsi/gomega"
+	"github.com/pkg/errors"
+	"gopkg.in/yaml.v2"
 	corev1 "k8s.io/api/core/v1"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/klog"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 
 	chv1 "github.com/open-cluster-management/multicloud-operators-channel/pkg/apis/apps/v1"
@@ -31,9 +37,11 @@ import (
 )
 
 //1. objectstore is empty, delete all deployables, if there's any
-//2. if objectstore has extra, then it should be deployed
-//3. some deployables changed then the local deployables should be updated as well
-
+// Test_alginClusterResourceWithHost_emptyHost
+//2. if objectstore has entry, then it should be deployed
+// Test_alginClusterResourceWithHost_createDplBasedOnHost
+//3. some deployables changed at objectstore then the local deployables should be updated as well
+// Test_alginClusterResourceWithHost_updateDplBasedOnHost
 func Test_syncChannelsWithObjStore(t *testing.T) {
 	g := gomega.NewGomegaWithT(t)
 
@@ -148,8 +156,8 @@ func Test_alginClusterResourceWithHost_emptyHost(t *testing.T) {
 	g.Expect(c.Get(context.TODO(), types.NamespacedName{Name: dplName, Namespace: tKey.Namespace}, res)).Should(gomega.HaveOccurred())
 }
 
-//new deployable at host
-func Test_alginClusterResourceWithHost_newDplAtHost(t *testing.T) {
+//new deployable should create from hostResMap
+func Test_alginClusterResourceWithHost_createDplBasedOnHost(t *testing.T) {
 	g := gomega.NewGomegaWithT(t)
 
 	// Setup the Manager and Controller.  Wrap the Controller Reconcile function so it writes each request to a
@@ -188,7 +196,7 @@ func Test_alginClusterResourceWithHost_newDplAtHost(t *testing.T) {
 		},
 		Spec: chv1.ChannelSpec{
 			Type:     chv1.ChannelType("objectbucket"),
-			Pathname: "/" + tKey.Namespace,
+			Pathname: "/" + tKey.Name,
 			SecretRef: &corev1.ObjectReference{
 				Name:      srtName,
 				Namespace: tKey.Namespace,
@@ -219,10 +227,10 @@ func Test_alginClusterResourceWithHost_newDplAtHost(t *testing.T) {
 	//		},
 	//	}
 
-	defer g.Expect(c.Delete(context.TODO(), refSrt)).NotTo(gomega.HaveOccurred())
+	defer c.Delete(context.TODO(), refSrt)
 	g.Expect(c.Create(context.TODO(), refSrt)).NotTo(gomega.HaveOccurred())
 
-	defer g.Expect(c.Delete(context.TODO(), tCh)).NotTo(gomega.HaveOccurred())
+	defer c.Delete(context.TODO(), tCh)
 	g.Expect(c.Create(context.TODO(), tCh)).NotTo(gomega.HaveOccurred())
 
 	chdesc, _ := utils.CreateObjectStorageChannelDescriptor()
@@ -232,10 +240,11 @@ func Test_alginClusterResourceWithHost_newDplAtHost(t *testing.T) {
 	objsync.ObjectStore = &utils.FakeObjectStore{
 		Clt: map[string]map[string]utils.DeployableObject{
 			tKey.Name: map[string]utils.DeployableObject{
-				dplName: utils.DeployableObject{},
-				"a":     utils.DeployableObject{Name: "b"},
+				dplName: utils.DeployableObject{
+					Name:    dplName,
+					Content: []byte{},
+				},
 			},
-			"ch2": map[string]utils.DeployableObject{},
 		},
 	}
 
@@ -243,4 +252,202 @@ func Test_alginClusterResourceWithHost_newDplAtHost(t *testing.T) {
 
 	res := &dplv1.Deployable{}
 	g.Expect(c.Get(context.TODO(), types.NamespacedName{Name: dplName, Namespace: tKey.Namespace}, res)).ShouldNot(gomega.HaveOccurred())
+
+	c.Delete(context.TODO(), res)
+}
+
+//deployable should update from hostResMap
+func Test_alginClusterResourceWithHost_updateDplBasedOnHost(t *testing.T) {
+	g := gomega.NewGomegaWithT(t)
+
+	// Setup the Manager and Controller.  Wrap the Controller Reconcile function so it writes each request to a
+	// channel when it is finished.
+	mgr, err := manager.New(cfg, manager.Options{MetricsBindAddress: "0"})
+	g.Expect(err).NotTo(gomega.HaveOccurred())
+
+	g.Expect(err).NotTo(gomega.HaveOccurred())
+
+	stopMgr, mgrStopped := StartTestManager(mgr, g)
+
+	c := mgr.GetClient()
+	defer func() {
+		close(stopMgr)
+		mgrStopped.Wait()
+	}()
+
+	tKey := types.NamespacedName{Name: "tch", Namespace: "tns"}
+
+	srtName := "srt-ref"
+	refSrt := &corev1.Secret{
+		ObjectMeta: v1.ObjectMeta{
+			Name:      srtName,
+			Namespace: tKey.Namespace,
+		},
+		Data: map[string][]byte{
+			utils.SecretMapKeyAccessKeyID:     []byte{},
+			utils.SecretMapKeySecretAccessKey: []byte{},
+		},
+	}
+
+	tCh := &chv1.Channel{
+		ObjectMeta: v1.ObjectMeta{
+			Name:      tKey.Name,
+			Namespace: tKey.Namespace,
+		},
+		Spec: chv1.ChannelSpec{
+			Type:     chv1.ChannelType("objectbucket"),
+			Pathname: "/" + tKey.Name,
+			SecretRef: &corev1.ObjectReference{
+				Name:      srtName,
+				Namespace: tKey.Namespace,
+			},
+		},
+	}
+
+	dplName := "t-dpl"
+	tDpl := &dplv1.Deployable{
+		ObjectMeta: v1.ObjectMeta{
+			Name:      dplName,
+			Namespace: tKey.Namespace,
+			Annotations: map[string]string{
+				dplv1.AnnotationExternalSource: "true",
+			},
+		},
+		Spec: dplv1.DeployableSpec{
+			Template: &runtime.RawExtension{
+				Object: &corev1.ConfigMap{
+					TypeMeta: v1.TypeMeta{
+						Kind: "ConfigMap",
+					},
+					ObjectMeta: v1.ObjectMeta{
+						Name: "cm",
+					},
+				},
+			},
+		},
+	}
+
+	tDplTpl := &corev1.ConfigMap{
+		TypeMeta: v1.TypeMeta{
+			Kind: "ConfigMap",
+		},
+		ObjectMeta: v1.ObjectMeta{
+			Name: "cm-v2",
+		},
+	}
+
+	eDpl := &dplv1.Deployable{
+		TypeMeta: v1.TypeMeta{
+			Kind: "Deployable",
+		},
+		ObjectMeta: v1.ObjectMeta{
+			Name:      dplName,
+			Namespace: tKey.Namespace,
+			Annotations: map[string]string{
+				dplv1.AnnotationExternalSource: "true",
+			},
+		},
+		Spec: dplv1.DeployableSpec{
+			Template: &runtime.RawExtension{
+				Raw: convertToBytes(tDplTpl),
+			},
+		},
+	}
+
+	defer c.Delete(context.TODO(), refSrt)
+	g.Expect(c.Create(context.TODO(), refSrt)).NotTo(gomega.HaveOccurred())
+
+	defer c.Delete(context.TODO(), tCh)
+	g.Expect(c.Create(context.TODO(), tCh)).NotTo(gomega.HaveOccurred())
+
+	g.Expect(c.Create(context.TODO(), tDpl)).NotTo(gomega.HaveOccurred())
+
+	chdesc, _ := utils.CreateObjectStorageChannelDescriptor()
+
+	objsync, _ := CreateObjectStoreSynchronizer(mgr.GetConfig(), chdesc, 2)
+
+	eTpl, err := convertDplToTemplateForStorage(eDpl)
+
+	g.Expect(err).Should(gomega.BeNil())
+
+	objsync.ObjectStore = &utils.FakeObjectStore{
+		Clt: map[string]map[string]utils.DeployableObject{
+			tKey.Name: map[string]utils.DeployableObject{
+				dplName: utils.DeployableObject{
+					Name:    dplName,
+					Content: eTpl,
+				},
+			},
+		},
+	}
+
+	g.Expect(objsync.alginClusterResourceWithHost(tCh)).ShouldNot(gomega.HaveOccurred())
+
+	res := &dplv1.Deployable{}
+	g.Expect(c.Get(context.TODO(), types.NamespacedName{Name: dplName, Namespace: tKey.Namespace}, res)).ShouldNot(gomega.HaveOccurred())
+
+	g.Expect(res).Should(gomega.Equal(eDpl))
+}
+
+func convertDplToTemplateForStorage(deployable *dplv1.Deployable) ([]byte, error) {
+	template := &unstructured.Unstructured{}
+
+	if deployable.Spec.Template == nil {
+		klog.Warning("Processing deployable without template:", deployable)
+		return nil, errors.New(fmt.Sprintf("skip deployables with empty template %v", deployable))
+	}
+
+	if err := json.Unmarshal(deployable.Spec.Template.Raw, template); err != nil {
+		return nil, errors.Wrap(err, fmt.Sprintf("failed to unmarshal template %v", deployable.Spec.Template.Raw))
+	}
+
+	// Only reconcile templates that are not created by objectstore synchronizer
+	// meaning AnnotationExternalSource is not set in their template
+	annotations := deployable.GetAnnotations()
+
+	tplannotations := template.GetAnnotations()
+	if tplannotations == nil {
+		tplannotations = make(map[string]string)
+	} else if _, ok := tplannotations[dplv1.AnnotationExternalSource]; ok {
+		return nil, errors.New("skip external deployable")
+	}
+	// carry deployable annotations
+	for k, v := range annotations {
+		tplannotations[k] = v
+	}
+	// Set AnnotationHosting
+	hosting := types.NamespacedName{Name: deployable.GetName(), Namespace: deployable.GetNamespace()}.String()
+	tplannotations[dplv1.AnnotationHosting] = hosting
+	template.SetAnnotations(tplannotations)
+
+	// carry deployable labels
+	labels := deployable.GetLabels()
+	if len(labels) > 0 {
+		tpllbls := template.GetLabels()
+		if tpllbls == nil {
+			tpllbls = make(map[string]string)
+		}
+
+		for k, v := range labels {
+			tpllbls[k] = v
+		}
+
+		template.SetLabels(tpllbls)
+	}
+
+	tplb, err := yaml.Marshal(template)
+
+	return tplb, err
+}
+
+func convertToBytes(obj runtime.Object) []byte {
+	udpl := []byte{}
+
+	udpl, err := json.Marshal(obj)
+
+	if err != nil {
+		return []byte{}
+	}
+
+	return udpl
 }
