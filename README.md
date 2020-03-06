@@ -71,7 +71,6 @@ The following example is tested on a minikube, so that you can play with this op
 
 As a result, a config map wrapped by `deployable`,  at default namespace. At the meantime, it will also deploy a `channel` resource at the `ch-ns` namespace.
 
-
 ```
 % kubectl get deployables.apps.open-cluster-management.io
 
