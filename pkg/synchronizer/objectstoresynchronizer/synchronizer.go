@@ -95,6 +95,10 @@ func (sync *ChannelSynchronizer) syncChannelsWithObjStore() error {
 		return errors.Wrap(err, "sync failed to list all channels")
 	}
 
+	if len(chlist.Items) == 0 {
+		return nil
+	}
+
 	for _, ch := range chlist.Items {
 		// Syncying objectbucket channel types only
 		if !strings.EqualFold(string(ch.Spec.Type), chv1.ChannelTypeObjectBucket) {
@@ -110,7 +114,8 @@ func (sync *ChannelSynchronizer) syncChannelsWithObjStore() error {
 }
 
 func (sync *ChannelSynchronizer) alginClusterResourceWithHost(chn *chv1.Channel) error {
-	if err := sync.ChannelDescriptor.ConnectWithResourceHost(chn, sync.kubeClient); err != nil {
+	// injecting objectstore to ease up tests
+	if err := sync.ChannelDescriptor.ConnectWithResourceHost(chn, sync.kubeClient, sync.ObjectStore); err != nil {
 		return errors.Wrap(err,
 			fmt.Sprintf("failed to connect channel %v to it's resources host %v",
 				chn.Name, sync.ChannelDescriptor.GetBucketNameByChannel(chn.GetName())))
@@ -165,8 +170,8 @@ func getResourceMapFromHost(host utils.ObjectStore, bucketName string) (map[stri
 }
 
 func (sync *ChannelSynchronizer) deleteOrUpdateDeployableBasedOnHostResMap(chn *chv1.Channel, hostResMap map[string]*unstructured.Unstructured) error {
-	if chn == nil || len(hostResMap) == 0 {
-		return errors.New("failed to update deployable resources, nil of channel or hostResMap ")
+	if chn == nil {
+		return errors.New("failed to update deployable resources, nil of channel")
 	}
 
 	dpllist := &dplv1.DeployableList{}
@@ -229,27 +234,29 @@ func (sync *ChannelSynchronizer) addNewResourceFromHostResMap(chn *chv1.Channel,
 }
 
 func (sync *ChannelSynchronizer) deleteOrUpdateDeployable(
-	tplmap map[string]*unstructured.Unstructured, dpl dplv1.Deployable,
+	hostResMap map[string]*unstructured.Unstructured, dpl dplv1.Deployable,
 	chn *chv1.Channel) error {
 	dpltpl, err := getUnstructuredTemplateFromDeployable(&dpl)
 	if err != nil {
 		klog.Errorf("failed to get valid deployable template err %+v", err)
-		delete(tplmap, dpl.Name)
+		delete(hostResMap, dpl.Name)
 		return nil
 	}
 
 	// Delete deployables that don't exist in the bucket anymore
-	if _, ok := tplmap[dpl.Name]; !ok {
+	if _, ok := hostResMap[dpl.Name]; !ok {
 		klog.Info("Sync - Deleting deployable ", dpl.Namespace, "/", dpl.Name, " from channel ", chn.Name)
 
 		if err := sync.kubeClient.Delete(context.TODO(), &dpl); err != nil {
 			return errors.Wrap(err, fmt.Sprintf("sync failed to delete deployable %v", dpl.Name))
 		}
+
+		return nil
 	}
 
 	// Update deployables if they are updated in the bucket
 	// Ignore deployable AnnotationExternalSource when comparing with template
-	tpl := tplmap[dpl.Name]
+	tpl := hostResMap[dpl.Name]
 	tplannotations := tpl.GetAnnotations()
 
 	if tplannotations == nil {
@@ -262,7 +269,7 @@ func (sync *ChannelSynchronizer) deleteOrUpdateDeployable(
 	if !reflect.DeepEqual(tpl, dpltpl) {
 		dpl.Spec.Template.Raw, err = json.Marshal(tpl)
 		if err != nil {
-			delete(tplmap, dpl.Name)
+			delete(hostResMap, dpl.Name)
 			return errors.Wrap(err, fmt.Sprintf("failed to mashall template %v", tpl))
 		}
 
@@ -273,7 +280,7 @@ func (sync *ChannelSynchronizer) deleteOrUpdateDeployable(
 		}
 	}
 
-	delete(tplmap, dpl.Name)
+	delete(hostResMap, dpl.Name)
 
 	return nil
 }
