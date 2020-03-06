@@ -38,6 +38,7 @@ The following example is tested on a minikube, so that you can play with this op
 
 - Clone the channel operator repository
 
+
 ```shell
 % mkdir -p "$GOPATH"/src/github.com/open-cluster-management
 
