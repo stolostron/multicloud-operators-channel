@@ -306,6 +306,10 @@ func Test_alginClusterResourceWithHost_updateDplBasedOnHost(t *testing.T) {
 
 	dplName := "t-dpl"
 	tDpl := &dplv1.Deployable{
+		TypeMeta: v1.TypeMeta{
+			Kind:       "ConfigMap",
+			APIVersion: "apps.open-cluster-management.io/v1",
+		},
 		ObjectMeta: v1.ObjectMeta{
 			Name:      dplName,
 			Namespace: tKey.Namespace,
@@ -317,7 +321,8 @@ func Test_alginClusterResourceWithHost_updateDplBasedOnHost(t *testing.T) {
 			Template: &runtime.RawExtension{
 				Object: &corev1.ConfigMap{
 					TypeMeta: v1.TypeMeta{
-						Kind: "ConfigMap",
+						Kind:       "ConfigMap",
+						APIVersion: "apps.open-cluster-management.io/v1",
 					},
 					ObjectMeta: v1.ObjectMeta{
 						Name: "cm",

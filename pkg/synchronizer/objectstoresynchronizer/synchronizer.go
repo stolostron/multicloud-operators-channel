@@ -22,8 +22,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/ghodss/yaml"
 	"github.com/pkg/errors"
+	"gopkg.in/yaml.v2"
 
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -157,15 +157,15 @@ func getResourceMapFromHost(host utils.ObjectStore, bucketName string) (map[stri
 		}
 
 		objtpl := &unstructured.Unstructured{}
-		err = yaml.Unmarshal(objb.Content, objtpl)
 
-		if err != nil {
+		if err := yaml.Unmarshal(objb.Content, objtpl); err != nil {
 			klog.Errorf("failed to unmashall %v/%v err: %v", bucketName, name, err)
 			continue
 		}
 
 		resMap[name] = objtpl
 	}
+
 	return resMap, nil
 }
 
