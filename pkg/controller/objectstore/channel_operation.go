@@ -44,7 +44,7 @@ func (r *ReconcileDeployable) deleteDeployableInObjectStore(request types.Namesp
 		return reconcile.Result{}, nil
 	}
 
-	err := r.validateChannel(dplchn)
+	err := r.updateChannelDescriptorMap(dplchn)
 	if err != nil {
 		return reconcile.Result{}, nil
 	}
@@ -90,13 +90,13 @@ func (r *ReconcileDeployable) deleteDeployableInObjectStore(request types.Namesp
 }
 
 // reconcileForChannel populate object store with channel when turned on
-func (r *ReconcileDeployable) reconcileForChannel(deployable *dplv1.Deployable) (reconcile.Result, error) {
+func (r *ReconcileDeployable) updateOrDeleteDeployableOnHost(deployable *dplv1.Deployable) (reconcile.Result, error) {
 	dplchn, err := r.getChannelForNamespace(deployable.Namespace)
 	if dplchn == nil || err != nil {
 		return reconcile.Result{}, errors.Wrap(err, "failed to find channel deployables")
 	}
 
-	err = r.validateChannel(dplchn)
+	err = r.updateChannelDescriptorMap(dplchn)
 	if err != nil {
 		return reconcile.Result{}, err
 	}
@@ -159,17 +159,16 @@ func (r *ReconcileDeployable) getChannelForNamespace(namespace string) (*chv1.Ch
 	return dplchn, nil
 }
 
-func (r *ReconcileDeployable) validateChannel(dplchn *chv1.Channel) error {
+func (r *ReconcileDeployable) updateChannelDescriptorMap(dplchn *chv1.Channel) error {
 	_, ok := r.ChannelDescriptor.Get(dplchn.Name)
 	if !ok {
 		klog.Info("Syncing channel ", dplchn.Name)
 
-		err := r.syncChannel(dplchn)
+		err := r.updateDesscriptorMap(dplchn)
 		if err != nil {
 			return errors.Wrap(err, fmt.Sprintf("Failed to sync channel %v", dplchn.Name))
 		}
 	} else {
-
 		if err := r.ChannelDescriptor.ConnectWithResourceHost(dplchn, r.KubeClient); err != nil {
 			return errors.Wrap(err, fmt.Sprintf("Failed to validate channel %v", dplchn.Name))
 		}
@@ -180,7 +179,7 @@ func (r *ReconcileDeployable) validateChannel(dplchn *chv1.Channel) error {
 
 // sync channel info with channel namespace. For ObjectBucket channel, namespace is source of truth
 // WARNNING: if channel is deleted during controller outage, bucket won't be cleaned up
-func (r *ReconcileDeployable) syncChannel(dplchn *chv1.Channel) error {
+func (r *ReconcileDeployable) updateDesscriptorMap(dplchn *chv1.Channel) error {
 	err := r.ChannelDescriptor.ConnectWithResourceHost(dplchn, r.KubeClient)
 	if err != nil {
 		return errors.Wrap(err, fmt.Sprintf("failed to validate channel %v", dplchn.Name))
