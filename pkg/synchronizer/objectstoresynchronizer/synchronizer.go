@@ -22,8 +22,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/ghodss/yaml"
 	"github.com/pkg/errors"
-	"gopkg.in/yaml.v2"
 
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -181,7 +181,7 @@ func (sync *ChannelSynchronizer) deleteOrUpdateDeployableBasedOnHostResMap(chn *
 
 	for _, dpl := range dpllist.Items {
 		if err := sync.deleteOrUpdateDeployable(hostResMap, dpl, chn); err != nil {
-			klog.Error(errors.Cause(err).Error())
+			klog.Errorf("failed to update deployable due to %+v", err)
 		}
 	}
 

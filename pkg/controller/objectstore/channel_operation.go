@@ -106,56 +106,15 @@ func (r *ReconcileDeployable) reconcileForChannel(deployable *dplv1.Deployable) 
 		return reconcile.Result{}, errors.New("failed to get deployable from object bucket")
 	}
 
-	template := &unstructured.Unstructured{}
-
-	if deployable.Spec.Template == nil {
-		klog.Warning("Processing deployable without template:", deployable)
-		return reconcile.Result{}, errors.New(fmt.Sprintf("skip deployables with empty template %v", deployable))
-	}
-
-	err = json.Unmarshal(deployable.Spec.Template.Raw, template)
+	template, err := prepareDeployalbeTemplate(deployable)
 	if err != nil {
-		return reconcile.Result{}, errors.Wrap(err, fmt.Sprintf("failed to unmarshal template %v", deployable.Spec.Template.Raw))
-	}
-
-	// Only reconcile templates that are not created by objectstore synchronizer
-	// meaning AnnotationExternalSource is not set in their template
-	annotations := deployable.GetAnnotations()
-
-	tplannotations := template.GetAnnotations()
-	if tplannotations == nil {
-		tplannotations = make(map[string]string)
-	} else if _, ok := tplannotations[dplv1.AnnotationExternalSource]; ok {
-		return reconcile.Result{}, errors.New("skip external deployable")
-	}
-	// carry deployable annotations
-	for k, v := range annotations {
-		tplannotations[k] = v
-	}
-	// Set AnnotationHosting
-	hosting := types.NamespacedName{Name: deployable.GetName(), Namespace: deployable.GetNamespace()}.String()
-	tplannotations[dplv1.AnnotationHosting] = hosting
-	template.SetAnnotations(tplannotations)
-
-	// carry deployable labels
-	labels := deployable.GetLabels()
-	if len(labels) > 0 {
-		tpllbls := template.GetLabels()
-		if tpllbls == nil {
-			tpllbls = make(map[string]string)
-		}
-
-		for k, v := range labels {
-			tpllbls[k] = v
-		}
-
-		template.SetLabels(tpllbls)
+		return reconcile.Result{}, errors.Wrap(err, "failed to handlel deployable.spec.temaplate")
 	}
 
 	tplb, err := yaml.Marshal(template)
 	if err != nil {
-		klog.V(10).Info("YAML marshall ", template, "error:", err)
-		return reconcile.Result{}, errors.Wrap(err, "yaml marshall failed")
+		return reconcile.Result{}, errors.Wrap(err, "failed to marshall packaged deployable")
+
 	}
 
 	var dplGenerateName string
@@ -170,7 +129,7 @@ func (r *ReconcileDeployable) reconcileForChannel(deployable *dplv1.Deployable) 
 		Name:         deployable.GetName(),
 		GenerateName: dplGenerateName,
 		Content:      tplb,
-		Version:      annotations[dplv1.AnnotationDeployableVersion],
+		Version:      deployable.GetAnnotations()[dplv1.AnnotationDeployableVersion],
 	}
 	if err := chndesc.ObjectStore.Put(chndesc.Bucket, dplObj); err != nil {
 		return reconcile.Result{}, errors.Wrap(err, "failed to put to object bucket")
@@ -191,11 +150,11 @@ func (r *ReconcileDeployable) getChannelForNamespace(namespace string) (*chv1.Ch
 		return nil, errors.Wrap(err, fmt.Sprintf("incorrect channel setting %v namespace, itmes %v", namespace, dplchnlist.Items))
 	}
 
-	dplchn := dplchnlist.Items[0].DeepCopy()
-
-	if !strings.EqualFold(string(dplchn.Spec.Type), chv1.ChannelTypeObjectBucket) {
+	if !strings.EqualFold(string(dplchnlist.Items[0].Spec.Type), chv1.ChannelTypeObjectBucket) {
 		return nil, errors.New("wrong channel type")
 	}
+
+	dplchn := dplchnlist.Items[0].DeepCopy()
 
 	return dplchn, nil
 }
@@ -210,8 +169,8 @@ func (r *ReconcileDeployable) validateChannel(dplchn *chv1.Channel) error {
 			return errors.Wrap(err, fmt.Sprintf("Failed to sync channel %v", dplchn.Name))
 		}
 	} else {
-		err := r.ChannelDescriptor.ConnectWithResourceHost(dplchn, r.KubeClient)
-		if err != nil {
+
+		if err := r.ChannelDescriptor.ConnectWithResourceHost(dplchn, r.KubeClient); err != nil {
 			return errors.Wrap(err, fmt.Sprintf("Failed to validate channel %v", dplchn.Name))
 		}
 	}
