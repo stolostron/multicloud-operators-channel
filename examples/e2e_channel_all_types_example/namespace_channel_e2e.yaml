@@ -1,0 +1,62 @@
+--- 
+apiVersion: apps.open-cluster-management.io/v1
+kind: Deployable
+metadata: 
+  name: payload-cfg-namespace-channel
+  annotations: 
+    app.ibm.com/is-local-deployable: "false"
+  namespace: default
+spec: 
+  channels: 
+  - ns
+  template: 
+    apiVersion: v1
+    data: 
+      database: mongodb
+    kind: ConfigMap
+    metadata: 
+      name: cfg-from-ch-qa
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: ch-ns
+---
+apiVersion: apps.open-cluster-management.io/v1
+kind: Channel
+metadata:
+  name: ns
+  namespace: ch-ns
+spec:
+  type: Namespace
+  pathname: ch-ns
+  sourceNamespaces:
+    - default
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: ns-sub-ns
+---
+apiVersion: apps.open-cluster-management.io/v1
+kind: PlacementRule
+metadata:
+  name: towhichcluster
+  namespace: ns-sub-ns
+spec:
+  clusterReplicas: 1
+  clusterLabels:
+    matchLabels:
+      name: gamp
+---
+apiVersion: apps.open-cluster-management.io/v1
+kind: Subscription
+metadata:
+  name: ns-sub
+  namespace: ns-sub-ns
+spec:
+  channel: ch-ns/ns
+  placement:
+    placementRef: 
+      name: towhichcluster
+      kind: PlacementRule
