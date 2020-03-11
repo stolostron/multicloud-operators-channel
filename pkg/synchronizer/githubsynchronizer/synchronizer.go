@@ -179,7 +179,7 @@ func (sync *ChannelSynchronizer) handleSingleDeployable(
 	filecontent []byte,
 	t kubeResource,
 	newDplList map[string]*dplv1.Deployable) error {
-	klog.V(debugLevel).Info("Kubernetes resource of kind ", t.Kind, " Creating a deployable.")
+	klog.Info("Kubernetes resource of kind ", t.Kind, " Creating a deployable.")
 
 	obj := &unstructured.Unstructured{}
 
@@ -188,7 +188,7 @@ func (sync *ChannelSynchronizer) handleSingleDeployable(
 	}
 
 	dpl := &dplv1.Deployable{}
-	dpl.Name = strings.ToLower(chn.GetName() + "-" + t.APIVersion + "-" + t.Kind + "-" + t.Metadata.Namespace + "-" + t.Metadata.Name)
+	dpl.Name = strings.ToLower(chn.GetName() + "-" + t.Kind + "-" + t.Metadata.Namespace + "-" + t.Metadata.Name)
 	dpl.Namespace = chn.GetNamespace()
 
 	if err := controllerutil.SetControllerReference(chn, dpl, sync.Scheme); err != nil {
@@ -320,25 +320,27 @@ func (sync *ChannelSynchronizer) handleResourceDeployable(
 
 	// Update deployables if the template is updated in the git repo
 	newdpl := newDplList[dpl.Name]
-	newdpltpl := &unstructured.Unstructured{}
-	err = json.Unmarshal(newdpl.Spec.Template.Raw, newdpltpl)
-
-	if err != nil {
-		klog.Warning("Failed to unmarshall the template from updated deployable:", newdpl, err)
-		return errors.Wrap(err, fmt.Sprintf("failed to unmarshall the template from updated deployable: %v", newdpl))
-	}
-
-	if !reflect.DeepEqual(dpltpl, newdpltpl) {
-		klog.Info("Sync - Updating the template in existing deployable ", dpl.Name, " in channel ", chn.Name)
-		dpl.Spec.Template.Raw, err = json.Marshal(newdpltpl)
+	if newdpl != nil {
+		newdpltpl := &unstructured.Unstructured{}
+		err = json.Unmarshal(newdpl.Spec.Template.Raw, newdpltpl)
 
 		if err != nil {
-			klog.Warning(err.Error())
-			return errors.Wrap(err, fmt.Sprintf("failed to mashall template %v", newdpltpl))
+			klog.Warning("Failed to unmarshall the template from updated deployable:", newdpl, err)
+			return errors.Wrap(err, fmt.Sprintf("failed to unmarshall the template from updated deployable: %v", newdpl))
 		}
 
-		if err := sync.kubeClient.Update(context.TODO(), &dpl); err != nil {
-			return errors.Wrap(err, fmt.Sprintf("failed to update deployable %v", dpl.Name))
+		if !reflect.DeepEqual(dpltpl, newdpltpl) {
+			klog.Info("Sync - Updating the template in existing deployable ", dpl.Name, " in channel ", chn.Name)
+			dpl.Spec.Template.Raw, err = json.Marshal(newdpltpl)
+
+			if err != nil {
+				klog.Warning(err.Error())
+				return errors.Wrap(err, fmt.Sprintf("failed to mashall template %v", newdpltpl))
+			}
+
+			if err := sync.kubeClient.Update(context.TODO(), &dpl); err != nil {
+				return errors.Wrap(err, fmt.Sprintf("failed to update deployable %v", dpl.Name))
+			}
 		}
 	}
 
