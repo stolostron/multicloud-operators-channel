@@ -166,7 +166,7 @@ func (sync *ChannelSynchronizer) processYamlFile(chn *chv1.Channel, files []os.F
 				if t.APIVersion == "" || t.Kind == "" {
 					klog.V(debugLevel).Info("Not a Kubernetes resource")
 				} else if err := sync.handleSingleDeployable(chn, f, file, t, newDplList); err != nil {
-					klog.Error(errors.Cause(err).Error())
+					klog.Errorf("Failed to handle single deployable, err: %+v", err)
 				}
 			}
 		}
