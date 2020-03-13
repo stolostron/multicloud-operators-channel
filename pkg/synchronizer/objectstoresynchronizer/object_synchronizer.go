@@ -243,6 +243,14 @@ func (sync *ChannelSynchronizer) deleteOrUpdateDeployable(
 		return nil
 	}
 
+	// Only sync (delete/update) deployables created by this synchronizer
+	// meaning AnnotationExternalSource must be set in their template
+	if !isDeployableCreatedBySynchronizer(dpltpl) {
+		klog.Infof("skip deployable %v/%v, not created by object sychronizer", dpltpl.GetName(), dpltpl.GetNamespace())
+		delete(hostResMap, dpltpl.GetName())
+		return nil
+	}
+
 	// Delete deployables that don't exist in the bucket anymore
 	if _, ok := hostResMap[dpl.Name]; !ok {
 		klog.Info("Sync - Deleting deployable ", dpl.Namespace, "/", dpl.Name, " from channel ", chn.Name)
@@ -298,16 +306,18 @@ func getUnstructuredTemplateFromDeployable(dpl *dplv1.Deployable) (*unstructured
 		return nil, errors.Errorf("failed to unmarshal %v template, err: %v", dpl.GetName(), err)
 	}
 
-	// Only sync (delete/update) deployables created by this synchronizer
-	// meaning AnnotationExternalSource must be set in their template
+	return dpltpl, nil
+}
+
+func isDeployableCreatedBySynchronizer(dpltpl *unstructured.Unstructured) bool {
 	dpltplannotations := dpltpl.GetAnnotations()
 	if dpltplannotations == nil {
-		return nil, errors.Errorf("skipped deployable %v since it is not created by this synchronizer", dpl.GetName())
+		return false
 	}
 
 	if _, ok := dpltplannotations[dplv1.AnnotationExternalSource]; !ok {
-		return nil, errors.Errorf("skipped deployable %v since it is not created by this synchronizer", dpl.GetName())
+		return false
 	}
 
-	return dpltpl, nil
+	return true
 }
