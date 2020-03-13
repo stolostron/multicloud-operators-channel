@@ -594,10 +594,12 @@ func TestGenerateDeployableForChannel(t *testing.T) {
 			chKey: chkey,
 			want: &dplv1.Deployable{
 				ObjectMeta: metav1.ObjectMeta{
-					GenerateName: testDplName + "-",
-					Labels:       labels,
-					Namespace:    testNamespace,
-					Annotations:  targetAnno},
+					GenerateName:    testDplName + "-",
+					Labels:          labels,
+					Namespace:       testNamespace,
+					Annotations:     targetAnno,
+					OwnerReferences: []metav1.OwnerReference{{Name: testDplName}},
+				},
 				Spec: dplv1.DeployableSpec{
 					Template: &runtime.RawExtension{
 						Object: &v1.ConfigMap{},
