@@ -265,7 +265,6 @@ func GenerateDeployableForChannel(deployable *dplv1.Deployable, channel types.Na
 	deployable.Spec.DeepCopyInto(&(chdpl.Spec))
 	chdpl.Spec.Placement = nil
 	chdpl.Spec.Overrides = nil
-	// chdpl.Spec.Channels = nil
 	chdpl.Spec.Dependencies = nil
 
 	labels := deployable.GetLabels()
@@ -308,7 +307,7 @@ func GenerateDeployableForChannel(deployable *dplv1.Deployable, channel types.Na
 
 func createOwnerReference(deployable *dplv1.Deployable) []metav1.OwnerReference {
 	return []metav1.OwnerReference{
-		metav1.OwnerReference{
+		{
 			APIVersion: deployable.APIVersion,
 			Kind:       deployable.Kind,
 			Name:       deployable.Name,
