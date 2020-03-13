@@ -17,8 +17,8 @@ package utils
 import "k8s.io/klog"
 
 const (
-	infoLevel  = klog.Level(5)
-	debugLevel = klog.Level(10)
+	infoLevel  = klog.Level(3)
+	debugLevel = klog.Level(5)
 	// HelmCRKind is kind of the Helm CR
 	HelmCRKind = "HelmRelease"
 	// HelmCRAPIVersion is APIVersion of the Helm CR
