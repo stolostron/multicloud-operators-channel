@@ -17,7 +17,9 @@ package utils
 import (
 	"context"
 
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
+
 	"k8s.io/klog"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
@@ -258,11 +260,12 @@ func GenerateDeployableForChannel(deployable *dplv1.Deployable, channel types.Na
 	chdpl.GenerateName = DplGenerateNameStr(deployable)
 
 	chdpl.Namespace = channel.Namespace
+	chdpl.SetOwnerReferences(createOwnerReference(deployable))
 
 	deployable.Spec.DeepCopyInto(&(chdpl.Spec))
 	chdpl.Spec.Placement = nil
 	chdpl.Spec.Overrides = nil
-	chdpl.Spec.Channels = nil
+	// chdpl.Spec.Channels = nil
 	chdpl.Spec.Dependencies = nil
 
 	labels := deployable.GetLabels()
@@ -301,6 +304,17 @@ func GenerateDeployableForChannel(deployable *dplv1.Deployable, channel types.Na
 	chdpl.SetAnnotations(chdplannotations)
 
 	return chdpl, nil
+}
+
+func createOwnerReference(deployable *dplv1.Deployable) []metav1.OwnerReference {
+	return []metav1.OwnerReference{
+		metav1.OwnerReference{
+			APIVersion: deployable.APIVersion,
+			Kind:       deployable.Kind,
+			Name:       deployable.Name,
+			UID:        deployable.GetUID(),
+		},
+	}
 }
 
 //DplGenerateNameStr  will generate a string for the dpl generate name
