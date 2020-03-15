@@ -149,6 +149,7 @@ func getResourceMapFromHost(host utils.ObjectStore, bucketName string) (map[stri
 	}
 
 	resMap := make(map[string]*unstructured.Unstructured)
+
 	for _, name := range objnames {
 		objb, err := host.Get(bucketName, name)
 		if err != nil {
@@ -211,8 +212,9 @@ func (sync *ChannelSynchronizer) addNewResourceFromHostResMap(chn *chv1.Channel,
 		tplannotations[dplv1.AnnotationLocal] = "false"
 		tpl.SetAnnotations(tplannotations)
 
-		dpl := &dplv1.Deployable{}
 		var err error
+
+		dpl := &dplv1.Deployable{}
 		dpl.Name = tplname
 		dpl.Namespace = chn.Namespace
 		dpl.Spec.Template = &runtime.RawExtension{}
@@ -229,8 +231,6 @@ func (sync *ChannelSynchronizer) addNewResourceFromHostResMap(chn *chv1.Channel,
 			klog.Errorf("failed to create deployable %v from hostResMap with error: %v ", err, dpl)
 		}
 	}
-
-	return
 }
 
 func (sync *ChannelSynchronizer) deleteOrUpdateDeployable(
@@ -240,6 +240,7 @@ func (sync *ChannelSynchronizer) deleteOrUpdateDeployable(
 	if err != nil {
 		klog.Errorf("failed to get valid deployable template err %+v", err)
 		delete(hostResMap, dpl.Name)
+
 		return nil
 	}
 
@@ -248,6 +249,7 @@ func (sync *ChannelSynchronizer) deleteOrUpdateDeployable(
 	if !isDeployableCreatedBySynchronizer(dpltpl) {
 		klog.Infof("skip deployable %v/%v, not created by object sychronizer", dpltpl.GetName(), dpltpl.GetNamespace())
 		delete(hostResMap, dpltpl.GetName())
+
 		return nil
 	}
 

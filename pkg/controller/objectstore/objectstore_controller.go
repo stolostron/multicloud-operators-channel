@@ -22,7 +22,6 @@ import (
 	helmsync "github.com/open-cluster-management/multicloud-operators-channel/pkg/synchronizer/helmreposynchronizer"
 	"github.com/open-cluster-management/multicloud-operators-channel/pkg/utils"
 	dplv1 "github.com/open-cluster-management/multicloud-operators-deployable/pkg/apis/apps/v1"
-	dplutils "github.com/open-cluster-management/multicloud-operators-deployable/pkg/utils"
 
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/types"
@@ -106,32 +105,25 @@ type ReconcileDeployable struct {
 	ChannelDescriptor *utils.ChannelDescriptor
 }
 
-// Reconcile reads that state of the cluster for a Deployable object and makes changes based on the state read
-// and what is in the Deployable.Spec
+// Reconcile reads that state of the cluster for a Deployable object, make sure the deployables at cluster has accurate record on objectstore store
+/// if deployable is updated or created, then make sure the object bucket has a record of it as well. If
+// if deployable is deleted, then it also delete the record of the deployable from object bucket.
+// Note, within this flow, we only take above actions for deployables who's annotated with dplv1.AnnotationHosting
 
 // a Deployment as an example Automatically generate RBAC rules to allow the Controller to read and write Deployments
 // +kubebuilder:rbac:groups=apps.open-cluster-management.io,resources=deployables,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups=apps.open-cluster-management.io,resources=deployables/status,verbs=get;update;patch
 func (r *ReconcileDeployable) Reconcile(request reconcile.Request) (reconcile.Result, error) {
-	if klog.V(debugLevel) {
-		fnName := dplutils.GetFnName()
-		klog.Infof("Entering: %v()", fnName)
-
-		defer klog.Infof("Exiting: %v()", fnName)
-	}
-
 	// Fetch the Deployable instance
 	instance := &dplv1.Deployable{}
 	err := r.KubeClient.Get(context.TODO(), request.NamespacedName, instance)
-	klog.Info("Reconciling:", request.NamespacedName, " with Get err:", err)
+	klog.Info("Reconciling:", request.NamespacedName)
 
 	if err != nil {
 		if errors.IsNotFound(err) {
-			// Object not found, return.  Created objects are automatically garbage collected.
-			// For additional cleanup logic use finalizers.
-			_, err = r.deleteDeployableInObjectStore(request.NamespacedName)
-			if err != nil {
-				klog.Errorf("Failed to delete deployable %v  error %v", request.NamespacedName, err)
+			if err := r.deleteDeployableInObjectBucket(request.NamespacedName); err != nil {
+				klog.Errorf("failed to delete deployable %v,  error %+v", request.NamespacedName, err)
+				return reconcile.Result{}, err
 			}
 
 			return reconcile.Result{}, nil
@@ -142,11 +134,10 @@ func (r *ReconcileDeployable) Reconcile(request reconcile.Request) (reconcile.Re
 		return reconcile.Result{}, err
 	}
 
-	req, err := r.updateOrDeleteDeployableOnHost(instance)
-	if err != nil {
-		klog.Errorf("failed to reconcile deployable for channel %v, err %v", request.String(), err)
-		return req, err
+	if err := r.createOrUpdateDeployableInObjectBucket(instance); err != nil {
+		klog.Errorf("failed to reconcile deployable for channel %v, err %+v", request.String(), err)
+		return reconcile.Result{}, err
 	}
 
-	return reconcile.Result{}, err
+	return reconcile.Result{}, nil
 }

@@ -27,13 +27,14 @@ func (m *FakeObjectStore) InitObjectStoreConnection(endpoint, accessKeyID, secre
 	if len(m.Clt) == 0 {
 		m.Clt = make(map[string]map[string]DeployableObject)
 	}
+
 	return nil
 }
 
 //it's odd that we request the storage to be pre-set
 func (m *FakeObjectStore) Exists(bucket string) error {
 	if _, ok := m.Clt[bucket]; !ok {
-		m.Create(bucket)
+		return m.Create(bucket)
 	}
 
 	return nil

@@ -76,6 +76,7 @@ func Test_alginClusterResourceWithHost_emptyHost(t *testing.T) {
 	stopMgr, mgrStopped := StartTestManager(mgr, g)
 
 	c := mgr.GetClient()
+
 	defer func() {
 		close(stopMgr)
 		mgrStopped.Wait()
@@ -90,8 +91,8 @@ func Test_alginClusterResourceWithHost_emptyHost(t *testing.T) {
 			Namespace: tKey.Namespace,
 		},
 		Data: map[string][]byte{
-			utils.SecretMapKeyAccessKeyID:     []byte{},
-			utils.SecretMapKeySecretAccessKey: []byte{},
+			utils.SecretMapKeyAccessKeyID:     {},
+			utils.SecretMapKeySecretAccessKey: {},
 		},
 	}
 
@@ -166,6 +167,7 @@ func Test_alginClusterResourceWithHost_createDplBasedOnHost(t *testing.T) {
 	stopMgr, mgrStopped := StartTestManager(mgr, g)
 
 	c := mgr.GetClient()
+
 	defer func() {
 		close(stopMgr)
 		mgrStopped.Wait()
@@ -180,8 +182,8 @@ func Test_alginClusterResourceWithHost_createDplBasedOnHost(t *testing.T) {
 			Namespace: tKey.Namespace,
 		},
 		Data: map[string][]byte{
-			utils.SecretMapKeyAccessKeyID:     []byte{},
-			utils.SecretMapKeySecretAccessKey: []byte{},
+			utils.SecretMapKeyAccessKeyID:     {},
+			utils.SecretMapKeySecretAccessKey: {},
 		},
 	}
 
@@ -201,27 +203,6 @@ func Test_alginClusterResourceWithHost_createDplBasedOnHost(t *testing.T) {
 	}
 
 	dplName := "t-dpl"
-	//	tDpl := &dplv1.Deployable{
-	//		ObjectMeta: v1.ObjectMeta{
-	//			Name:      dplName,
-	//			Namespace: tKey.Namespace,
-	//		},
-	//		Spec: dplv1.DeployableSpec{
-	//			Template: &runtime.RawExtension{
-	//				Object: &corev1.ConfigMap{
-	//					TypeMeta: v1.TypeMeta{
-	//						Kind: "ConfigMap",
-	//					},
-	//					ObjectMeta: v1.ObjectMeta{
-	//						Name: "cm",
-	//						Annotations: map[string]string{
-	//							dplv1.AnnotationExternalSource: "true",
-	//						},
-	//					},
-	//				},
-	//			},
-	//		},
-	//	}
 
 	defer c.Delete(context.TODO(), refSrt)
 	g.Expect(c.Create(context.TODO(), refSrt)).NotTo(gomega.HaveOccurred())
@@ -235,8 +216,8 @@ func Test_alginClusterResourceWithHost_createDplBasedOnHost(t *testing.T) {
 
 	objsync.ObjectStore = &utils.FakeObjectStore{
 		Clt: map[string]map[string]utils.DeployableObject{
-			tKey.Name: map[string]utils.DeployableObject{
-				dplName: utils.DeployableObject{
+			tKey.Name: {
+				dplName: {
 					Name:    dplName,
 					Content: []byte{},
 				},
@@ -266,6 +247,7 @@ func Test_alginClusterResourceWithHost_updateDplBasedOnHost(t *testing.T) {
 	stopMgr, mgrStopped := StartTestManager(mgr, g)
 
 	c := mgr.GetClient()
+
 	defer func() {
 		close(stopMgr)
 		mgrStopped.Wait()
@@ -280,8 +262,8 @@ func Test_alginClusterResourceWithHost_updateDplBasedOnHost(t *testing.T) {
 			Namespace: tKey.Namespace,
 		},
 		Data: map[string][]byte{
-			utils.SecretMapKeyAccessKeyID:     []byte{},
-			utils.SecretMapKeySecretAccessKey: []byte{},
+			utils.SecretMapKeyAccessKeyID:     {},
+			utils.SecretMapKeySecretAccessKey: {},
 		},
 	}
 
@@ -363,8 +345,8 @@ func Test_alginClusterResourceWithHost_updateDplBasedOnHost(t *testing.T) {
 
 	objsync.ObjectStore = &utils.FakeObjectStore{
 		Clt: map[string]map[string]utils.DeployableObject{
-			tKey.Name: map[string]utils.DeployableObject{
-				dplName: utils.DeployableObject{
+			tKey.Name: {
+				dplName: {
 					Name:    dplName,
 					Content: eTpl,
 				},
