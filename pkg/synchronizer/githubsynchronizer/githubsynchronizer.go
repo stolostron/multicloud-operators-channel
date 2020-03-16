@@ -32,6 +32,8 @@ import (
 	"k8s.io/client-go/rest"
 	"k8s.io/helm/pkg/repo"
 
+	k8serrors "k8s.io/apimachinery/pkg/api/errors"
+
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/klog"
@@ -212,6 +214,9 @@ func (sync *ChannelSynchronizer) handleSingleDeployable(
 	newDplList[dpl.Name] = dpl
 
 	if err := sync.kubeClient.Create(context.TODO(), dpl); err != nil {
+		if k8serrors.IsAlreadyExists(err) {
+			return nil
+		}
 		return errors.Wrap(err, "failed to create deployable")
 	}
 
