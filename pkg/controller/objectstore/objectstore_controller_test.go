@@ -199,7 +199,7 @@ func Test_getChannelForNamespace(t *testing.T) {
 			tC.tRec.KubeClient.Create(ctx, tC.dfChan)
 			defer tC.tRec.KubeClient.Delete(ctx, tC.dfChan)
 			time.Sleep(1 * time.Second)
-			gotCh, _ := tC.tRec.getChannelForNamespace(testNamespace)
+			gotCh := tC.tRec.getChannelForNamespace(testNamespace)
 
 			assertChannelObject(t, tC.wantCh, gotCh)
 		})

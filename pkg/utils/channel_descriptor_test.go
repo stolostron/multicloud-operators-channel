@@ -20,7 +20,6 @@ import (
 
 	"github.com/google/go-cmp/cmp"
 	"github.com/onsi/gomega"
-	"github.com/pkg/errors"
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -28,71 +27,6 @@ import (
 	chv1 "github.com/open-cluster-management/multicloud-operators-channel/pkg/apis/apps/v1"
 	"github.com/open-cluster-management/multicloud-operators-channel/pkg/utils"
 )
-
-type myObjectStore struct {
-	Clt map[string]map[string]string
-}
-
-func (m *myObjectStore) InitObjectStoreConnection(endpoint, accessKeyID, secretAccessKey string) error {
-	m.Clt = make(map[string]map[string]string)
-	return nil
-}
-
-//it's odd that we request the storage to be pre-set
-func (m *myObjectStore) Exists(bucket string) error {
-	if _, ok := m.Clt[bucket]; !ok {
-		m.Create(bucket)
-	}
-
-	return nil
-}
-
-func (m *myObjectStore) Create(bucket string) error {
-	m.Clt[bucket] = make(map[string]string)
-
-	return nil
-}
-
-func (m *myObjectStore) List(bucket string) ([]string, error) {
-	keys := []string{}
-
-	for k := range m.Clt {
-		keys = append(keys, k)
-	}
-
-	return keys, nil
-}
-
-func (m *myObjectStore) Put(bucket string, dplObj utils.DeployableObject) error {
-	m.Clt[bucket] = map[string]string{
-		"name": dplObj.Name,
-	}
-
-	return nil
-}
-
-func (m *myObjectStore) Delete(bucket, name string) error {
-	if _, ok := m.Clt[bucket]; !ok {
-		return errors.New("empty bucket")
-	}
-
-	delete(m.Clt, bucket)
-
-	return nil
-}
-
-func (m *myObjectStore) Get(bucket, name string) (utils.DeployableObject, error) {
-	if _, ok := m.Clt[bucket]; !ok {
-		return utils.DeployableObject{}, errors.New("empty bucket")
-	}
-
-	bucketMap := m.Clt[bucket]
-	dplObj := utils.DeployableObject{
-		Name: bucketMap["name"],
-	}
-
-	return dplObj, nil
-}
 
 func TestValidateChannel(t *testing.T) {
 	testCh := "objch"
@@ -115,8 +49,8 @@ func TestValidateChannel(t *testing.T) {
 		desc       string
 		chn        *chv1.Channel
 		kubeClient client.Client
-		myStorage  *myObjectStore
-		wanted     *myObjectStore
+		myStorage  *utils.FakeObjectStore
+		wanted     *utils.FakeObjectStore
 	}{
 		{
 			desc: "channel without referred secret",
@@ -173,13 +107,13 @@ func TestValidateChannel(t *testing.T) {
 				},
 			},
 			kubeClient: c,
-			myStorage: &myObjectStore{
-				Clt: map[string]map[string]string{
-					testBucket: make(map[string]string),
+			myStorage: &utils.FakeObjectStore{
+				Clt: map[string]map[string]utils.DeployableObject{
+					testBucket: make(map[string]utils.DeployableObject),
 				},
 			},
-			wanted: &myObjectStore{
-				Clt: map[string]map[string]string{
+			wanted: &utils.FakeObjectStore{
+				Clt: map[string]map[string]utils.DeployableObject{
 					testBucket: {},
 				},
 			},
@@ -196,9 +130,9 @@ func TestValidateChannel(t *testing.T) {
 			myChDescriptor, _ := utils.CreateObjectStorageChannelDescriptor()
 
 			if tC.myStorage == nil {
-				_ = myChDescriptor.ValidateChannel(tC.chn, tC.kubeClient)
+				_ = myChDescriptor.ConnectWithResourceHost(tC.chn, tC.kubeClient)
 			} else {
-				_ = myChDescriptor.ValidateChannel(tC.chn, tC.kubeClient, tC.myStorage)
+				_ = myChDescriptor.ConnectWithResourceHost(tC.chn, tC.kubeClient, tC.myStorage)
 			}
 
 			if diff := cmp.Diff(tC.myStorage, tC.wanted); diff != "" {

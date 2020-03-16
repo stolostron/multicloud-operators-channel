@@ -36,8 +36,6 @@ var c client.Client
 
 // testing.M is going to set up a local k8s env and provide the client, so the other test case can access to the cluster
 func TestMain(m *testing.M) {
-	log.Printf("Enter TestMain\n")
-
 	testEnv := &envtest.Environment{
 		CRDDirectoryPaths: []string{filepath.Join("..", "..", "deploy", "crds"), filepath.Join("..", "..", "deploy", "dependent-crds")},
 	}

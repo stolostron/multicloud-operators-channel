@@ -44,6 +44,14 @@ type ChannelDescriptor struct {
 	channelDescriptorMap map[string]*ChannelDescription // key: channel name
 }
 
+func (desc *ChannelDescriptor) GetBucketNameByChannel(chName string) string {
+	if _, ok := desc.channelDescriptorMap[chName]; !ok {
+		return ""
+	}
+
+	return desc.channelDescriptorMap[chName].Bucket
+}
+
 // CreateChannelDescriptor - creates an instance of ChannelDescriptor
 func CreateObjectStorageChannelDescriptor() (*ChannelDescriptor, error) {
 	c := &ChannelDescriptor{
@@ -53,8 +61,8 @@ func CreateObjectStorageChannelDescriptor() (*ChannelDescriptor, error) {
 	return c, nil
 }
 
-// ValidateChannel validates and makes channel object store connection
-func (desc *ChannelDescriptor) ValidateChannel(chn *chv1.Channel, kubeClient client.Client, objStoreHandler ...ObjectStore) error {
+// ConnectWithResourceHost validates and makes channel object store connection
+func (desc *ChannelDescriptor) ConnectWithResourceHost(chn *chv1.Channel, kubeClient client.Client, objStoreHandler ...ObjectStore) error {
 	var storageHanler ObjectStore
 
 	if len(objStoreHandler) == 0 || objStoreHandler[0] == nil {

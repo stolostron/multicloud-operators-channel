@@ -15,6 +15,7 @@ require (
 	github.com/prometheus/common v0.4.1
 	github.com/spf13/pflag v1.0.3
 	golang.org/x/net v0.0.0-20190812203447-cdfb69ac37fc
+	golang.org/x/tools/gopls v0.3.3 // indirect
 	gopkg.in/src-d/go-git.v4 v4.13.1
 	gopkg.in/yaml.v2 v2.2.2
 	k8s.io/api v0.0.0

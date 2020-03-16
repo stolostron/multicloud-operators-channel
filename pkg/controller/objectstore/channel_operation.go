@@ -28,134 +28,113 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/klog"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	chv1 "github.com/open-cluster-management/multicloud-operators-channel/pkg/apis/apps/v1"
 	"github.com/open-cluster-management/multicloud-operators-channel/pkg/utils"
 	dplv1 "github.com/open-cluster-management/multicloud-operators-deployable/pkg/apis/apps/v1"
 )
 
-//
+const ChnNumPerNamespace = 1
+
+func isObjectGenerateByHub(objtpl *unstructured.Unstructured) bool {
+	tplannotations := objtpl.GetAnnotations()
+	if tplannotations == nil {
+		return false
+	}
+
+	if _, ok := tplannotations[dplv1.AnnotationHosting]; !ok {
+		return false
+	}
+
+	return true
+}
 
 // ReconcileForChannel populate object store with channel when turned on
-func (r *ReconcileDeployable) deleteDeployableInObjectStore(request types.NamespacedName) (reconcile.Result, error) {
-	dplchn, _ := r.getChannelForNamespace(request.Namespace)
-	if dplchn == nil {
-		return reconcile.Result{}, nil
-	}
-
-	err := r.validateChannel(dplchn)
-	if err != nil {
-		return reconcile.Result{}, nil
-	}
-
-	chndesc, ok := r.ChannelDescriptor.Get(dplchn.Name)
+func (r *ReconcileDeployable) deleteDeployableInObjectBucket(request types.NamespacedName) error {
+	dplchn, ok := r.isReconileSignalLinkToChannel(request.Namespace)
 	if !ok {
-		klog.Info("Failed to get channel description for ", dplchn.Name)
-		return reconcile.Result{}, nil
+		klog.Infof("skip reconcile, deployable not sitting in a channel")
+		return nil
+	}
+
+	chndesc, err := r.findObjectBucketForDeployable(dplchn)
+	if err != nil {
+		return errors.Wrap(err, "failed to bucket configured for deployable")
 	}
 
 	//ignoring deployable generate name, since channel is managing deployable via deployable name
 	dplObj, err := chndesc.ObjectStore.Get(chndesc.Bucket, request.Name)
 	if err != nil {
-		klog.Error("Failed to get object ", chndesc.Bucket, "/", request.Name, " err:", err)
-		return reconcile.Result{}, err
+		return errors.Wrapf(err, "failed to get object %v/%v, it might be delete ready, err: %v ", chndesc.Bucket, request.Name, err)
 	}
 
 	objtpl := &unstructured.Unstructured{}
 
 	err = yaml.Unmarshal(dplObj.Content, objtpl)
 	if err != nil {
-		klog.Error("Failed to unmashall ", chndesc.Bucket, "/", request.Name, " err:", err)
-		return reconcile.Result{}, err
+		return errors.Wrapf(err, "failed to unmashall %v/%v", chndesc.Bucket, request.Name)
 	}
 
 	// Only delete templates created and uploaded to objectstore by deployables Reconcile
 	// meaning AnnotationHosting must be set in their template
-	tplannotations := objtpl.GetAnnotations()
-
-	if tplannotations == nil {
-		return reconcile.Result{}, nil
-	}
-
-	if _, ok := tplannotations[dplv1.AnnotationHosting]; !ok {
-		return reconcile.Result{}, nil
+	if !isObjectGenerateByHub(objtpl) {
+		klog.Infof("skip delete deployable %v/%v, not created by a hub deployable", objtpl.GetName(), objtpl.GetNamespace())
+		return nil
 	}
 
 	klog.Info("Deleting ", chndesc.Bucket, request.Name)
 
-	err = chndesc.ObjectStore.Delete(chndesc.Bucket, request.Name)
-
-	return reconcile.Result{}, err
-}
-
-// reconcileForChannel populate object store with channel when turned on
-func (r *ReconcileDeployable) reconcileForChannel(deployable *dplv1.Deployable) (reconcile.Result, error) {
-	dplchn, err := r.getChannelForNamespace(deployable.Namespace)
-	if dplchn == nil || err != nil {
-		return reconcile.Result{}, errors.Wrap(err, "failed to find channel deployables")
+	if err := chndesc.ObjectStore.Delete(chndesc.Bucket, request.Name); err != nil {
+		return errors.Wrapf(err, "failed to delete object %v from bucket %v", chndesc.Bucket, request.Name)
 	}
 
-	err = r.validateChannel(dplchn)
-	if err != nil {
-		return reconcile.Result{}, err
+	return nil
+}
+
+func (r *ReconcileDeployable) isReconileSignalLinkToChannel(reqNs string) (*chv1.Channel, bool) {
+	dplchn := r.getChannelForNamespace(reqNs)
+
+	if dplchn == nil {
+		return nil, false
+	}
+
+	return dplchn, true
+}
+
+func (r *ReconcileDeployable) findObjectBucketForDeployable(dplchn *chv1.Channel) (*utils.ChannelDescription, error) {
+	if err := r.makeConnectToBucket(dplchn); err != nil {
+		return nil, errors.Wrap(err, "faild to find the channel from descriptor map")
 	}
 
 	chndesc, ok := r.ChannelDescriptor.Get(dplchn.Name)
 	if !ok {
-		return reconcile.Result{}, errors.New("failed to get deployable from object bucket")
+		return nil, errors.New("failed to get deployable from object bucket")
 	}
 
-	template := &unstructured.Unstructured{}
+	return chndesc, nil
+}
 
-	if deployable.Spec.Template == nil {
-		klog.Warning("Processing deployable without template:", deployable)
-		return reconcile.Result{}, errors.New(fmt.Sprintf("skip deployables with empty template %v", deployable))
+// reconcileForChannel populate object store with channel when turned on
+func (r *ReconcileDeployable) createOrUpdateDeployableInObjectBucket(deployable *dplv1.Deployable) error {
+	dplchn, ok := r.isReconileSignalLinkToChannel(deployable.GetNamespace())
+	if !ok {
+		klog.Infof("skip reconcile, deployable not sitting in a channel")
+		return nil
 	}
 
-	err = json.Unmarshal(deployable.Spec.Template.Raw, template)
+	chndesc, err := r.findObjectBucketForDeployable(dplchn)
 	if err != nil {
-		return reconcile.Result{}, errors.Wrap(err, fmt.Sprintf("failed to unmarshal template %v", deployable.Spec.Template.Raw))
+		return errors.Wrapf(err, "failed to configure bucket for deployable %v/%v", deployable.Namespace, deployable.Name)
 	}
 
-	// Only reconcile templates that are not created by objectstore synchronizer
-	// meaning AnnotationExternalSource is not set in their template
-	annotations := deployable.GetAnnotations()
-
-	tplannotations := template.GetAnnotations()
-	if tplannotations == nil {
-		tplannotations = make(map[string]string)
-	} else if _, ok := tplannotations[dplv1.AnnotationExternalSource]; ok {
-		return reconcile.Result{}, errors.New("skip external deployable")
-	}
-	// carry deployable annotations
-	for k, v := range annotations {
-		tplannotations[k] = v
-	}
-	// Set AnnotationHosting
-	hosting := types.NamespacedName{Name: deployable.GetName(), Namespace: deployable.GetNamespace()}.String()
-	tplannotations[dplv1.AnnotationHosting] = hosting
-	template.SetAnnotations(tplannotations)
-
-	// carry deployable labels
-	labels := deployable.GetLabels()
-	if len(labels) > 0 {
-		tpllbls := template.GetLabels()
-		if tpllbls == nil {
-			tpllbls = make(map[string]string)
-		}
-
-		for k, v := range labels {
-			tpllbls[k] = v
-		}
-
-		template.SetLabels(tpllbls)
+	template, err := prepareDeployalbeTemplate(deployable)
+	if err != nil {
+		return errors.Wrap(err, "failed to handle deployable.spec.temaplate")
 	}
 
 	tplb, err := yaml.Marshal(template)
 	if err != nil {
-		klog.V(10).Info("YAML marshall ", template, "error:", err)
-		return reconcile.Result{}, errors.Wrap(err, "yaml marshall failed")
+		return errors.Wrap(err, "failed to marshall packaged deployable")
 	}
 
 	var dplGenerateName string
@@ -170,50 +149,50 @@ func (r *ReconcileDeployable) reconcileForChannel(deployable *dplv1.Deployable) 
 		Name:         deployable.GetName(),
 		GenerateName: dplGenerateName,
 		Content:      tplb,
-		Version:      annotations[dplv1.AnnotationDeployableVersion],
-	}
-	if err := chndesc.ObjectStore.Put(chndesc.Bucket, dplObj); err != nil {
-		return reconcile.Result{}, errors.Wrap(err, "failed to put to object bucket")
+		Version:      deployable.GetAnnotations()[dplv1.AnnotationDeployableVersion],
 	}
 
-	return reconcile.Result{}, nil
+	if err := chndesc.ObjectStore.Put(chndesc.Bucket, dplObj); err != nil {
+		return errors.Wrap(err, "failed to put to object bucket")
+	}
+
+	return nil
 }
 
-func (r *ReconcileDeployable) getChannelForNamespace(namespace string) (*chv1.Channel, error) {
+func (r *ReconcileDeployable) getChannelForNamespace(namespace string) *chv1.Channel {
 	dplchnlist := &chv1.ChannelList{}
 
 	err := r.KubeClient.List(context.TODO(), dplchnlist, &client.ListOptions{Namespace: namespace})
 	if err != nil {
-		return nil, errors.Wrap(err, fmt.Sprintf("failed to find deployable from %v", namespace))
+		klog.Errorf("failed to find deployable from %v, err: %+v", namespace, err)
+		return nil
 	}
 
-	if len(dplchnlist.Items) != 1 {
-		return nil, errors.Wrap(err, fmt.Sprintf("incorrect channel setting %v namespace, itmes %v", namespace, dplchnlist.Items))
+	if len(dplchnlist.Items) != ChnNumPerNamespace {
+		klog.Errorf("incorrect channel setting %v namespace, itmes %v", namespace, dplchnlist.Items)
+		return nil
+	}
+
+	if !strings.EqualFold(string(dplchnlist.Items[0].Spec.Type), chv1.ChannelTypeObjectBucket) {
+		klog.Error("wrong channel type")
+		return nil
 	}
 
 	dplchn := dplchnlist.Items[0].DeepCopy()
 
-	if !strings.EqualFold(string(dplchn.Spec.Type), chv1.ChannelTypeObjectBucket) {
-		return nil, errors.New("wrong channel type")
-	}
-
-	return dplchn, nil
+	return dplchn
 }
 
-func (r *ReconcileDeployable) validateChannel(dplchn *chv1.Channel) error {
+func (r *ReconcileDeployable) makeConnectToBucket(dplchn *chv1.Channel) error {
 	_, ok := r.ChannelDescriptor.Get(dplchn.Name)
 	if !ok {
 		klog.Info("Syncing channel ", dplchn.Name)
 
-		err := r.syncChannel(dplchn)
-		if err != nil {
+		if err := r.deleteOrUpdateBucketWithDeployablesInChannel(dplchn); err != nil {
 			return errors.Wrap(err, fmt.Sprintf("Failed to sync channel %v", dplchn.Name))
 		}
-	} else {
-		err := r.ChannelDescriptor.ValidateChannel(dplchn, r.KubeClient)
-		if err != nil {
-			return errors.Wrap(err, fmt.Sprintf("Failed to validate channel %v", dplchn.Name))
-		}
+	} else if err := r.ChannelDescriptor.ConnectWithResourceHost(dplchn, r.KubeClient); err != nil {
+		return errors.Wrap(err, fmt.Sprintf("Failed to validate channel %v", dplchn.Name))
 	}
 
 	return nil
@@ -221,9 +200,8 @@ func (r *ReconcileDeployable) validateChannel(dplchn *chv1.Channel) error {
 
 // sync channel info with channel namespace. For ObjectBucket channel, namespace is source of truth
 // WARNNING: if channel is deleted during controller outage, bucket won't be cleaned up
-func (r *ReconcileDeployable) syncChannel(dplchn *chv1.Channel) error {
-	err := r.ChannelDescriptor.ValidateChannel(dplchn, r.KubeClient)
-	if err != nil {
+func (r *ReconcileDeployable) deleteOrUpdateBucketWithDeployablesInChannel(dplchn *chv1.Channel) error {
+	if err := r.ChannelDescriptor.ConnectWithResourceHost(dplchn, r.KubeClient); err != nil {
 		return errors.Wrap(err, fmt.Sprintf("failed to validate channel %v", dplchn.Name))
 	}
 
@@ -234,8 +212,7 @@ func (r *ReconcileDeployable) syncChannel(dplchn *chv1.Channel) error {
 
 	dpllist := &dplv1.DeployableList{}
 
-	err = r.KubeClient.List(context.TODO(), dpllist, &client.ListOptions{Namespace: dplchn.GetNamespace()})
-	if err != nil {
+	if err := r.KubeClient.List(context.TODO(), dpllist, &client.ListOptions{Namespace: dplchn.GetNamespace()}); err != nil {
 		return errors.Wrap(err, "failed to list deployables")
 	}
 
@@ -263,7 +240,7 @@ func (r *ReconcileDeployable) syncChannel(dplchn *chv1.Channel) error {
 			continue
 		}
 
-		if !isValidObj(objtpl) {
+		if !isObjectGenerateByHub(objtpl) {
 			continue
 		}
 
@@ -297,27 +274,13 @@ func (r *ReconcileDeployable) syncChannel(dplchn *chv1.Channel) error {
 			dpltplannotations := dpltpl.GetAnnotations()
 			dplObj.Version = dpltplannotations[dplv1.AnnotationDeployableVersion]
 
-			err = chndesc.ObjectStore.Put(chndesc.Bucket, dplObj)
-			if err != nil {
+			if err := chndesc.ObjectStore.Put(chndesc.Bucket, dplObj); err != nil {
 				klog.Error("Failed to Put", chndesc.Bucket, "/", name, " err:", err)
 			}
 		}
 	}
 
 	return nil
-}
-
-func isValidObj(objtpl *unstructured.Unstructured) bool {
-	tplannotations := objtpl.GetAnnotations()
-	if tplannotations == nil {
-		return false
-	}
-
-	if _, ok := tplannotations[dplv1.AnnotationHosting]; !ok {
-		return false
-	}
-
-	return true
 }
 
 func prepareDeployalbeTemplate(dpl *dplv1.Deployable) (*unstructured.Unstructured, error) {
@@ -328,9 +291,7 @@ func prepareDeployalbeTemplate(dpl *dplv1.Deployable) (*unstructured.Unstructure
 		return dpltpl, errors.New(fmt.Sprintf("processing deployable %v without template", dpl))
 	}
 
-	err := json.Unmarshal(dpl.Spec.Template.Raw, dpltpl)
-
-	if err != nil {
+	if err := json.Unmarshal(dpl.Spec.Template.Raw, dpltpl); err != nil {
 		return dpltpl, errors.New(fmt.Sprintf("failed to unmashall deployable %v, err: %v", dpl, err))
 	}
 
