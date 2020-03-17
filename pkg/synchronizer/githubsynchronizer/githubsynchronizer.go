@@ -27,6 +27,7 @@ import (
 
 	"github.com/ghodss/yaml"
 	"github.com/pkg/errors"
+	"gopkg.in/src-d/go-git.v4"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/rest"
@@ -145,7 +146,7 @@ func (sync *ChannelSynchronizer) syncChannelsWithGitRepo() {
 
 	for _, ch := range sync.ChannelMap {
 		klog.V(debugLevel).Info("synching channel ", ch.Name)
-		sync.syncChannel(ch)
+		sync.syncChannel(ch, git.PlainClone)
 	}
 }
 
@@ -223,13 +224,13 @@ func (sync *ChannelSynchronizer) handleSingleDeployable(
 	return nil
 }
 
-func (sync *ChannelSynchronizer) syncChannel(chn *chv1.Channel) {
+func (sync *ChannelSynchronizer) syncChannel(chn *chv1.Channel, cloneOpt utils.CloneFunc) {
 	if chn == nil {
 		return
 	}
 
 	// Clone the Git repo
-	idx, resourceDirs, err := utils.CloneGitRepo(chn, sync.kubeClient)
+	idx, resourceDirs, err := utils.CloneGitRepo(chn, sync.kubeClient, cloneOpt)
 	if err != nil {
 		klog.Error("Failed to clone the git repo: ", err.Error())
 		return
