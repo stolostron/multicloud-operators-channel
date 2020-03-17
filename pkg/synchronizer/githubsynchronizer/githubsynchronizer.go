@@ -27,10 +27,13 @@ import (
 
 	"github.com/ghodss/yaml"
 	"github.com/pkg/errors"
+	"gopkg.in/src-d/go-git.v4"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/rest"
 	"k8s.io/helm/pkg/repo"
+
+	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/wait"
@@ -143,7 +146,7 @@ func (sync *ChannelSynchronizer) syncChannelsWithGitRepo() {
 
 	for _, ch := range sync.ChannelMap {
 		klog.V(debugLevel).Info("synching channel ", ch.Name)
-		sync.syncChannel(ch)
+		sync.syncChannel(ch, git.PlainClone)
 	}
 }
 
@@ -212,19 +215,23 @@ func (sync *ChannelSynchronizer) handleSingleDeployable(
 	newDplList[dpl.Name] = dpl
 
 	if err := sync.kubeClient.Create(context.TODO(), dpl); err != nil {
+		if k8serrors.IsAlreadyExists(err) {
+			return nil
+		}
+
 		return errors.Wrap(err, "failed to create deployable")
 	}
 
 	return nil
 }
 
-func (sync *ChannelSynchronizer) syncChannel(chn *chv1.Channel) {
+func (sync *ChannelSynchronizer) syncChannel(chn *chv1.Channel, cloneOpt utils.CloneFunc) {
 	if chn == nil {
 		return
 	}
 
 	// Clone the Git repo
-	idx, resourceDirs, err := utils.CloneGitRepo(chn, sync.kubeClient)
+	idx, resourceDirs, err := utils.CloneGitRepo(chn, sync.kubeClient, cloneOpt)
 	if err != nil {
 		klog.Error("Failed to clone the git repo: ", err.Error())
 		return
