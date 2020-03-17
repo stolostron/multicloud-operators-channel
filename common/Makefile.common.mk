@@ -43,8 +43,8 @@ lint-scripts:
 lint-yaml:
 	@${FINDFILES} \( -name '*.yml' -o -name '*.yaml' \) -print0 | ${XARGS} grep -L -e "{{" | ${CLEANXARGS} yamllint -c ./common/config/.yamllint.yml
 
-lint-helm:
-	@${FINDFILES} -name 'Chart.yaml' -print | xargs -L 1 dirname | xargs helm lint --strict
+# lint-helm:
+# 	@${FINDFILES} -name 'Chart.yaml' -print | xargs -L 1 dirname | xargs helm lint --strict
 
 lint-copyright-banner:
 	@${FINDFILES} \( -name '*.go' -o -name '*.cc' -o -name '*.h' -o -name '*.proto' -o -name '*.py' -o -name '*.sh' \) \( ! \( -name '*.gen.go' -o -name '*.pb.go' -o -name '*_pb2.py' \) \) -print0 |\
