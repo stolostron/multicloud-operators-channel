@@ -113,6 +113,7 @@ func CloneGitRepo(chn *chv1.Channel, kubeClient client.Client, cOpt ...CloneFunc
 		if err != nil {
 			return nil, nil, errors.Wrap(err, "failed to clone git")
 		}
+
 		options.Auth = &githttp.BasicAuth{
 			Username: *gitCred.accessKey,
 			Password: *gitCred.pwd,

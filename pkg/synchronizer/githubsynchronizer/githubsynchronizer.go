@@ -218,6 +218,7 @@ func (sync *ChannelSynchronizer) handleSingleDeployable(
 		if k8serrors.IsAlreadyExists(err) {
 			return nil
 		}
+
 		return errors.Wrap(err, "failed to create deployable")
 	}
 
