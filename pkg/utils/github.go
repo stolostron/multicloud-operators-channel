@@ -49,7 +49,7 @@ type cred struct {
 	pwd       *string
 }
 
-func fetchCreditionalOfGitHub(chn *chv1.Channel, c client.Client) (*cred, error) {
+func fetchCredentialOfGithub(chn *chv1.Channel, c client.Client) (*cred, error) {
 	secret := &corev1.Secret{}
 	secns := chn.Spec.SecretRef.Namespace
 
@@ -109,7 +109,7 @@ func CloneGitRepo(chn *chv1.Channel, kubeClient client.Client, cOpt ...CloneFunc
 	}
 
 	if chn.Spec.SecretRef != nil {
-		gitCred, err := fetchCreditionalOfGitHub(chn, kubeClient)
+		gitCred, err := fetchCredentialOfGithub(chn, kubeClient)
 		if err != nil {
 			return nil, nil, errors.Wrap(err, "failed to clone git")
 		}
