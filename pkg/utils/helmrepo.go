@@ -82,7 +82,9 @@ func GetHelmRepoIndex(channelPathName string, loadIdx LoadIndexPageFunc) (*repo.
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to get chart index")
 	}
+
 	defer resp.Body.Close()
+
 	klog.V(debugLevel).Info("Done retrieving URL: ", buildRepoURL(channelPathName))
 
 	body, err := ioutil.ReadAll(resp.Body)
