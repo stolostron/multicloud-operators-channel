@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package githubsynchronizer
+package helmreposynchronizer
 
 import (
 	"context"
@@ -20,9 +20,6 @@ import (
 	"testing"
 
 	"github.com/onsi/gomega"
-	fileCopy "github.com/otiai10/copy"
-	"github.com/pkg/errors"
-	"gopkg.in/src-d/go-git.v4"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/types"
@@ -37,12 +34,14 @@ import (
 // 2. delete/update local deployables resource if github resource changed
 
 const (
-	testSyncInterval = 2
-	testGitDir       = "../../../tests/github/testrepo"
-	testGitDirUpdate = "../../../tests/github/testrepo-update"
+	helmTests            = "../../../tests/helm/testhelm"
+	helmTestsUpdate      = "../../../tests/helm/testhelm-update"
+	helmChartsNum        = 2
+	helmChartsUpdatedNum = 1
+	testSyncInterval     = 2
 )
 
-func Test_CloneAndCreateDeployables(t *testing.T) {
+func Test_HelmCloneAndCreateDeployables(t *testing.T) {
 	g := gomega.NewGomegaWithT(t)
 
 	// Setup the Manager and Controller.  Wrap the Controller Reconcile function so it writes each request to a
@@ -59,7 +58,7 @@ func Test_CloneAndCreateDeployables(t *testing.T) {
 		mgrStopped.Wait()
 	}()
 
-	sync, err := CreateGithubSynchronizer(mgr.GetConfig(), mgr.GetScheme(), testSyncInterval)
+	sync, err := CreateHelmrepoSynchronizer(mgr.GetConfig(), mgr.GetScheme(), testSyncInterval)
 
 	if err != nil {
 		t.Error("failed to create synchronizer")
@@ -72,8 +71,8 @@ func Test_CloneAndCreateDeployables(t *testing.T) {
 			Name:      chKey.Name,
 		},
 		Spec: chv1.ChannelSpec{
-			Type:     chv1.ChannelType("github"),
-			Pathname: testGitDir,
+			Type:     chv1.ChannelType("helmrepo"),
+			Pathname: helmTests,
 		},
 	}
 
@@ -83,16 +82,14 @@ func Test_CloneAndCreateDeployables(t *testing.T) {
 	fCh := &chv1.Channel{}
 	g.Expect(c.Get(context.TODO(), chKey, fCh))
 
-	sync.syncChannel(fCh, utils.FakeClone)
+	sync.syncChannel(fCh, utils.LoadLocalIdx)
 
 	dplList := &dplv1.DeployableList{}
 
 	g.Expect(c.List(context.TODO(), dplList)).NotTo(gomega.HaveOccurred())
 
 	dplCnt := map[string]int{
-		"Deployment":  3,
-		"HelmRelease": 1,
-		"Service":     3,
+		"HelmRelease": helmChartsNum,
 	}
 	assertDeployableList(t, dplList, dplCnt)
 }
@@ -116,7 +113,7 @@ func assertDeployableList(t *testing.T, dplList *dplv1.DeployableList, dplCnt ma
 	}
 }
 
-func Test_DeleteOrUpdateDeployables(t *testing.T) {
+func Test_HelmDeleteOrUpdateDeployables(t *testing.T) {
 	g := gomega.NewGomegaWithT(t)
 
 	// Setup the Manager and Controller.  Wrap the Controller Reconcile function so it writes each request to a
@@ -133,7 +130,7 @@ func Test_DeleteOrUpdateDeployables(t *testing.T) {
 		mgrStopped.Wait()
 	}()
 
-	sync, err := CreateGithubSynchronizer(mgr.GetConfig(), mgr.GetScheme(), testSyncInterval)
+	sync, err := CreateHelmrepoSynchronizer(mgr.GetConfig(), mgr.GetScheme(), testSyncInterval)
 
 	if err != nil {
 		t.Error("failed to create synchronizer")
@@ -146,58 +143,37 @@ func Test_DeleteOrUpdateDeployables(t *testing.T) {
 			Name:      chKey.Name,
 		},
 		Spec: chv1.ChannelSpec{
-			Type:     chv1.ChannelType("github"),
-			Pathname: chKey.String(),
+			Type:     chv1.ChannelType("helmrepo"),
+			Pathname: helmTests,
 		},
 	}
 
 	defer c.Delete(context.TODO(), tChn)
 	g.Expect(c.Create(context.TODO(), tChn)).NotTo(gomega.HaveOccurred())
 
-	fakeClone := func(repoRoot string, isBare bool, gOpt *git.CloneOptions) (*git.Repository, error) {
-		if err := fileCopy.Copy(testGitDir, repoRoot); err != nil {
-			return nil, errors.Wrap(err, "faked gitclone failed")
-		}
-
-		return nil, nil
-	}
-
 	fCh := &chv1.Channel{}
 	g.Expect(c.Get(context.TODO(), chKey, fCh))
 
-	fCh.Spec.Pathname = testGitDirUpdate
-	sync.syncChannel(fCh, fakeClone)
+	sync.syncChannel(fCh, utils.LoadLocalIdx)
 
 	dplList := &dplv1.DeployableList{}
 
 	g.Expect(c.List(context.TODO(), dplList)).NotTo(gomega.HaveOccurred())
 
 	dplCnt := map[string]int{
-		"Deployment":  3,
-		"HelmRelease": 1,
-		"ConfigMap":   1,
-		"Service":     3,
+		"HelmRelease": helmChartsNum,
 	}
 	assertDeployableList(t, dplList, dplCnt)
 
-	fakeCloneUpdate := func(repoRoot string, isBare bool, gOpt *git.CloneOptions) (*git.Repository, error) {
-		if err := fileCopy.Copy(testGitDirUpdate, repoRoot); err != nil {
-			return nil, errors.Wrap(err, "faked gitclone failed")
-		}
+	fCh.Spec.Pathname = helmTestsUpdate
 
-		return nil, nil
-	}
-
-	sync.syncChannel(fCh, fakeCloneUpdate)
+	sync.syncChannel(fCh, utils.LoadLocalIdx)
 
 	dplListUpdate := &dplv1.DeployableList{}
 	g.Expect(c.List(context.TODO(), dplListUpdate)).NotTo(gomega.HaveOccurred())
 
 	dplUpdateCnt := map[string]int{
-		"Deployment":  1,
-		"ConfigMap":   1,
-		"HelmRelease": 1,
-		"Service":     3,
+		"HelmRelease": helmChartsUpdatedNum,
 	}
 	assertDeployableList(t, dplListUpdate, dplUpdateCnt)
 }

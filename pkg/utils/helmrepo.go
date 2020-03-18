@@ -46,9 +46,8 @@ func buildRepoURL(repoURL string) string {
 	return validURL + "index.yaml"
 }
 
-// GetHelmRepoIndex get the index file from helm repository
-func GetHelmRepoIndex(channelPathName string) (*repo.IndexFile, error) {
-	repoURL := buildRepoURL(channelPathName)
+func GetChartIndex(chnPathname string) (*http.Response, error) {
+	repoURL := buildRepoURL(chnPathname)
 
 	client := decideHTTPClient(repoURL)
 
@@ -57,19 +56,47 @@ func GetHelmRepoIndex(channelPathName string) (*repo.IndexFile, error) {
 		return nil, errors.Wrap(err, fmt.Sprintf("failed to contact repo: %v", repoURL))
 	}
 
+	return resp, nil
+}
+
+type LoadIndexPageFunc func(string) (*http.Response, error)
+
+func LoadLocalIdx(idxPath string) (*http.Response, error) {
+	localDir := http.Dir(idxPath)
+	content, err := localDir.Open("index.yaml")
+
+	if err != nil {
+		return nil, err
+	}
+
+	resp := &http.Response{
+		Body: content,
+	}
+
+	return resp, nil
+}
+
+// GetHelmRepoIndex get the index file from helm repository
+func GetHelmRepoIndex(channelPathName string, loadIdx LoadIndexPageFunc) (*repo.IndexFile, error) {
+	resp, err := loadIdx(channelPathName)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to get chart index")
+	}
+
 	defer resp.Body.Close()
-	klog.V(debugLevel).Info("Done retrieving URL: ", repoURL)
+
+	klog.V(debugLevel).Info("Done retrieving URL: ", buildRepoURL(channelPathName))
 
 	body, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
-		return nil, errors.Wrap(err, fmt.Sprintf("unable to read body of %v", repoURL))
+		return nil, errors.Wrap(err, fmt.Sprintf("unable to read body of %v", buildRepoURL(channelPathName)))
 	}
 
 	klog.V(debugLevel).Info("Index file: \n", string(body))
 
 	i := &repo.IndexFile{}
 	if err := yaml.Unmarshal(body, i); err != nil {
-		return nil, errors.Wrap(err, fmt.Sprintf("unable to unmarshal repo %v", repoURL))
+		return nil, errors.Wrap(err, fmt.Sprintf("unable to unmarshal repo %v", buildRepoURL(channelPathName)))
 	}
 
 	return i, nil

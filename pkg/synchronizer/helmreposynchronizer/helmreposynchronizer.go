@@ -96,17 +96,17 @@ func (sync *ChannelSynchronizer) syncChannelsWithHelmRepo() {
 
 	for _, ch := range sync.ChannelMap {
 		klog.V(5).Info("synching channel ", ch.Name)
-		sync.syncChannel(ch)
+		sync.syncChannel(ch, utils.GetChartIndex)
 	}
 }
 
-func (sync *ChannelSynchronizer) syncChannel(chn *chv1.Channel) {
+func (sync *ChannelSynchronizer) syncChannel(chn *chv1.Channel, localIdxFunc utils.LoadIndexPageFunc) {
 	if chn == nil {
 		return
 	}
 
 	// retrieve helm chart list from helm repo
-	idx, err := utils.GetHelmRepoIndex(chn.Spec.Pathname)
+	idx, err := utils.GetHelmRepoIndex(chn.Spec.Pathname, localIdxFunc)
 	if err != nil {
 		klog.Errorf("Error getting index for channel %v/%v err: %v ", chn.Namespace, chn.Name, errors.Cause(err).Error())
 		return

@@ -17,9 +17,6 @@ package utils
 import (
 	"testing"
 
-	fileCopy "github.com/otiai10/copy"
-	"github.com/pkg/errors"
-	"gopkg.in/src-d/go-git.v4"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 
@@ -32,14 +29,6 @@ const (
 	resDirNum = 2
 )
 
-func FakeClone(repoRoot string, isBare bool, gOpt *git.CloneOptions) (*git.Repository, error) {
-	if err := fileCopy.Copy(gitTests, repoRoot); err != nil {
-		return nil, errors.Wrap(err, "faked gitclone failed")
-	}
-
-	return nil, nil
-}
-
 func Test_CloneGitRepo(t *testing.T) {
 	chnKey := types.NamespacedName{Name: "t-ch", Namespace: "t-ch-ns"}
 	chn := &chv1.Channel{
@@ -48,7 +37,7 @@ func Test_CloneGitRepo(t *testing.T) {
 			Name:      chnKey.Name,
 		},
 		Spec: chv1.ChannelSpec{
-			Pathname: chnKey.String(),
+			Pathname: gitTests,
 		},
 	}
 
