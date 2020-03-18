@@ -46,7 +46,7 @@ func buildRepoURL(repoURL string) string {
 	return validURL + "index.yaml"
 }
 
-func getChartIndex(chnPathname string) (*http.Response, error) {
+func GetChartIndex(chnPathname string) (*http.Response, error) {
 	repoURL := buildRepoURL(chnPathname)
 
 	client := decideHTTPClient(repoURL)
@@ -59,9 +59,11 @@ func getChartIndex(chnPathname string) (*http.Response, error) {
 	return resp, nil
 }
 
+type LoadIndexPageFunc func(string) (*http.Response, error)
+
 // GetHelmRepoIndex get the index file from helm repository
-func GetHelmRepoIndex(channelPathName string) (*repo.IndexFile, error) {
-	resp, err := getChartIndex(channelPathName)
+func GetHelmRepoIndex(channelPathName string, loadIdx LoadIndexPageFunc) (*repo.IndexFile, error) {
+	resp, err := loadIdx(channelPathName)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to get chart index")
 	}
