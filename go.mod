@@ -11,6 +11,7 @@ require (
 	github.com/open-cluster-management/multicloud-operators-deployable v0.0.0-20200305002029-e8093169e4ff
 	github.com/open-cluster-management/multicloud-operators-placementrule v0.0.0-20200304214605-e52bfdcb25bb
 	github.com/operator-framework/operator-sdk v0.12.0
+	github.com/otiai10/copy v1.1.1
 	github.com/pkg/errors v0.8.1
 	github.com/prometheus/common v0.4.1
 	github.com/spf13/pflag v1.0.3

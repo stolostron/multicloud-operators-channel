@@ -27,6 +27,7 @@ import (
 	"strings"
 
 	"github.com/ghodss/yaml"
+	"github.com/pkg/errors"
 	"k8s.io/helm/pkg/chartutil"
 	"k8s.io/helm/pkg/repo"
 
@@ -43,8 +44,62 @@ const (
 	Password = "accessToken"
 )
 
+type cred struct {
+	accessKey *string
+	pwd       *string
+}
+
+func fetchCredentialOfGithub(chn *chv1.Channel, c client.Client) (*cred, error) {
+	secret := &corev1.Secret{}
+	secns := chn.Spec.SecretRef.Namespace
+
+	if secns == "" {
+		secns = chn.Namespace
+	}
+
+	if err := c.Get(context.TODO(), types.NamespacedName{Name: chn.Spec.SecretRef.Name, Namespace: secns}, secret); err != nil {
+		return nil, errors.Wrap(err, "unable to get secret.")
+	}
+
+	gitCred := &cred{}
+	if err := yaml.Unmarshal(secret.Data[UserID], gitCred.accessKey); err != nil {
+		return nil, errors.Wrap(err, "unable to unmarshal github access key")
+	}
+
+	if err := yaml.Unmarshal(secret.Data[Password], gitCred.pwd); err != nil {
+		return nil, errors.Wrap(err, "unable to unmarshal github secert key")
+	}
+
+	return gitCred, nil
+}
+
+func createTmpDir(ns, name string) (string, error) {
+	repoRoot := filepath.Join(os.TempDir(), ns, name)
+	if _, err := os.Stat(repoRoot); os.IsNotExist(err) {
+		if err := os.MkdirAll(repoRoot, os.ModePerm); err != nil {
+			klog.Error(err, "unable to unable to unmarshal secret.")
+			return "", errors.Wrap(err, "unable to create a temp dirctory")
+		}
+	} else {
+		if err := os.RemoveAll(repoRoot); err != nil {
+			return "", errors.Wrap(err, "unable to clean up temp dirctory")
+		}
+	}
+
+	return repoRoot, nil
+}
+
+type CloneFunc = func(string, bool, *git.CloneOptions) (*git.Repository, error)
+
 // CloneGitRepo clones the GitHub repo
-func CloneGitRepo(chn *chv1.Channel, kubeClient client.Client) (*repo.IndexFile, map[string]string, error) {
+func CloneGitRepo(chn *chv1.Channel, kubeClient client.Client, cOpt ...CloneFunc) (*repo.IndexFile, map[string]string, error) {
+	var cFunc CloneFunc
+	if len(cOpt) == 0 {
+		cFunc = git.PlainClone
+	} else {
+		cFunc = cOpt[0]
+	}
+
 	options := &git.CloneOptions{
 		URL:               chn.Spec.Pathname,
 		Depth:             1,
@@ -54,62 +109,26 @@ func CloneGitRepo(chn *chv1.Channel, kubeClient client.Client) (*repo.IndexFile,
 	}
 
 	if chn.Spec.SecretRef != nil {
-		secret := &corev1.Secret{}
-		secns := chn.Spec.SecretRef.Namespace
-
-		if secns == "" {
-			secns = chn.Namespace
-		}
-
-		err := kubeClient.Get(context.TODO(), types.NamespacedName{Name: chn.Spec.SecretRef.Name, Namespace: secns}, secret)
-
+		gitCred, err := fetchCredentialOfGithub(chn, kubeClient)
 		if err != nil {
-			klog.Error(err, "Unable to get secret.")
-			return nil, nil, err
-		}
-
-		username := ""
-		password := ""
-
-		err = yaml.Unmarshal(secret.Data[UserID], &username)
-		if err != nil {
-			klog.Error(err, "Unable to unable to unmarshal secret.")
-			return nil, nil, err
-		}
-
-		err = yaml.Unmarshal(secret.Data[Password], &password)
-		if err != nil {
-			klog.Error(err, "unable to unable to unmarshal secret.")
-			return nil, nil, err
+			return nil, nil, errors.Wrap(err, "failed to clone git")
 		}
 
 		options.Auth = &githttp.BasicAuth{
-			Username: username,
-			Password: password,
+			Username: *gitCred.accessKey,
+			Password: *gitCred.pwd,
 		}
 	}
 
-	repoRoot := filepath.Join(os.TempDir(), chn.Namespace, chn.Name)
-	if _, err := os.Stat(repoRoot); os.IsNotExist(err) {
-		err := os.MkdirAll(repoRoot, os.ModePerm)
-		if err != nil {
-			klog.Error(err, "unable to unable to unmarshal secret.")
-			return nil, nil, err
-		}
-	} else {
-		err := os.RemoveAll(repoRoot)
-		if err != nil {
-			klog.Error(err, "unable to unable to unmarshal secret.")
-			return nil, nil, err
-		}
+	repoRoot, err := createTmpDir(chn.Namespace, chn.Name)
+	if err != nil {
+		return nil, nil, errors.Wrap(err, "failed to clone git")
 	}
 
 	klog.V(debugLevel).Info("Cloning ", chn.Spec.Pathname, " into ", repoRoot)
-	_, err := git.PlainClone(repoRoot, false, options)
 
-	if err != nil {
-		klog.Error("Failed to git clone: ", err.Error())
-		return nil, nil, err
+	if _, err := cFunc(repoRoot, false, options); err != nil {
+		return nil, nil, errors.Wrap(err, "failed to clone git")
 	}
 
 	// Generate index.yaml
