@@ -61,6 +61,21 @@ func GetChartIndex(chnPathname string) (*http.Response, error) {
 
 type LoadIndexPageFunc func(string) (*http.Response, error)
 
+func LoadLocalIdx(idxPath string) (*http.Response, error) {
+	localDir := http.Dir(idxPath)
+	content, err := localDir.Open("index.yaml")
+
+	if err != nil {
+		return nil, err
+	}
+
+	resp := &http.Response{
+		Body: content,
+	}
+
+	return resp, nil
+}
+
 // GetHelmRepoIndex get the index file from helm repository
 func GetHelmRepoIndex(channelPathName string, loadIdx LoadIndexPageFunc) (*repo.IndexFile, error) {
 	resp, err := loadIdx(channelPathName)

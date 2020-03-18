@@ -27,6 +27,7 @@ import (
 	"strings"
 
 	"github.com/ghodss/yaml"
+	fileCopy "github.com/otiai10/copy"
 	"github.com/pkg/errors"
 	"k8s.io/helm/pkg/chartutil"
 	"k8s.io/helm/pkg/repo"
@@ -90,6 +91,14 @@ func createTmpDir(ns, name string) (string, error) {
 }
 
 type CloneFunc = func(string, bool, *git.CloneOptions) (*git.Repository, error)
+
+func FakeClone(repoRoot string, isBare bool, gOpt *git.CloneOptions) (*git.Repository, error) {
+	if err := fileCopy.Copy(gOpt.URL, repoRoot); err != nil {
+		return nil, errors.Wrap(err, "faked gitclone failed")
+	}
+
+	return nil, nil
+}
 
 // CloneGitRepo clones the GitHub repo
 func CloneGitRepo(chn *chv1.Channel, kubeClient client.Client, cOpt ...CloneFunc) (*repo.IndexFile, map[string]string, error) {

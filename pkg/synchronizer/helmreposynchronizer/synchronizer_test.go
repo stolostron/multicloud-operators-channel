@@ -17,7 +17,6 @@ package helmreposynchronizer
 import (
 	"context"
 	"encoding/json"
-	"net/http"
 	"testing"
 
 	"github.com/onsi/gomega"
@@ -27,6 +26,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 
 	chv1 "github.com/open-cluster-management/multicloud-operators-channel/pkg/apis/apps/v1"
+	"github.com/open-cluster-management/multicloud-operators-channel/pkg/utils"
 	dplv1 "github.com/open-cluster-management/multicloud-operators-deployable/pkg/apis/apps/v1"
 )
 
@@ -40,20 +40,6 @@ const (
 	helmChartsUpdatedNum = 1
 	testSyncInterval     = 2
 )
-
-func loadLocalIdx(idxPath string) (*http.Response, error) {
-	localDir := http.Dir(idxPath)
-	content, err := localDir.Open("index.yaml")
-	if err != nil {
-		return nil, err
-	}
-
-	resp := &http.Response{
-		Body: content,
-	}
-
-	return resp, nil
-}
 
 func Test_HelmCloneAndCreateDeployables(t *testing.T) {
 	g := gomega.NewGomegaWithT(t)
@@ -96,7 +82,7 @@ func Test_HelmCloneAndCreateDeployables(t *testing.T) {
 	fCh := &chv1.Channel{}
 	g.Expect(c.Get(context.TODO(), chKey, fCh))
 
-	sync.syncChannel(fCh, loadLocalIdx)
+	sync.syncChannel(fCh, utils.LoadLocalIdx)
 
 	dplList := &dplv1.DeployableList{}
 
@@ -168,7 +154,7 @@ func Test_HelmDeleteOrUpdateDeployables(t *testing.T) {
 	fCh := &chv1.Channel{}
 	g.Expect(c.Get(context.TODO(), chKey, fCh))
 
-	sync.syncChannel(fCh, loadLocalIdx)
+	sync.syncChannel(fCh, utils.LoadLocalIdx)
 
 	dplList := &dplv1.DeployableList{}
 
@@ -181,7 +167,7 @@ func Test_HelmDeleteOrUpdateDeployables(t *testing.T) {
 
 	fCh.Spec.Pathname = helmTestsUpdate
 
-	sync.syncChannel(fCh, loadLocalIdx)
+	sync.syncChannel(fCh, utils.LoadLocalIdx)
 
 	dplListUpdate := &dplv1.DeployableList{}
 	g.Expect(c.List(context.TODO(), dplListUpdate)).NotTo(gomega.HaveOccurred())

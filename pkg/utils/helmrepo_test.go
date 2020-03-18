@@ -15,31 +15,16 @@
 package utils
 
 import (
-	"net/http"
 	"testing"
 )
 
 const (
 	helmTests     = "../../tests/helm/testhelm"
-	helmChartsNum = 1
+	helmChartsNum = 2
 )
 
-func loadLocalIdx(idxPath string) (*http.Response, error) {
-	localDir := http.Dir(idxPath)
-	content, err := localDir.Open("index.yaml")
-	if err != nil {
-		return nil, err
-	}
-
-	resp := &http.Response{
-		Body: content,
-	}
-
-	return resp, nil
-}
-
 func TestGetHelmRepoIndex(t *testing.T) {
-	idx, err := GetHelmRepoIndex(helmTests, loadLocalIdx)
+	idx, err := GetHelmRepoIndex(helmTests, LoadLocalIdx)
 
 	if err != nil {
 		t.Errorf("failed to clone %+v", err)

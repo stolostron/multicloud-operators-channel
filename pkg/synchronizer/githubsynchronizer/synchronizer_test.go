@@ -29,6 +29,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 
 	chv1 "github.com/open-cluster-management/multicloud-operators-channel/pkg/apis/apps/v1"
+	"github.com/open-cluster-management/multicloud-operators-channel/pkg/utils"
 	dplv1 "github.com/open-cluster-management/multicloud-operators-deployable/pkg/apis/apps/v1"
 )
 
@@ -72,25 +73,17 @@ func Test_CloneAndCreateDeployables(t *testing.T) {
 		},
 		Spec: chv1.ChannelSpec{
 			Type:     chv1.ChannelType("github"),
-			Pathname: chKey.String(),
+			Pathname: testGitDir,
 		},
 	}
 
 	defer c.Delete(context.TODO(), tChn)
 	g.Expect(c.Create(context.TODO(), tChn)).NotTo(gomega.HaveOccurred())
 
-	fakeClone := func(repoRoot string, isBare bool, gOpt *git.CloneOptions) (*git.Repository, error) {
-		if err := fileCopy.Copy(testGitDir, repoRoot); err != nil {
-			return nil, errors.Wrap(err, "faked gitclone failed")
-		}
-
-		return nil, nil
-	}
-
 	fCh := &chv1.Channel{}
 	g.Expect(c.Get(context.TODO(), chKey, fCh))
 
-	sync.syncChannel(fCh, fakeClone)
+	sync.syncChannel(fCh, utils.FakeClone)
 
 	dplList := &dplv1.DeployableList{}
 
@@ -172,6 +165,7 @@ func Test_DeleteOrUpdateDeployables(t *testing.T) {
 	fCh := &chv1.Channel{}
 	g.Expect(c.Get(context.TODO(), chKey, fCh))
 
+	fCh.Spec.Pathname = testGitDirUpdate
 	sync.syncChannel(fCh, fakeClone)
 
 	dplList := &dplv1.DeployableList{}
