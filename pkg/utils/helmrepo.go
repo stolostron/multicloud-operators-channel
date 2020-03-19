@@ -19,19 +19,35 @@ import (
 	"fmt"
 	"io/ioutil"
 	"net/http"
+	"strconv"
 
 	"github.com/ghodss/yaml"
 	"github.com/pkg/errors"
+	corev1 "k8s.io/api/core/v1"
 	"k8s.io/helm/pkg/repo"
 	"k8s.io/klog"
 )
 
-func decideHTTPClient(repoURL string) *http.Client {
+const InsecureSkipVerifyFlag = "insecureSkipVerify"
+
+func decideHTTPClient(repoURL string, chnRefCfgMap *corev1.ConfigMap) *http.Client {
 	klog.V(infoLevel).Info(repoURL)
 
-	tlsConfig := &tls.Config{InsecureSkipVerify: true}
-	transport := &http.Transport{TLSClientConfig: tlsConfig}
-	client := &http.Client{Transport: transport}
+	tlsConfig := &tls.Config{}
+
+	if chnRefCfgMap != nil && chnRefCfgMap.Data[InsecureSkipVerifyFlag] != "" {
+		b, err := strconv.ParseBool(chnRefCfgMap.Data[InsecureSkipVerifyFlag])
+		if err != nil {
+			klog.Warning("unable to parse insecureSkipVerify false, using default value: false")
+		}
+		tlsConfig.InsecureSkipVerify = b
+	}
+
+	client := &http.Client{
+		Transport: &http.Transport{
+			TLSClientConfig: tlsConfig,
+		},
+	}
 
 	return client
 }
@@ -46,10 +62,10 @@ func buildRepoURL(repoURL string) string {
 	return validURL + "index.yaml"
 }
 
-func GetChartIndex(chnPathname string) (*http.Response, error) {
+func GetChartIndex(chnPathname string, chnRefCfgMap *corev1.ConfigMap) (*http.Response, error) {
 	repoURL := buildRepoURL(chnPathname)
 
-	client := decideHTTPClient(repoURL)
+	client := decideHTTPClient(repoURL, chnRefCfgMap)
 
 	resp, err := client.Get(repoURL)
 	if err != nil {
@@ -59,9 +75,9 @@ func GetChartIndex(chnPathname string) (*http.Response, error) {
 	return resp, nil
 }
 
-type LoadIndexPageFunc func(string) (*http.Response, error)
+type LoadIndexPageFunc func(string, *corev1.ConfigMap) (*http.Response, error)
 
-func LoadLocalIdx(idxPath string) (*http.Response, error) {
+func LoadLocalIdx(idxPath string, cfg *corev1.ConfigMap) (*http.Response, error) {
 	localDir := http.Dir(idxPath)
 	content, err := localDir.Open("index.yaml")
 
@@ -77,8 +93,8 @@ func LoadLocalIdx(idxPath string) (*http.Response, error) {
 }
 
 // GetHelmRepoIndex get the index file from helm repository
-func GetHelmRepoIndex(channelPathName string, loadIdx LoadIndexPageFunc) (*repo.IndexFile, error) {
-	resp, err := loadIdx(channelPathName)
+func GetHelmRepoIndex(channelPathName string, chnRefCfgMap *corev1.ConfigMap, loadIdx LoadIndexPageFunc) (*repo.IndexFile, error) {
+	resp, err := loadIdx(channelPathName, chnRefCfgMap)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to get chart index")
 	}
