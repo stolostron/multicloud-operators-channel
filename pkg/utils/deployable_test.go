@@ -50,8 +50,8 @@ var configmap, _ = json.Marshal(v1.ConfigMap{
 func dplGenerator(dpl dplElements) *dplv1.Deployable {
 	return &dplv1.Deployable{
 		TypeMeta: metav1.TypeMeta{
-			Kind:       "app.ibm.com",
-			APIVersion: "v1alpha1",
+			Kind:       utils.DeployableTypeKind,
+			APIVersion: utils.DeployableTypeAPIVersion,
 		},
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      dpl.name,
