@@ -39,8 +39,8 @@ func TestGenerateChannelMap(t *testing.T) {
 	}
 	chObj := &chv1.Channel{
 		TypeMeta: metav1.TypeMeta{
-			Kind:       "app.ibm.com",
-			APIVersion: "v1alpha1",
+			Kind:       utils.ChannelTypeKind,
+			APIVersion: utils.ChannelTypeAPIVersion,
 		},
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      chName,
@@ -74,8 +74,8 @@ func TestLocateChannel(t *testing.T) {
 
 	chObj := &chv1.Channel{
 		TypeMeta: metav1.TypeMeta{
-			Kind:       "app.ibm.com",
-			APIVersion: "v1alpha1",
+			Kind:       utils.ChannelTypeKind,
+			APIVersion: utils.ChannelTypeAPIVersion,
 		},
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      chName,
