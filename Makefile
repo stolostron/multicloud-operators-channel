@@ -138,8 +138,9 @@ build-latest-community-operator:
 	@echo "Pushed the following image: ${COMPONENT_DOCKER_REPO}/${COMPONENT_NAME}:community-latest"
 
 release-community-operator:
-	docker tag $(REGISTRY)/$(IMG):community-latest ${COMPONENT_DOCKER_REPO}/${COMPONENT_NAME}:community-${COMPONENT_VERSION}
 	docker login ${COMPONENT_DOCKER_REPO} -u ${DOCKER_USER} -p ${DOCKER_PASS}
+	docker pull ${COMPONENT_DOCKER_REPO}/${COMPONENT_NAME}:community-latest
+	docker tag $(REGISTRY)/$(IMG):community-latest ${COMPONENT_DOCKER_REPO}/${COMPONENT_NAME}:community-${COMPONENT_VERSION}
 	docker push ${COMPONENT_DOCKER_REPO}/${COMPONENT_NAME}:community-${COMPONENT_VERSION}
 	@echo "Pushed the following image: ${COMPONENT_DOCKER_REPO}/${COMPONENT_NAME}:community-${COMPONENT_VERSION}"
 
