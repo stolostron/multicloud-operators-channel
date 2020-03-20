@@ -132,8 +132,14 @@ build-images:
 	@operator-sdk build ${IMAGE_NAME_AND_VERSION}
 	@docker tag ${IMAGE_NAME_AND_VERSION} $(REGISTRY)/$(IMG):latest
 
-build-release-community-operator:
-	docker tag $(REGISTRY)/$(IMG):latest ${COMPONENT_DOCKER_REPO}/${COMPONENT_NAME}:community-${COMPONENT_VERSION}
+build-latest-community-operator:
+	docker tag $(REGISTRY)/$(IMG):latest ${COMPONENT_DOCKER_REPO}/${COMPONENT_NAME}:community-latest
+	docker login ${COMPONENT_DOCKER_REPO} -u ${DOCKER_USER} -p ${DOCKER_PASS}
+	docker push ${COMPONENT_DOCKER_REPO}/${COMPONENT_NAME}:community-latest
+	@echo "Pushed the following image: ${COMPONENT_DOCKER_REPO}/${COMPONENT_NAME}:community-latest"
+
+release-community-operator:
+	docker tag $(REGISTRY)/$(IMG):community-latest ${COMPONENT_DOCKER_REPO}/${COMPONENT_NAME}:community-${COMPONENT_VERSION}
 	docker login ${COMPONENT_DOCKER_REPO} -u ${DOCKER_USER} -p ${DOCKER_PASS}
 	docker push ${COMPONENT_DOCKER_REPO}/${COMPONENT_NAME}:community-${COMPONENT_VERSION}
 	@echo "Pushed the following image: ${COMPONENT_DOCKER_REPO}/${COMPONENT_NAME}:community-${COMPONENT_VERSION}"
