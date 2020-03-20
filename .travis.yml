@@ -59,6 +59,7 @@ jobs:
           make init
           make component/build
           make component/push
+          make build-images-community-operator-latest
   
     - stage: unit-test
       name: "Run unit test"

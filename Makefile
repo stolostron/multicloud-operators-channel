@@ -56,6 +56,7 @@ ifneq ("$(realpath $(DEST))", "$(realpath $(PWD))")
     $(error Please run 'make' from $(DEST). Current directory is $(PWD))
 endif
 
+COMPONENT_VERSION_COMMUNITY_OP ?= $(shell cat ${BUILD_HARNESS_PATH}/../COMPONENT_VERSION_COMMUNITY_OP 2> /dev/null)
 
 # GITHUB_USER containing '@' char must be escaped with '%40'
 GITHUB_USER := $(shell echo $(GITHUB_USER) | sed 's/@/%40/g')
@@ -131,6 +132,11 @@ build-images:
 	@operator-sdk build ${IMAGE_NAME_AND_VERSION}
 	@docker tag ${IMAGE_NAME_AND_VERSION} $(REGISTRY)/$(IMG):latest
 
+build-images-community-operator-latest:
+	@echo ${COMPONENT_VERSION_COMMUNITY_OP}
+	$(DOCKER) login ${COMPONENT_DOCKER_REPO} -u ${DOCKER_USER} -p ${DOCKER_PASS}
+	$(DOCKER) push ${COMPONENT_DOCKER_REPO}/${COMPONENT_NAME}:latest
+	@echo "Pushed the following image: ${COMPONENT_DOCKER_REPO}/${COMPONENT_NAME}:latest"
 
 ############################################################
 # clean section
