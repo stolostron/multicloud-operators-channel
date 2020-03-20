@@ -132,11 +132,9 @@ build-images:
 	@operator-sdk build ${IMAGE_NAME_AND_VERSION}
 	@docker tag ${IMAGE_NAME_AND_VERSION} $(REGISTRY)/$(IMG):latest
 
-build-images-community-operator-latest:
-	@echo "community operator version: ${COMPONENT_VERSION_COMMUNITY_OP}"
-	$(DOCKER) images
+build-release-community-operator:
 	$(DOCKER) login ${COMPONENT_DOCKER_REPO} -u ${DOCKER_USER} -p ${DOCKER_PASS}
-	$(DOCKER) push ${COMPONENT_DOCKER_REPO}/${COMPONENT_NAME}:latest
+	$(DOCKER) push ${COMPONENT_DOCKER_REPO}/${COMPONENT_NAME}:community-${COMPONENT_VERSION}
 	@echo "Pushed the following image: ${COMPONENT_DOCKER_REPO}/${COMPONENT_NAME}:latest"
 
 ############################################################
