@@ -3,6 +3,7 @@
 [![Build](https://travis-ci.com/open-cluster-management/multicloud-operators-channel.svg?branch=master)](https://travis-ci.com/open-cluster-management/multicloud-operators-channel.svg?branch=master)
 [![Go Report Card](https://goreportcard.com/badge/github.com/open-cluster-management/multicloud-operators-channel)](https://goreportcard.com/report/github.com/open-cluster-management/multicloud-operators-channel)
 [![GoDoc](https://godoc.org/github.com/open-cluster-management/multicloud-operators-channel?status.svg)](https://godoc.org/github.com/open-cluster-management/multicloud-operators-channel?status.svg)
+[![Sonarcloud Status](https://sonarcloud.io/api/project_badges/measure?project=open-cluster-management_multicloud-operators-channel&metric=coverage)](https://sonarcloud.io/api/project_badges/measure?project=open-cluster-management_multicloud-operators-channel&metric=coverage)
 [![License](https://img.shields.io/:license-apache-blue.svg)](http://www.apache.org/licenses/LICENSE-2.0.html)
 
 <!-- START doctoc generated TOC please keep comment here to allow auto update -->
