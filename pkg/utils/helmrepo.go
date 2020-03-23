@@ -40,6 +40,7 @@ func decideHTTPClient(repoURL string, chnRefCfgMap *corev1.ConfigMap) *http.Clie
 		if err != nil {
 			klog.Warning("unable to parse insecureSkipVerify false, using default value: false")
 		}
+
 		tlsConfig.InsecureSkipVerify = b
 	}
 
