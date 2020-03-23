@@ -33,6 +33,7 @@ const InsecureSkipVerifyFlag = "insecureSkipVerify"
 func decideHTTPClient(repoURL string, chnRefCfgMap *corev1.ConfigMap) *http.Client {
 	klog.V(infoLevel).Info(repoURL)
 
+	// rootsCA is loading from host if not configed, https://golang.org/src/crypto/x509/root_linux.go
 	tlsConfig := &tls.Config{}
 
 	if chnRefCfgMap != nil && chnRefCfgMap.Data[InsecureSkipVerifyFlag] != "" {
