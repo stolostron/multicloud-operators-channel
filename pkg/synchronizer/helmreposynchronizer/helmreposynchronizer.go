@@ -19,11 +19,13 @@ import (
 	"encoding/json"
 	"time"
 
+	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/client-go/rest"
+
 	"k8s.io/klog"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
@@ -105,8 +107,16 @@ func (sync *ChannelSynchronizer) syncChannel(chn *chv1.Channel, localIdxFunc uti
 		return
 	}
 
+	chnRefCfgMap := &corev1.ConfigMap{}
+
+	if chn.Spec.ConfigMapRef != nil {
+		chnRefCfgMapKey := types.NamespacedName{Name: chn.Spec.ConfigMapRef.Name, Namespace: chn.Spec.ConfigMapRef.Namespace}
+		if err := sync.kubeClient.Get(context.TODO(), chnRefCfgMapKey, chnRefCfgMap); err != nil {
+			klog.Errorf("failed to Get channel's referred configmap, err: %v ", err)
+		}
+	}
 	// retrieve helm chart list from helm repo
-	idx, err := utils.GetHelmRepoIndex(chn.Spec.Pathname, localIdxFunc)
+	idx, err := utils.GetHelmRepoIndex(chn.Spec.Pathname, chnRefCfgMap, localIdxFunc)
 	if err != nil {
 		klog.Errorf("Error getting index for channel %v/%v err: %v ", chn.Namespace, chn.Name, errors.Cause(err).Error())
 		return
