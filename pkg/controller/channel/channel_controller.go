@@ -23,6 +23,7 @@ import (
 	gitsync "github.com/open-cluster-management/multicloud-operators-channel/pkg/synchronizer/githubsynchronizer"
 	helmsync "github.com/open-cluster-management/multicloud-operators-channel/pkg/synchronizer/helmreposynchronizer"
 	"github.com/open-cluster-management/multicloud-operators-channel/pkg/utils"
+	dplv1 "github.com/open-cluster-management/multicloud-operators-deployable/pkg/apis/apps/v1"
 	dplutils "github.com/open-cluster-management/multicloud-operators-deployable/pkg/utils"
 	placementutils "github.com/open-cluster-management/multicloud-operators-placementrule/pkg/utils"
 
@@ -48,7 +49,7 @@ var (
 	clusterRules = []rbac.PolicyRule{
 		{
 			Verbs:     []string{"get", "list", "watch"},
-			APIGroups: []string{"app.ibm.com"},
+			APIGroups: []string{dplv1.SchemeGroupVersion.Group},
 			Resources: []string{"deployables", "deployables/status", "channels", "channels/status"},
 		},
 		{
@@ -59,7 +60,7 @@ var (
 	}
 
 	//DeployableAnnotation is used to indicate a resource as a logic deployable
-	DeployableAnnotation = "app.ibm.com/deployables"
+	DeployableAnnotation = dplv1.SchemeGroupVersion.Group + "/deployables"
 )
 
 const (

@@ -14,7 +14,9 @@
 
 package utils
 
-import "k8s.io/klog"
+import (
+	"k8s.io/klog"
+)
 
 const (
 	infoLevel  = klog.Level(3)
@@ -41,4 +43,12 @@ const (
 	HelmCRRepoURL = "urls"
 	// HelmCRGitRepoChartPath is spec.Source.Github.ChartPath of the Helm CR
 	HelmCRGitRepoChartPath = "chartPath"
+
+	//Channel type meta for testing case
+	ChannelTypeKind       = "Channel"
+	ChannelTypeAPIVersion = "v1"
+
+	//Deployable type meta for testing case
+	DeployableTypeKind       = "Deployable"
+	DeployableTypeAPIVersion = "v1"
 )
