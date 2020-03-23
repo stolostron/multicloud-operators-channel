@@ -220,6 +220,20 @@ func (r *ReconcileChannel) Reconcile(request reconcile.Request) (reconcile.Resul
 	}
 
 	// If the channel has relative secret and configMap, annotate the channel info in the secret and configMap
+	r.updateReferredSecretAnno(instance)
+
+	//sync the channel to the serving-channel annotation in all involved secrets.
+	r.syncSecrectAnnotation(instance, request.NamespacedName)
+
+	r.updateConfigMap(instance)
+
+	//sync the channel to the serving-channel annotation in all involved ConfigMaps.
+	r.syncConfigAnnotation(instance, request.NamespacedName)
+
+	return reconcile.Result{}, nil
+}
+
+func (r *ReconcileChannel) updateReferredSecretAnno(instance *chv1.Channel) {
 	if instance.Spec.SecretRef != nil && instance.Spec.SecretRef.Name > "" {
 		secretName := instance.Spec.SecretRef.Name
 
@@ -231,8 +245,7 @@ func (r *ReconcileChannel) Reconcile(request reconcile.Request) (reconcile.Resul
 		secrectInstance := &corev1.Secret{}
 		secetKey := types.NamespacedName{Name: secretName, Namespace: secretNamespace}
 
-		err = r.Get(context.TODO(), secetKey, secrectInstance)
-		if err == nil {
+		if err := r.Get(context.TODO(), secetKey, secrectInstance); err == nil {
 			localLabels := secrectInstance.GetLabels()
 			if localLabels == nil {
 				localLabels = make(map[string]string)
@@ -244,16 +257,7 @@ func (r *ReconcileChannel) Reconcile(request reconcile.Request) (reconcile.Resul
 			err = r.Update(context.TODO(), secrectInstance)
 			klog.Infof("Set label serving-channel to secret object: %#v, error: %#v", *secrectInstance, err)
 		}
-		//sync the channel to the serving-channel annotation in all involved secrets.
-		r.syncSecrectAnnotation(instance, request.NamespacedName)
 	}
-
-	r.updateConfigMap(instance)
-
-	//sync the channel to the serving-channel annotation in all involved ConfigMaps.
-	r.syncConfigAnnotation(instance, request.NamespacedName)
-
-	return reconcile.Result{}, nil
 }
 
 func (r *ReconcileChannel) updateConfigMap(instance *chv1.Channel) {
@@ -383,6 +387,11 @@ func (r *ReconcileChannel) syncConfigAnnotation(channel *chv1.Channel, channelKe
 
 	for _, config := range configList.Items {
 		annotations := config.GetAnnotations()
+
+		if annotations == nil {
+			annotations = make(map[string]string)
+		}
+
 		newServingChannel := annotations[chv1.ServingChannel]
 
 		if channel != nil && channel.Spec.ConfigMapRef != nil && channel.Spec.ConfigMapRef.Name > "" && channel.Spec.ConfigMapRef.Namespace > "" {
