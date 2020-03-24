@@ -16,6 +16,7 @@ package channel
 
 import (
 	"context"
+	"fmt"
 	"reflect"
 	"strings"
 
@@ -267,7 +268,7 @@ func (r *ReconcileChannel) Reconcile(request reconcile.Request) (reconcile.Resul
 
 func (r *ReconcileChannel) updatedReferredObjLabel(ref *corev1.ObjectReference, objGvk schema.GroupVersionKind) error {
 	if ref == nil {
-		return gerr.New("empty referred object pointer")
+		return gerr.New(fmt.Sprintf("empty referred object %v", objGvk.Kind))
 	}
 
 	objName := ref.Name
@@ -390,9 +391,8 @@ func (r *ReconcileChannel) validateClusterRBAC(instance *chv1.Channel) error {
 	}
 
 	if err := r.Get(context.TODO(), clusterCRDKey, clusterCRD); err != nil {
-		if kerr.IsNotFound(err) {
-			return nil
-		}
+		klog.Infof("skipping role binding for %v/%v since cluste CRD is not ready, err %v", instance.Name, instance.Namespace, err)
+		return nil
 	}
 
 	cllist := &clusterv1alpha1.ClusterList{}
@@ -403,7 +403,7 @@ func (r *ReconcileChannel) validateClusterRBAC(instance *chv1.Channel) error {
 			return nil
 		}
 
-		return err
+		return gerr.Wrap(err, "failed to list cluster resource while rolebinding")
 	}
 
 	for _, cl := range cllist.Items {
