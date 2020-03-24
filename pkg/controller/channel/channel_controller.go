@@ -108,7 +108,9 @@ func add(mgr manager.Manager, r reconcile.Reconciler) error {
 		return err
 	}
 
-	apiextensionsv1beta1.AddToScheme(mgr.GetScheme())
+	if err := apiextensionsv1beta1.AddToScheme(mgr.GetScheme()); err != nil {
+		klog.Errorf("failed to add CRD scheme to manager, err: %v", err)
+	}
 	// Watch for changes to Channel
 	err = c.Watch(&source.Kind{Type: &chv1.Channel{}}, &handler.EnqueueRequestForObject{})
 	if err != nil {
@@ -282,7 +284,7 @@ func (r *ReconcileChannel) updatedReferredObjLabel(ref *corev1.ObjectReference, 
 	obj.SetGroupVersionKind(objGvk)
 
 	if err := r.Get(context.TODO(), objKey, obj); err != nil {
-		return err
+		return gerr.Wrapf(err, "failed to get the referred object %v", objGvk.Kind)
 	}
 
 	localLabels := obj.GetLabels()
@@ -294,7 +296,7 @@ func (r *ReconcileChannel) updatedReferredObjLabel(ref *corev1.ObjectReference, 
 	obj.SetLabels(localLabels)
 
 	if err := r.Update(context.TODO(), obj); err != nil {
-		return err
+		return gerr.Wrapf(err, "failed to update the referred object %v", objGvk.Kind)
 	}
 
 	klog.Infof("Set label serving-channel to object: %v", objKey.String())
@@ -378,9 +380,8 @@ func (r *ReconcileChannel) validateClusterRBAC(instance *chv1.Channel) error {
 
 	role := &rbac.Role{}
 
-	err := r.setupRole(instance, role)
-	if err != nil {
-		return err
+	if err := r.setupRole(instance, role); err != nil {
+		return gerr.Wrap(err, "failed to create/update rolebinding")
 	}
 
 	rolebinding := &rbac.RoleBinding{}
@@ -394,16 +395,17 @@ func (r *ReconcileChannel) validateClusterRBAC(instance *chv1.Channel) error {
 
 	if err := r.Get(context.TODO(), clusterCRDKey, clusterCRD); err != nil {
 		klog.V(debugLevel).Infof("skipping role binding for %v/%v since cluste CRD is not ready, err %v", instance.Name, instance.Namespace, err)
+
 		if kerr.IsNotFound(err) {
 			return nil
 		}
+
 		return gerr.Wrap(err, "failed to list cluster CRD")
 	}
 
 	cllist := &clusterv1alpha1.ClusterList{}
 
-	err = r.List(context.TODO(), cllist, &client.ListOptions{})
-	if err != nil {
+	if err := r.List(context.TODO(), cllist, &client.ListOptions{}); err != nil {
 		if kerr.IsNotFound(err) {
 			return nil
 		}
@@ -425,14 +427,12 @@ func (r *ReconcileChannel) validateClusterRBAC(instance *chv1.Channel) error {
 		Name:     instance.Name,
 	}
 
-	err = r.Get(context.TODO(), types.NamespacedName{Name: instance.Name, Namespace: instance.Namespace}, rolebinding)
-	if err != nil {
+	if err := r.Get(context.TODO(), types.NamespacedName{Name: instance.Name, Namespace: instance.Namespace}, rolebinding); err != nil {
 		if kerr.IsNotFound(err) {
 			rolebinding.Name = instance.Name
 			rolebinding.Namespace = instance.Namespace
 
-			err = controllerutil.SetControllerReference(instance, rolebinding, r.scheme)
-			if err != nil {
+			if err := controllerutil.SetControllerReference(instance, rolebinding, r.scheme); err != nil {
 				klog.Error("Failed to set controller reference, err:", err)
 				return err
 			}
@@ -440,66 +440,59 @@ func (r *ReconcileChannel) validateClusterRBAC(instance *chv1.Channel) error {
 			rolebinding.RoleRef = roleref
 			rolebinding.Subjects = subjects
 
-			err = r.Create(context.TODO(), rolebinding)
-			if err != nil {
-				klog.Error("Failed to create rolebinding, err:", err)
-				return err
+			if err := r.Create(context.TODO(), rolebinding); err != nil {
+				return gerr.Wrap(err, "faild to create rolebinding")
 			}
-		} else {
-			return err
 		}
-	} else {
-		if !reflect.DeepEqual(subjects, rolebinding.Subjects) || !reflect.DeepEqual(rolebinding.RoleRef, roleref) {
-			err = controllerutil.SetControllerReference(instance, rolebinding, r.scheme)
-			if err != nil {
-				klog.Error("Failed to set controller reference, err:", err)
-				return err
-			}
+		return gerr.Wrap(err, "failed to get rolebinding state")
+	}
 
-			rolebinding.RoleRef = roleref
-			rolebinding.Subjects = subjects
-			err = r.Update(context.TODO(), rolebinding)
+	if !reflect.DeepEqual(subjects, rolebinding.Subjects) || !reflect.DeepEqual(rolebinding.RoleRef, roleref) {
+		if err := controllerutil.SetControllerReference(instance, rolebinding, r.scheme); err != nil {
+			return gerr.Wrap(err, "failed to set controller reference")
+		}
+
+		rolebinding.RoleRef = roleref
+		rolebinding.Subjects = subjects
+
+		if err := r.Update(context.TODO(), rolebinding); err != nil {
+			return gerr.Wrap(err, "failed to update rolebinding")
 		}
 	}
+
 	klog.V(debugLevel).Infof("created role %v and rolebinding %v with subjects %v", role.Name, rolebinding.Name, rolebinding.Subjects)
-	return err
+
+	return nil
 }
 
 func (r *ReconcileChannel) setupRole(instance *chv1.Channel, role *rbac.Role) error {
-	err := r.Get(context.TODO(), types.NamespacedName{Name: instance.Name, Namespace: instance.Namespace}, role)
-	if err != nil {
+	if err := r.Get(context.TODO(), types.NamespacedName{Name: instance.Name, Namespace: instance.Namespace}, role); err != nil {
 		if kerr.IsNotFound(err) {
 			role.Name = instance.Name
 			role.Namespace = instance.Namespace
 			role.Rules = clusterRules
 
-			err = controllerutil.SetControllerReference(instance, role, r.scheme)
-			if err != nil {
-				klog.Error("Failed to set controller reference, err:", err)
-				return err
+			if err := controllerutil.SetControllerReference(instance, role, r.scheme); err != nil {
+				return gerr.Wrap(err, "failed to set controller reference for role set up")
 			}
 
-			err = r.Create(context.TODO(), role)
-			if err != nil {
-				return err
+			if err := r.Create(context.TODO(), role); err != nil {
+				return gerr.Wrapf(err, "failed to create role %v", role.Name)
 			}
-		} else {
-			return err
 		}
-	} else {
-		if !reflect.DeepEqual(role.Rules, clusterRules) {
-			role.Rules = clusterRules
 
-			err = controllerutil.SetControllerReference(instance, role, r.scheme)
-			if err != nil {
-				klog.Error("Failed to set controller reference, err:", err)
-				return err
-			}
+		return err
+	}
 
-			err = r.Update(context.TODO(), role)
-			if err != nil {
-				return err
-			}
+	if !reflect.DeepEqual(role.Rules, clusterRules) {
+		role.Rules = clusterRules
+
+		if err := controllerutil.SetControllerReference(instance, role, r.scheme); err != nil {
+			return gerr.Wrap(err, "failed to set controller reference for role set up")
+		}
+
+		if err := r.Update(context.TODO(), role); err != nil {
+			return gerr.Wrapf(err, "failed to update role %v", role.Name)
 		}
 	}
 

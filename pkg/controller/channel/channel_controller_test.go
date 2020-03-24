@@ -309,9 +309,6 @@ func TestChannelReconcileWithoutClusterCRD(t *testing.T) {
 	defer c.Delete(context.TODO(), refSrt)
 	g.Expect(c.Create(context.TODO(), refSrt)).NotTo(gomega.HaveOccurred())
 
-	defer c.Delete(context.TODO(), refCm)
-	g.Expect(c.Create(context.TODO(), refCm)).NotTo(gomega.HaveOccurred())
-
 	defer c.Delete(context.TODO(), chn)
 	g.Expect(c.Create(context.TODO(), chn)).NotTo(gomega.HaveOccurred())
 
@@ -333,8 +330,6 @@ func TestChannelReconcileWithoutClusterCRD(t *testing.T) {
 		context.TODO(),
 		types.NamespacedName{Name: refCmName, Namespace: targetNamespace},
 		updatedCm)).NotTo(gomega.HaveOccurred())
-
-	assertReferredObjAnno(t, updatedCm, chKey.String())
 
 	expectedRole := &rbac.Role{}
 	g.Expect(c.Get(
