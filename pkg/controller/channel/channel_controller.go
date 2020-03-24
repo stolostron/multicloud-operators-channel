@@ -72,7 +72,8 @@ var (
 )
 
 const (
-	debugLevel = klog.Level(10)
+	clusterCRDNAME = "clusters.clusterregistry.k8s.io"
+	debugLevel     = klog.Level(5)
 )
 
 /**
@@ -107,6 +108,7 @@ func add(mgr manager.Manager, r reconcile.Reconciler) error {
 		return err
 	}
 
+	apiextensionsv1beta1.AddToScheme(mgr.GetScheme())
 	// Watch for changes to Channel
 	err = c.Watch(&source.Kind{Type: &chv1.Channel{}}, &handler.EnqueueRequestForObject{})
 	if err != nil {
@@ -386,13 +388,16 @@ func (r *ReconcileChannel) validateClusterRBAC(instance *chv1.Channel) error {
 	var subjects []rbac.Subject
 
 	clusterCRD := &apiextensionsv1beta1.CustomResourceDefinition{}
-	clusterCRDKey := client.ObjectKey{
-		Name: "clusters.clusterregistry.k8s.io",
+	clusterCRDKey := types.NamespacedName{
+		Name: clusterCRDNAME,
 	}
 
 	if err := r.Get(context.TODO(), clusterCRDKey, clusterCRD); err != nil {
-		klog.Infof("skipping role binding for %v/%v since cluste CRD is not ready, err %v", instance.Name, instance.Namespace, err)
-		return nil
+		klog.V(debugLevel).Infof("skipping role binding for %v/%v since cluste CRD is not ready, err %v", instance.Name, instance.Namespace, err)
+		if kerr.IsNotFound(err) {
+			return nil
+		}
+		return gerr.Wrap(err, "failed to list cluster CRD")
 	}
 
 	cllist := &clusterv1alpha1.ClusterList{}
@@ -456,7 +461,7 @@ func (r *ReconcileChannel) validateClusterRBAC(instance *chv1.Channel) error {
 			err = r.Update(context.TODO(), rolebinding)
 		}
 	}
-
+	klog.V(debugLevel).Infof("created role %v and rolebinding %v with subjects %v", role.Name, rolebinding.Name, rolebinding.Subjects)
 	return err
 }
 
