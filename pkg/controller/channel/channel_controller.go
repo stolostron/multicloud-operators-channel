@@ -110,11 +110,13 @@ func add(mgr manager.Manager, r reconcile.Reconciler) error {
 		return err
 	}
 
-	err = c.Watch(
-		&source.Kind{Type: &clusterv1alpha1.Cluster{}},
-		&handler.EnqueueRequestsFromMapFunc{ToRequests: &clusterMapper{mgr.GetClient()}},
-		placementutils.ClusterPredicateFunc,
-	)
+	if placementutils.IsReadyACMClusterRegistry(mgr.GetAPIReader()) {
+		err = c.Watch(
+			&source.Kind{Type: &clusterv1alpha1.Cluster{}},
+			&handler.EnqueueRequestsFromMapFunc{ToRequests: &clusterMapper{mgr.GetClient()}},
+			placementutils.ClusterPredicateFunc,
+		)
+	}
 
 	return err
 }
