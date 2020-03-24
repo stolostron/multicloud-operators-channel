@@ -242,6 +242,7 @@ func assertRoleBinding(t *testing.T, clt client.Client, chn *chv1.Channel, rb *r
 
 	for _, cluster := range cllist.Items {
 		rbStr := "hcm:clusters:" + cluster.Namespace + cluster.Name
+
 		if _, ok := rbMap[rbStr]; !ok {
 			t.Errorf("missing rolebinding for cluster %v", rbStr)
 		}
