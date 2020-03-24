@@ -261,13 +261,8 @@ func TestChannelReconcileWithoutClusterCRD(t *testing.T) {
 		},
 	}
 
+	// referreding to a non-exist object, reconcile should still pass
 	refCmName := "ch-cm"
-	refCm := &corev1.ConfigMap{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      refCmName,
-			Namespace: targetNamespace,
-		},
-	}
 
 	chKey := types.NamespacedName{Name: tragetChannelName, Namespace: targetNamespace}
 	chn := &chv1.Channel{
@@ -289,7 +284,7 @@ func TestChannelReconcileWithoutClusterCRD(t *testing.T) {
 
 	clusterCRD := &apiextensionsv1beta1.CustomResourceDefinition{
 		ObjectMeta: metav1.ObjectMeta{
-			Name: "clusters.clusterregistry.k8s.io",
+			Name: clusterCRDNAME,
 		},
 	}
 
@@ -324,12 +319,6 @@ func TestChannelReconcileWithoutClusterCRD(t *testing.T) {
 		updatedSrt)).NotTo(gomega.HaveOccurred())
 
 	assertReferredObjAnno(t, updatedSrt, chKey.String())
-
-	updatedCm := &corev1.ConfigMap{}
-	g.Expect(c.Get(
-		context.TODO(),
-		types.NamespacedName{Name: refCmName, Namespace: targetNamespace},
-		updatedCm)).NotTo(gomega.HaveOccurred())
 
 	expectedRole := &rbac.Role{}
 	g.Expect(c.Get(

@@ -433,8 +433,7 @@ func (r *ReconcileChannel) validateClusterRBAC(instance *chv1.Channel) error {
 			rolebinding.Namespace = instance.Namespace
 
 			if err := controllerutil.SetControllerReference(instance, rolebinding, r.scheme); err != nil {
-				klog.Error("Failed to set controller reference, err:", err)
-				return err
+				return gerr.Wrap(err, "failed to set controller reference")
 			}
 
 			rolebinding.RoleRef = roleref
@@ -443,7 +442,10 @@ func (r *ReconcileChannel) validateClusterRBAC(instance *chv1.Channel) error {
 			if err := r.Create(context.TODO(), rolebinding); err != nil {
 				return gerr.Wrap(err, "faild to create rolebinding")
 			}
+
+			return nil
 		}
+
 		return gerr.Wrap(err, "failed to get rolebinding state")
 	}
 
@@ -479,6 +481,8 @@ func (r *ReconcileChannel) setupRole(instance *chv1.Channel, role *rbac.Role) er
 			if err := r.Create(context.TODO(), role); err != nil {
 				return gerr.Wrapf(err, "failed to create role %v", role.Name)
 			}
+
+			return nil
 		}
 
 		return err
