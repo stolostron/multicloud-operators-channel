@@ -7,17 +7,20 @@ require (
 	github.com/ghodss/yaml v1.0.1-0.20180820084758-c7ce16629ff4
 	github.com/go-openapi/spec v0.19.0
 	github.com/google/go-cmp v0.3.1
+	github.com/onsi/ginkgo v1.12.0 // indirect
 	github.com/onsi/gomega v1.9.0
-	github.com/open-cluster-management/multicloud-operators-deployable v0.0.0-20200305002029-e8093169e4ff
-	github.com/open-cluster-management/multicloud-operators-placementrule v0.0.0-20200304214605-e52bfdcb25bb
+	github.com/open-cluster-management/multicloud-operators-deployable v0.0.0-20200324042552-efcef6528509
+	github.com/open-cluster-management/multicloud-operators-placementrule v0.0.0-20200324034428-30b1b40184d3
 	github.com/operator-framework/operator-sdk v0.12.0
 	github.com/otiai10/copy v1.1.1
 	github.com/pkg/errors v0.8.1
 	github.com/prometheus/common v0.4.1
-	github.com/securego/gosec v0.0.0-20200316084457-7da9f46445fd // indirect
 	github.com/spf13/pflag v1.0.3
+	github.com/stretchr/testify v1.4.0 // indirect
+	golang.org/x/crypto v0.0.0-20191011191535-87dc89f01550 // indirect
 	golang.org/x/net v0.0.0-20190923162816-aa69164e4478
-	golang.org/x/tools/gopls v0.3.3 // indirect
+	golang.org/x/xerrors v0.0.0-20191011141410-1b5146add898 // indirect
+	gopkg.in/check.v1 v1.0.0-20190902080502-41f04d3bba15 // indirect
 	gopkg.in/src-d/go-git.v4 v4.13.1
 	gopkg.in/yaml.v2 v2.2.8
 	k8s.io/api v0.0.0

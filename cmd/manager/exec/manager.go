@@ -50,6 +50,7 @@ import (
 	gitsync "github.com/open-cluster-management/multicloud-operators-channel/pkg/synchronizer/githubsynchronizer"
 	helmsync "github.com/open-cluster-management/multicloud-operators-channel/pkg/synchronizer/helmreposynchronizer"
 	objsync "github.com/open-cluster-management/multicloud-operators-channel/pkg/synchronizer/objectstoresynchronizer"
+	placementutils "github.com/open-cluster-management/multicloud-operators-placementrule/pkg/utils"
 )
 
 // Change below variables to serve metrics on different host or port.
@@ -220,6 +221,9 @@ func RunManager(sig <-chan struct{}) {
 			klog.Info("Install prometheus-operator in your cluster to create ServiceMonitor objects", "error", err.Error())
 		}
 	}
+
+	klog.Info("Detecting ACM cluster API service...")
+	placementutils.DetectClusterRegistry(mgr.GetAPIReader(), sig)
 
 	klog.Info("Starting the Cmd.")
 
