@@ -27,11 +27,14 @@ import (
 	dplutils "github.com/open-cluster-management/multicloud-operators-deployable/pkg/utils"
 	placementutils "github.com/open-cluster-management/multicloud-operators-placementrule/pkg/utils"
 
+	gerr "github.com/pkg/errors"
 	corev1 "k8s.io/api/core/v1"
 	rbac "k8s.io/api/rbac/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/tools/record"
 	clusterv1alpha1 "k8s.io/cluster-registry/pkg/apis/clusterregistry/v1alpha1"
@@ -61,6 +64,8 @@ var (
 
 	//DeployableAnnotation is used to indicate a resource as a logic deployable
 	DeployableAnnotation = dplv1.SchemeGroupVersion.Group + "/deployables"
+	srtGvk               = schema.GroupVersionKind{Group: "", Kind: "Secret", Version: "v1"}
+	cmGvk                = schema.GroupVersionKind{Group: "", Kind: "ConfigMap", Version: "v1"}
 )
 
 const (
@@ -190,10 +195,10 @@ func (r *ReconcileChannel) Reconcile(request reconcile.Request) (reconcile.Resul
 			// Object not found, return.  Created objects are automatically garbage collected.
 			// For additional cleanup logic use finalizers.
 			//sync the channel to the serving-channel annotation in all involved secrets - remove channel
-			r.syncSecrectAnnotation(nil, request.NamespacedName)
+			r.syncReferredObjAnnotation(request, nil, srtGvk)
 
 			//remove the channel from the serving-channel annotation in all involved ConfigMaps - remove channel
-			r.syncConfigAnnotation(nil, request.NamespacedName)
+			r.syncReferredObjAnnotation(request, nil, cmGvk)
 
 			return reconcile.Result{}, utils.CleanupDeployables(r.Client, request.NamespacedName)
 		}
@@ -220,77 +225,67 @@ func (r *ReconcileChannel) Reconcile(request reconcile.Request) (reconcile.Resul
 	}
 
 	// If the channel has relative secret and configMap, annotate the channel info in the secret and configMap
-	r.updateReferredSecretAnno(instance)
 
 	//sync the channel to the serving-channel annotation in all involved secrets.
-	r.syncSecrectAnnotation(instance, request.NamespacedName)
+	srtRef := instance.Spec.SecretRef
 
-	r.updateConfigMap(instance)
+	if err := r.updatedReferredObjLabel(srtRef, srtGvk); err != nil {
+		klog.Errorf("failed to update referred secret label %v", err)
+	}
+
+	if err := r.syncReferredObjAnnotation(request, srtRef, srtGvk); err != nil {
+		klog.Errorf("faild to annotation %v", err)
+	}
 
 	//sync the channel to the serving-channel annotation in all involved ConfigMaps.
-	r.syncConfigAnnotation(instance, request.NamespacedName)
+	//r.syncConfigAnnotation(instance, request.NamespacedName)
+	cmRef := instance.Spec.ConfigMapRef
+	if err := r.updatedReferredObjLabel(cmRef, cmGvk); err != nil {
+		klog.Errorf("failed to update referred configMap label %v", err)
+	}
+
+	if err := r.syncReferredObjAnnotation(request, cmRef, cmGvk); err != nil {
+		klog.Errorf("faild to annotation %v", err)
+	}
 
 	return reconcile.Result{}, nil
 }
 
-func (r *ReconcileChannel) updateReferredSecretAnno(instance *chv1.Channel) {
-	if instance.Spec.SecretRef != nil && instance.Spec.SecretRef.Name > "" {
-		secretName := instance.Spec.SecretRef.Name
-
-		secretNamespace := instance.Spec.SecretRef.Namespace
-		if secretNamespace == "" {
-			secretNamespace = instance.Namespace
-		}
-
-		secrectInstance := &corev1.Secret{}
-		secetKey := types.NamespacedName{Name: secretName, Namespace: secretNamespace}
-
-		if err := r.Get(context.TODO(), secetKey, secrectInstance); err == nil {
-			localLabels := secrectInstance.GetLabels()
-			if localLabels == nil {
-				localLabels = make(map[string]string)
-			}
-
-			localLabels[chv1.ServingChannel] = "true"
-			secrectInstance.SetLabels(localLabels)
-
-			err = r.Update(context.TODO(), secrectInstance)
-			klog.Infof("Set label serving-channel to secret object: %#v, error: %#v", *secrectInstance, err)
-		}
+func (r *ReconcileChannel) updatedReferredObjLabel(ref *corev1.ObjectReference, objGvk schema.GroupVersionKind) error {
+	if ref == nil {
+		return gerr.New("empty referred object pointer")
 	}
+
+	objName := ref.Name
+	objNs := ref.Namespace
+
+	obj := &unstructured.Unstructured{}
+	objKey := types.NamespacedName{Name: objName, Namespace: objNs}
+
+	obj.SetGroupVersionKind(objGvk)
+
+	if err := r.Get(context.TODO(), objKey, obj); err != nil {
+		return err
+	}
+
+	localLabels := obj.GetLabels()
+	if localLabels == nil {
+		localLabels = make(map[string]string)
+	}
+
+	localLabels[chv1.ServingChannel] = "true"
+	obj.SetLabels(localLabels)
+
+	if err := r.Update(context.TODO(), obj); err != nil {
+		return err
+	}
+
+	klog.Infof("Set label serving-channel to object: %v", objKey.String())
+
+	return nil
 }
 
-func (r *ReconcileChannel) updateConfigMap(instance *chv1.Channel) {
-	if instance.Spec.ConfigMapRef != nil && instance.Spec.ConfigMapRef.Name > "" {
-		configName := instance.Spec.ConfigMapRef.Name
-		configNamespace := instance.Spec.ConfigMapRef.Namespace
-
-		if configNamespace == "" {
-			configNamespace = instance.Namespace
-		}
-
-		configInstance := &corev1.ConfigMap{}
-		configKey := types.NamespacedName{Name: configName, Namespace: configNamespace}
-
-		err := r.Get(context.TODO(), configKey, configInstance)
-		if err == nil {
-			localLabels := configInstance.GetLabels()
-
-			if localLabels == nil {
-				localLabels = make(map[string]string)
-			}
-
-			localLabels[chv1.ServingChannel] = "true"
-			configInstance.SetLabels(localLabels)
-
-			err = r.Update(context.TODO(), configInstance)
-
-			klog.Infof("Set label serving-channel to configMap object: %#v, error: %#v", *configInstance, err)
-		}
-	}
-}
-
-func (r *ReconcileChannel) syncSecrectAnnotation(channel *chv1.Channel, channelKey types.NamespacedName) {
+func (r *ReconcileChannel) syncReferredObjAnnotation(rq reconcile.Request, ref *corev1.ObjectReference, objGvk schema.GroupVersionKind) error {
 	if klog.V(debugLevel) {
 		fnName := dplutils.GetFnName()
 		klog.Infof("Entering: %v()", fnName)
@@ -298,32 +293,33 @@ func (r *ReconcileChannel) syncSecrectAnnotation(channel *chv1.Channel, channelK
 		defer klog.Infof("Exiting: %v()", fnName)
 	}
 
-	secList := &corev1.SecretList{}
+	chnKey := types.NamespacedName{Name: rq.Name, Namespace: rq.Namespace}
 
-	secListOptions := &client.ListOptions{}
+	uObjList := &unstructured.UnstructuredList{}
 
-	secLabel := make(map[string]string)
-	secLabel[chv1.ServingChannel] = "true"
+	uObjList.SetGroupVersionKind(objGvk)
+
+	opts := &client.ListOptions{}
+
+	objLabel := make(map[string]string)
+	objLabel[chv1.ServingChannel] = "true"
 	labelSelector := &metav1.LabelSelector{
-		MatchLabels: secLabel,
+		MatchLabels: objLabel,
 	}
 
 	clSelector, err := dplutils.ConvertLabels(labelSelector)
 	if err != nil {
-		klog.Error("Failed to set label selector for secret objects. err: ", err)
-		return
+		return gerr.Wrap(err, "failed to set lable selector for referred object")
 	}
 
-	secListOptions.LabelSelector = clSelector
+	opts.LabelSelector = clSelector
 
-	err = r.Client.List(context.TODO(), secList, secListOptions)
-	if err != nil {
-		klog.Error("Failed to list Secret objects. error: ", err)
-		return
+	if err := r.Client.List(context.TODO(), uObjList, opts); err != nil {
+		return gerr.Wrapf(err, "failed to list objects %v. error: ", objGvk.String())
 	}
 
-	for _, secret := range secList.Items {
-		annotations := secret.GetAnnotations()
+	for _, obj := range uObjList.Items {
+		annotations := obj.GetAnnotations()
 
 		if annotations == nil {
 			annotations = make(map[string]string)
@@ -331,13 +327,12 @@ func (r *ReconcileChannel) syncSecrectAnnotation(channel *chv1.Channel, channelK
 
 		newServingChannel := annotations[chv1.ServingChannel]
 
-		if channel != nil && channel.Spec.SecretRef != nil {
-			if secret.Name == channel.Spec.SecretRef.Name && channel.Namespace == secret.Namespace {
-				newServingChannel = utils.UpdateServingChannel(annotations[chv1.ServingChannel], channelKey.String(), "add")
-				annotations[DeployableAnnotation] = "true"
+		if ref != nil && (ref.Name > "" && ref.Namespace > "") {
+			if obj.GetName() == ref.Name && obj.GetNamespace() == ref.Namespace {
+				newServingChannel = utils.UpdateServingChannel(annotations[chv1.ServingChannel], chnKey.String(), "add")
 			}
 		} else {
-			newServingChannel = utils.UpdateServingChannel(annotations[chv1.ServingChannel], channelKey.String(), "remove")
+			newServingChannel = utils.UpdateServingChannel(annotations[chv1.ServingChannel], chnKey.String(), "remove")
 		}
 
 		if newServingChannel > "" {
@@ -346,73 +341,14 @@ func (r *ReconcileChannel) syncSecrectAnnotation(channel *chv1.Channel, channelK
 			delete(annotations, chv1.ServingChannel)
 		}
 
-		secret.SetAnnotations(annotations)
+		obj.SetAnnotations(annotations)
 
-		err = r.Update(context.TODO(), &secret)
-		klog.Infof("Annotate secret object: %#v, error: %#v", secret, err)
-	}
-}
-
-func (r *ReconcileChannel) syncConfigAnnotation(channel *chv1.Channel, channelKey types.NamespacedName) {
-	if klog.V(debugLevel) {
-		fnName := dplutils.GetFnName()
-		klog.Infof("Entering: %v()", fnName)
-
-		defer klog.Infof("Exiting: %v()", fnName)
-	}
-
-	configList := &corev1.ConfigMapList{}
-
-	configListOptions := &client.ListOptions{}
-
-	configLabel := make(map[string]string)
-	configLabel[chv1.ServingChannel] = "true"
-	labelSelector := &metav1.LabelSelector{
-		MatchLabels: configLabel,
-	}
-
-	clSelector, err := dplutils.ConvertLabels(labelSelector)
-	if err != nil {
-		klog.Error("Failed to set label selector for configMap objects. err: ", err)
-		return
-	}
-
-	configListOptions.LabelSelector = clSelector
-
-	err = r.Client.List(context.TODO(), configList, configListOptions)
-	if err != nil {
-		klog.Error("Failed to list ConfigMap objects. error: ", err)
-		return
-	}
-
-	for _, config := range configList.Items {
-		annotations := config.GetAnnotations()
-
-		if annotations == nil {
-			annotations = make(map[string]string)
+		if err := r.Update(context.TODO(), &obj); err != nil {
+			klog.Errorf("failed to annotate object: %v/%v, err: %#v", obj.GetNamespace(), obj.GetName(), err)
 		}
-
-		newServingChannel := annotations[chv1.ServingChannel]
-
-		if channel != nil && channel.Spec.ConfigMapRef != nil && channel.Spec.ConfigMapRef.Name > "" && channel.Spec.ConfigMapRef.Namespace > "" {
-			if config.Name == channel.Spec.ConfigMapRef.Name && config.Namespace == channel.Spec.ConfigMapRef.Namespace {
-				newServingChannel = utils.UpdateServingChannel(annotations[chv1.ServingChannel], channelKey.String(), "add")
-			}
-		} else {
-			newServingChannel = utils.UpdateServingChannel(annotations[chv1.ServingChannel], channelKey.String(), "remove")
-		}
-
-		if newServingChannel > "" {
-			annotations[chv1.ServingChannel] = newServingChannel
-		} else {
-			delete(annotations, chv1.ServingChannel)
-		}
-
-		config.SetAnnotations(annotations)
-
-		err = r.Update(context.TODO(), &config)
-		klog.Infof("Annotate configMap object: %#v, error: %#v", config, err)
 	}
+
+	return nil
 }
 
 func (r *ReconcileChannel) validateClusterRBAC(instance *chv1.Channel) error {

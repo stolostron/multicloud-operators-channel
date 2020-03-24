@@ -190,3 +190,6 @@ func assertReferredObjAnno(t *testing.T, obj metav1.Object, chKeyStr string) {
 		return
 	}
 }
+
+// 1. test role and rolebinding set up
+// 2. test the annotation deletion
