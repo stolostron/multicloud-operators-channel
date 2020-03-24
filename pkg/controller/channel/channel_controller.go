@@ -30,7 +30,7 @@ import (
 	gerr "github.com/pkg/errors"
 	corev1 "k8s.io/api/core/v1"
 	rbac "k8s.io/api/rbac/v1"
-	"k8s.io/apimachinery/pkg/api/errors"
+	kerr "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -193,17 +193,27 @@ func (r *ReconcileChannel) Reconcile(request reconcile.Request) (reconcile.Resul
 
 	err := r.Get(context.TODO(), request.NamespacedName, instance)
 	if err != nil {
-		if errors.IsNotFound(err) {
+		if kerr.IsNotFound(err) {
 			// Object not found, return.  Created objects are automatically garbage collected.
 			// For additional cleanup logic use finalizers.
 			//sync the channel to the serving-channel annotation in all involved secrets - remove channel
-			r.syncReferredObjAnnotation(request, nil, srtGvk)
+			if err := r.syncReferredObjAnnotation(request, nil, srtGvk); err != nil {
+				return reconcile.Result{}, err
+			}
 
 			//remove the channel from the serving-channel annotation in all involved ConfigMaps - remove channel
-			r.syncReferredObjAnnotation(request, nil, cmGvk)
+			if err := r.syncReferredObjAnnotation(request, nil, cmGvk); err != nil {
+				return reconcile.Result{}, err
+			}
 
-			return reconcile.Result{}, utils.CleanupDeployables(r.Client, request.NamespacedName)
+			if err := utils.CleanupDeployables(r.Client, request.NamespacedName); err != nil {
+				klog.Errorf("failed to reconcile on deletion, err %v", err)
+				return reconcile.Result{}, err
+			}
+
+			return reconcile.Result{}, nil
 		}
+
 		// Error reading the object - requeue the request.
 		return reconcile.Result{}, err
 	}
@@ -222,7 +232,7 @@ func (r *ReconcileChannel) Reconcile(request reconcile.Request) (reconcile.Resul
 
 	err = r.validateClusterRBAC(instance)
 	if err != nil {
-		klog.Info("Failed to validate RBAC for clusters for channel ", instance.Name, " with error: ", err)
+		klog.Info("failed to validate RBAC for clusters for channel ", instance.Name, " with error: ", err)
 		return reconcile.Result{}, err
 	}
 
@@ -376,7 +386,9 @@ func (r *ReconcileChannel) validateClusterRBAC(instance *chv1.Channel) error {
 
 	err = r.List(context.TODO(), cllist, &client.ListOptions{})
 	if err != nil {
-		if errors.IsNotFound(err) {
+		klog.Error("figuring out CRD missing error", err)
+
+		if kerr.IsNotFound(err) {
 			return nil
 		}
 
@@ -399,7 +411,7 @@ func (r *ReconcileChannel) validateClusterRBAC(instance *chv1.Channel) error {
 
 	err = r.Get(context.TODO(), types.NamespacedName{Name: instance.Name, Namespace: instance.Namespace}, rolebinding)
 	if err != nil {
-		if errors.IsNotFound(err) {
+		if kerr.IsNotFound(err) {
 			rolebinding.Name = instance.Name
 			rolebinding.Namespace = instance.Namespace
 
@@ -440,7 +452,7 @@ func (r *ReconcileChannel) validateClusterRBAC(instance *chv1.Channel) error {
 func (r *ReconcileChannel) setupRole(instance *chv1.Channel, role *rbac.Role) error {
 	err := r.Get(context.TODO(), types.NamespacedName{Name: instance.Name, Namespace: instance.Namespace}, role)
 	if err != nil {
-		if errors.IsNotFound(err) {
+		if kerr.IsNotFound(err) {
 			role.Name = instance.Name
 			role.Namespace = instance.Namespace
 			role.Rules = clusterRules
