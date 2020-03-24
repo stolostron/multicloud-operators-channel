@@ -30,9 +30,11 @@ import (
 	gerr "github.com/pkg/errors"
 	corev1 "k8s.io/api/core/v1"
 	rbac "k8s.io/api/rbac/v1"
+	apiextensionsv1beta1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1beta1"
 	kerr "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
@@ -382,12 +384,21 @@ func (r *ReconcileChannel) validateClusterRBAC(instance *chv1.Channel) error {
 
 	var subjects []rbac.Subject
 
+	clusterCRD := &apiextensionsv1beta1.CustomResourceDefinition{}
+	clusterCRDKey := client.ObjectKey{
+		Name: "clusters.clusterregistry.k8s.io",
+	}
+
+	if err := r.Get(context.TODO(), clusterCRDKey, clusterCRD); err != nil {
+		if kerr.IsNotFound(err) {
+			return nil
+		}
+	}
+
 	cllist := &clusterv1alpha1.ClusterList{}
 
 	err = r.List(context.TODO(), cllist, &client.ListOptions{})
 	if err != nil {
-		klog.Error("figuring out CRD missing error", err)
-
 		if kerr.IsNotFound(err) {
 			return nil
 		}
