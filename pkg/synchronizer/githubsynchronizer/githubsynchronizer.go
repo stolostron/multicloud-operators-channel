@@ -316,6 +316,13 @@ func (sync *ChannelSynchronizer) handleResourceDeployable(
 		return nil
 	}
 
+	// Do not delete deployables with Subscription template kind. This causes problems if subscription
+	// and channel are in the same namespace.
+	if dpltpl.GetKind() == utils.SubscriptionCRKind {
+		klog.Info("Skipping subscription deployable:", dpl.Name, ".", dpltpl.GetKind())
+		return nil
+	}
+
 	// Delete deployables that don't exist in the bucket anymore
 	if _, ok := newDplList[dpl.Name]; !ok {
 		klog.Info("Sync - Deleting deployable ", dpl.Namespace, "/", dpl.Name, " from channel ", chn.Name)
