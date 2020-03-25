@@ -249,6 +249,13 @@ func (sync *ChannelSynchronizer) processDeployable(chn *chv1.Channel,
 		return
 	}
 
+	// Do not delete deployables with Subscription template kind. This causes problems if subscription
+	// and channel are in the same namespace.
+	if obj.GetKind() == utils.SubscriptionCRKind {
+		klog.Info("Skipping subscription deployable:", dpl.Name, ".", obj.GetKind())
+		return
+	}
+
 	specMap := obj.Object["spec"].(map[string]interface{})
 	cname := specMap[utils.HelmCRChartName].(string)
 	cver := specMap[utils.HelmCRVersion].(string)
