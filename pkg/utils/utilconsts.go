@@ -27,7 +27,7 @@ const (
 	// SubscriptionCRKind is kind of the Subscription CR
 	SubscriptionCRKind = "Subscription"
 	// HelmCRAPIVersion is APIVersion of the Helm CR
-	HelmCRAPIVersion = chnv1.SchemeGroupVersion.String()
+	HelmCRAPIVersion = "apps.open-cluster-management.io/v1"
 	// HelmCRChartName is spec.ChartName of the Helm CR
 	HelmCRChartName = "chartName"
 	// HelmCRReleaseName is spec.ReleaseName of the Helm CR
