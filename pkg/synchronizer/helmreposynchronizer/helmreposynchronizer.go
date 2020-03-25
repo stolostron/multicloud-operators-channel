@@ -20,6 +20,7 @@ import (
 	"time"
 
 	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
@@ -145,6 +146,23 @@ func (sync *ChannelSynchronizer) syncChannel(chn *chv1.Channel, localIdxFunc uti
 
 	// retrieve deployable list in current channel namespace
 	listopt := &client.ListOptions{Namespace: chn.Namespace}
+
+	// Handle deployables from multiple channels in the same namespace
+	chLabel := make(map[string]string)
+	chLabel[chv1.KeyChannel] = chn.Name
+	chLabel[chv1.KeyChannelType] = string(chn.Spec.Type)
+	labelSelector := &metav1.LabelSelector{
+		MatchLabels: chLabel,
+	}
+
+	clSelector, err := deputils.ConvertLabels(labelSelector)
+	if err != nil {
+		klog.Error("Failed to set label selector. err: ", err)
+		return
+	}
+
+	listopt.LabelSelector = clSelector
+
 	dpllist := &dplv1.DeployableList{}
 
 	err = sync.kubeClient.List(context.TODO(), dpllist, listopt)
@@ -189,6 +207,12 @@ func (sync *ChannelSynchronizer) syncChannel(chn *chv1.Channel, localIdxFunc uti
 			dplanno[dplv1.AnnotationDeployableVersion] = mv
 
 			dpl.SetAnnotations(dplanno)
+
+			dplLabels := make(map[string]string)
+			dplLabels[chv1.KeyChannel] = chn.Name
+			dplLabels[chv1.KeyChannelType] = string(chn.Spec.Type)
+			dpl.SetLabels(dplLabels)
+
 			dpl.Spec.Template = &runtime.RawExtension{}
 			dpl.Spec.Template.Raw, err = json.Marshal(obj)
 
