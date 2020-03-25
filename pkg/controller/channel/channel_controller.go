@@ -72,7 +72,7 @@ var (
 )
 
 const (
-	clusterCRDNAME = "clusters.clusterregistry.k8s.io"
+	clusterCRDName = "clusters.clusterregistry.k8s.io"
 	debugLevel     = klog.Level(5)
 )
 
@@ -248,7 +248,7 @@ func (r *ReconcileChannel) Reconcile(request reconcile.Request) (reconcile.Resul
 	//sync the channel to the serving-channel annotation in all involved secrets.
 	srtRef := instance.Spec.SecretRef
 
-	if err := r.updatedReferredObjLabel(srtRef, srtGvk); err != nil {
+	if err := r.updatedReferencedObjectLabels(srtRef, srtGvk); err != nil {
 		klog.Errorf("failed to update referred secret label %v", err)
 	}
 
@@ -259,7 +259,7 @@ func (r *ReconcileChannel) Reconcile(request reconcile.Request) (reconcile.Resul
 	//sync the channel to the serving-channel annotation in all involved ConfigMaps.
 	//r.syncConfigAnnotation(instance, request.NamespacedName)
 	cmRef := instance.Spec.ConfigMapRef
-	if err := r.updatedReferredObjLabel(cmRef, cmGvk); err != nil {
+	if err := r.updatedReferencedObjectLabels(cmRef, cmGvk); err != nil {
 		klog.Errorf("failed to update referred configMap label %v", err)
 	}
 
@@ -270,7 +270,7 @@ func (r *ReconcileChannel) Reconcile(request reconcile.Request) (reconcile.Resul
 	return reconcile.Result{}, nil
 }
 
-func (r *ReconcileChannel) updatedReferredObjLabel(ref *corev1.ObjectReference, objGvk schema.GroupVersionKind) error {
+func (r *ReconcileChannel) updatedReferencedObjectLabels(ref *corev1.ObjectReference, objGvk schema.GroupVersionKind) error {
 	if ref == nil {
 		return gerr.New(fmt.Sprintf("empty referred object %v", objGvk.Kind))
 	}
@@ -390,7 +390,7 @@ func (r *ReconcileChannel) validateClusterRBAC(instance *chv1.Channel) error {
 
 	clusterCRD := &apiextensionsv1beta1.CustomResourceDefinition{}
 	clusterCRDKey := types.NamespacedName{
-		Name: clusterCRDNAME,
+		Name: clusterCRDName,
 	}
 
 	if err := r.Get(context.TODO(), clusterCRDKey, clusterCRD); err != nil {

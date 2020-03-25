@@ -285,7 +285,7 @@ func TestChannelReconcileWithoutClusterCRD(t *testing.T) {
 
 	clusterCRD := &apiextensionsv1beta1.CustomResourceDefinition{
 		ObjectMeta: metav1.ObjectMeta{
-			Name: clusterCRDNAME,
+			Name: clusterCRDName,
 		},
 	}
 
