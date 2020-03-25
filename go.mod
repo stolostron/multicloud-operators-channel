@@ -24,6 +24,7 @@ require (
 	gopkg.in/src-d/go-git.v4 v4.13.1
 	gopkg.in/yaml.v2 v2.2.8
 	k8s.io/api v0.0.0
+	k8s.io/apiextensions-apiserver v0.0.0
 	k8s.io/apimachinery v0.0.0
 	k8s.io/client-go v11.0.0+incompatible
 	k8s.io/cluster-registry v0.0.6

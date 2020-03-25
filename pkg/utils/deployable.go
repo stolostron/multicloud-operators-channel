@@ -20,6 +20,8 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 
+	gerr "github.com/pkg/errors"
+
 	"k8s.io/klog"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
@@ -222,12 +224,11 @@ func CleanupDeployables(cl client.Client, channel types.NamespacedName) error {
 	}
 
 	dpllist := &dplv1.DeployableList{}
-	err := cl.List(context.TODO(), dpllist, &client.ListOptions{Namespace: channel.Namespace})
-
-	if err != nil {
-		klog.Error("Failed to list deployable for channel namespace ", channel.Namespace)
-		return err
+	if err := cl.List(context.TODO(), dpllist, &client.ListOptions{Namespace: channel.Namespace}); err != nil {
+		return gerr.Wrapf(err, "failed to list deploables while clean up for channel %v", channel.Name)
 	}
+
+	var err error
 
 	for _, dpl := range dpllist.Items {
 		if dpl.Spec.Channels != nil {

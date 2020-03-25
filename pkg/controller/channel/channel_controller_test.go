@@ -15,18 +15,22 @@
 package channel
 
 import (
+	"strings"
 	"testing"
 	"time"
 
 	"github.com/onsi/gomega"
 	"golang.org/x/net/context"
 	corev1 "k8s.io/api/core/v1"
+	rbac "k8s.io/api/rbac/v1"
+	apiextensionsv1beta1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1beta1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/kubernetes/scheme"
 	typedcorev1 "k8s.io/client-go/kubernetes/typed/core/v1"
 	"k8s.io/client-go/tools/record"
+	clusterv1alpha1 "k8s.io/cluster-registry/pkg/apis/clusterregistry/v1alpha1"
 	"k8s.io/klog"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
@@ -37,13 +41,14 @@ import (
 
 var c client.Client
 
-var targetNamespace = "default"
-var tragetChannelName = "foo"
-var targetChannelType = chv1.ChannelType("namespace")
+const (
+	timeout           = time.Second * 5
+	targetNamespace   = "default"
+	tragetChannelName = "foo"
+	targetChannelType = chv1.ChannelType("namespace")
+)
 
 var expectedRequest = reconcile.Request{NamespacedName: types.NamespacedName{Name: tragetChannelName, Namespace: targetNamespace}}
-
-const timeout = time.Second * 5
 
 func TestChannelControllerReconcile(t *testing.T) {
 	g := gomega.NewGomegaWithT(t)
@@ -63,7 +68,7 @@ func TestChannelControllerReconcile(t *testing.T) {
 
 	c = mgr.GetClient()
 
-	//create events handler on hub cluster. All the deployable events will be written to the root deploable on hub cluster.
+	//create events handler on hub cluster. All the deployable events will be written to the root deployable on hub cluster.
 	hubClientSet, _ := kubernetes.NewForConfig(cfg)
 
 	eventBroadcaster := record.NewBroadcaster()
@@ -90,4 +95,227 @@ func TestChannelControllerReconcile(t *testing.T) {
 
 	time.Sleep(time.Second * 1)
 	g.Eventually(requests, timeout).Should(gomega.Receive(gomega.Equal(expectedRequest)))
+}
+
+// test if referred secret and configmap were annotated correctly or not
+func TestChannelAnnotateReferredSecertAndConfigMap(t *testing.T) {
+	g := gomega.NewGomegaWithT(t)
+	refSrtName := "ch-srt"
+	refSrt := &corev1.Secret{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      refSrtName,
+			Namespace: targetNamespace,
+		},
+	}
+
+	refCmName := "ch-cm"
+	refCm := &corev1.ConfigMap{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      refCmName,
+			Namespace: targetNamespace,
+		},
+	}
+
+	chKey := types.NamespacedName{Name: tragetChannelName, Namespace: targetNamespace}
+	chn := &chv1.Channel{
+		ObjectMeta: metav1.ObjectMeta{Name: tragetChannelName, Namespace: targetNamespace},
+		Spec: chv1.ChannelSpec{
+			Type:         targetChannelType,
+			Pathname:     targetNamespace,
+			SecretRef:    &corev1.ObjectReference{Name: refSrtName, Namespace: targetNamespace, Kind: "secret"},
+			ConfigMapRef: &corev1.ObjectReference{Name: refCmName, Namespace: targetNamespace, Kind: "ConfigMap"},
+		},
+	}
+
+	// Setup the Manager and Controller.  Wrap the Controller Reconcile function so it writes each request to a
+	// channel when it is finished.
+	mgr, err := manager.New(cfg, manager.Options{MetricsBindAddress: "0"})
+	g.Expect(err).NotTo(gomega.HaveOccurred())
+
+	c = mgr.GetClient()
+
+	tRecorder := record.NewBroadcaster().NewRecorder(mgr.GetScheme(), corev1.EventSource{Component: "channel"})
+
+	stopMgr, mgrStopped := StartTestManager(mgr, g)
+
+	defer func() {
+		close(stopMgr)
+		mgrStopped.Wait()
+	}()
+
+	rec := newReconciler(mgr, tRecorder)
+
+	defer c.Delete(context.TODO(), refSrt)
+	g.Expect(c.Create(context.TODO(), refSrt)).NotTo(gomega.HaveOccurred())
+
+	defer c.Delete(context.TODO(), refCm)
+	g.Expect(c.Create(context.TODO(), refCm)).NotTo(gomega.HaveOccurred())
+
+	defer c.Delete(context.TODO(), chn)
+	g.Expect(c.Create(context.TODO(), chn)).NotTo(gomega.HaveOccurred())
+
+	rq := reconcile.Request{NamespacedName: chKey}
+
+	_, err = rec.Reconcile(rq)
+	g.Expect(err).NotTo(gomega.HaveOccurred())
+
+	updatedSrt := &corev1.Secret{}
+	g.Expect(c.Get(
+		context.TODO(),
+		types.NamespacedName{Name: refSrtName, Namespace: targetNamespace},
+		updatedSrt)).NotTo(gomega.HaveOccurred())
+
+	assertReferredObjAnno(t, updatedSrt, chKey.String())
+
+	updatedCm := &corev1.ConfigMap{}
+	g.Expect(c.Get(
+		context.TODO(),
+		types.NamespacedName{Name: refCmName, Namespace: targetNamespace},
+		updatedCm)).NotTo(gomega.HaveOccurred())
+
+	assertReferredObjAnno(t, updatedCm, chKey.String())
+
+	clusterCRD := &apiextensionsv1beta1.CustomResourceDefinition{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: "clusters.clusterregistry.k8s.io",
+		},
+	}
+
+	g.Expect(c.Delete(context.TODO(), clusterCRD))
+
+	expectedRole := &rbac.Role{}
+	g.Expect(c.Get(
+		context.TODO(),
+		types.NamespacedName{Name: chn.Name, Namespace: chn.Namespace},
+		expectedRole)).NotTo(gomega.HaveOccurred())
+
+	expectedRolebinding := &rbac.RoleBinding{}
+	g.Expect(c.Get(
+		context.TODO(),
+		types.NamespacedName{Name: chn.Name, Namespace: chn.Namespace},
+		expectedRolebinding)).NotTo(gomega.HaveOccurred())
+
+	expectedChn := &chv1.Channel{}
+	g.Expect(c.Get(
+		context.TODO(),
+		types.NamespacedName{Name: chn.Name, Namespace: chn.Namespace},
+		expectedChn)).NotTo(gomega.HaveOccurred())
+	assertRoleBinding(t, mgr.GetClient(), expectedChn, expectedRolebinding)
+}
+
+func assertReferredObjAnno(t *testing.T, obj metav1.Object, chKeyStr string) {
+	anno := obj.GetAnnotations()
+	if len(anno) == 0 {
+		t.Errorf("anno is empty")
+		return
+	}
+
+	if anno[chv1.ServingChannel] == "" {
+		t.Errorf("target annotation is missing")
+		return
+	}
+
+	annoStr := strings.Trim(anno[chv1.ServingChannel], ",")
+	if annoStr != chKeyStr {
+		t.Errorf("referred annotation, wanted %v got %v\n", chKeyStr, anno[chv1.ServingChannel])
+		return
+	}
+}
+
+func assertRoleBinding(t *testing.T, clt client.Client, chn *chv1.Channel, rb *rbac.RoleBinding) {
+	if rb.RoleRef.Name != chn.Name {
+		t.Errorf("wrong role ref for channel %v/%v", chn.Namespace, chn.Name)
+		return
+	}
+
+	cllist := &clusterv1alpha1.ClusterList{}
+
+	//if we encounter errors, meaning we are running in a standalone mode
+	if err := clt.List(context.TODO(), cllist, &client.ListOptions{}); err != nil {
+		return
+	}
+
+	rbMap := make(map[string]bool, len(rb.Subjects))
+	for _, sub := range rb.Subjects {
+		rbMap[sub.Name] = true
+	}
+
+	for _, cluster := range cllist.Items {
+		rbStr := "hcm:clusters:" + cluster.Namespace + cluster.Name
+
+		if _, ok := rbMap[rbStr]; !ok {
+			t.Errorf("missing rolebinding for cluster %v", rbStr)
+		}
+	}
+}
+
+// 1. test role and rolebinding set up
+// 2. test the annotation deletion
+
+func TestChannelReconcileWithoutClusterCRD(t *testing.T) {
+	g := gomega.NewGomegaWithT(t)
+	refSrtName := "ch-srt"
+	refSrt := &corev1.Secret{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      refSrtName,
+			Namespace: targetNamespace,
+		},
+	}
+
+	// referreding to a non-exist object, reconcile should still pass
+	refCmName := "ch-cm"
+
+	chKey := types.NamespacedName{Name: tragetChannelName, Namespace: targetNamespace}
+	chn := &chv1.Channel{
+		ObjectMeta: metav1.ObjectMeta{Name: tragetChannelName, Namespace: targetNamespace},
+		Spec: chv1.ChannelSpec{
+			Type:         targetChannelType,
+			Pathname:     targetNamespace,
+			SecretRef:    &corev1.ObjectReference{Name: refSrtName, Namespace: targetNamespace, Kind: "secret"},
+			ConfigMapRef: &corev1.ObjectReference{Name: refCmName, Namespace: targetNamespace, Kind: "ConfigMap"},
+		},
+	}
+
+	// Setup the Manager and Controller.  Wrap the Controller Reconcile function so it writes each request to a
+	// channel when it is finished.
+	mgr, err := manager.New(cfg, manager.Options{MetricsBindAddress: "0"})
+	g.Expect(err).NotTo(gomega.HaveOccurred())
+
+	c = mgr.GetClient()
+
+	clusterCRD := &apiextensionsv1beta1.CustomResourceDefinition{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: clusterCRDName,
+		},
+	}
+
+	g.Expect(c.Delete(context.TODO(), clusterCRD))
+
+	tRecorder := record.NewBroadcaster().NewRecorder(mgr.GetScheme(), corev1.EventSource{Component: "channel"})
+
+	stopMgr, mgrStopped := StartTestManager(mgr, g)
+
+	defer func() {
+		close(stopMgr)
+		mgrStopped.Wait()
+	}()
+
+	rec := newReconciler(mgr, tRecorder)
+
+	defer c.Delete(context.TODO(), refSrt)
+	g.Expect(c.Create(context.TODO(), refSrt)).NotTo(gomega.HaveOccurred())
+
+	defer c.Delete(context.TODO(), chn)
+	g.Expect(c.Create(context.TODO(), chn)).NotTo(gomega.HaveOccurred())
+
+	rq := reconcile.Request{NamespacedName: chKey}
+
+	_, err = rec.Reconcile(rq)
+	g.Expect(err).Should(gomega.HaveOccurred())
+
+	expectedRole := &rbac.Role{}
+	g.Expect(c.Get(
+		context.TODO(),
+		types.NamespacedName{Name: chn.Name, Namespace: chn.Namespace},
+		expectedRole)).NotTo(gomega.HaveOccurred())
 }
