@@ -16,6 +16,7 @@ package utils
 
 import (
 	"k8s.io/klog"
+	chnv1 ""github.com/open-cluster-management/multicloud-operators-channel/pkg/apis/apps/v1"
 )
 
 const (
@@ -26,7 +27,7 @@ const (
 	// SubscriptionCRKind is kind of the Subscription CR
 	SubscriptionCRKind = "Subscription"
 	// HelmCRAPIVersion is APIVersion of the Helm CR
-	HelmCRAPIVersion = "apps.open-cluster-management.io/v1"
+	HelmCRAPIVersion = chnv1.SchemeGroupVersion.String()
 	// HelmCRChartName is spec.ChartName of the Helm CR
 	HelmCRChartName = "chartName"
 	// HelmCRReleaseName is spec.ReleaseName of the Helm CR
