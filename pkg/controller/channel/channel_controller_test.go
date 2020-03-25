@@ -311,25 +311,11 @@ func TestChannelReconcileWithoutClusterCRD(t *testing.T) {
 	rq := reconcile.Request{NamespacedName: chKey}
 
 	_, err = rec.Reconcile(rq)
-	g.Expect(err).NotTo(gomega.HaveOccurred())
-
-	updatedSrt := &corev1.Secret{}
-	g.Expect(c.Get(
-		context.TODO(),
-		types.NamespacedName{Name: refSrtName, Namespace: targetNamespace},
-		updatedSrt)).NotTo(gomega.HaveOccurred())
-
-	assertReferredObjAnno(t, updatedSrt, chKey.String())
+	g.Expect(err).Should(gomega.HaveOccurred())
 
 	expectedRole := &rbac.Role{}
 	g.Expect(c.Get(
 		context.TODO(),
 		types.NamespacedName{Name: chn.Name, Namespace: chn.Namespace},
 		expectedRole)).NotTo(gomega.HaveOccurred())
-
-	expectedRolebinding := &rbac.RoleBinding{}
-	g.Expect(c.Get(
-		context.TODO(),
-		types.NamespacedName{Name: chn.Name, Namespace: chn.Namespace},
-		expectedRolebinding)).NotTo(gomega.HaveOccurred())
 }

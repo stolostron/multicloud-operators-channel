@@ -388,21 +388,6 @@ func (r *ReconcileChannel) validateClusterRBAC(instance *chv1.Channel) error {
 
 	var subjects []rbac.Subject
 
-	clusterCRD := &apiextensionsv1beta1.CustomResourceDefinition{}
-	clusterCRDKey := types.NamespacedName{
-		Name: clusterCRDName,
-	}
-
-	if err := r.Get(context.TODO(), clusterCRDKey, clusterCRD); err != nil {
-		klog.V(debugLevel).Infof("skipping role binding for %v/%v since cluste CRD is not ready, err %v", instance.Name, instance.Namespace, err)
-
-		if kerr.IsNotFound(err) {
-			return nil
-		}
-
-		return gerr.Wrap(err, "failed to list cluster CRD")
-	}
-
 	cllist := &clusterv1alpha1.ClusterList{}
 
 	if err := r.List(context.TODO(), cllist, &client.ListOptions{}); err != nil {
