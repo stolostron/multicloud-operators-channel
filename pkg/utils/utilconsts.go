@@ -15,7 +15,6 @@
 package utils
 
 import (
-	chnv1 "github.com/open-cluster-management/multicloud-operators-channel/pkg/apis/apps/v1"
 	"k8s.io/klog"
 )
 
