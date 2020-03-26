@@ -23,8 +23,10 @@ const (
 	debugLevel = klog.Level(5)
 	// HelmCRKind is kind of the Helm CR
 	HelmCRKind = "HelmRelease"
+	// SubscriptionCRKind is kind of the Subscription CR
+	SubscriptionCRKind = "Subscription"
 	// HelmCRAPIVersion is APIVersion of the Helm CR
-	HelmCRAPIVersion = "app.ibm.com/v1alpha1"
+	HelmCRAPIVersion = "apps.open-cluster-management.io/v1"
 	// HelmCRChartName is spec.ChartName of the Helm CR
 	HelmCRChartName = "chartName"
 	// HelmCRReleaseName is spec.ReleaseName of the Helm CR
