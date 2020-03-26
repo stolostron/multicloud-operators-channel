@@ -33,6 +33,7 @@ import (
 	rbac "k8s.io/api/rbac/v1"
 	apiextensionsv1beta1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1beta1"
 	kerr "k8s.io/apimachinery/pkg/api/errors"
+	metaerr "k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 
@@ -391,6 +392,11 @@ func (r *ReconcileChannel) validateClusterRBAC(instance *chv1.Channel) error {
 	cllist := &clusterv1alpha1.ClusterList{}
 
 	if err := r.List(context.TODO(), cllist, &client.ListOptions{}); err != nil {
+		if metaerr.IsNoMatchError(err) {
+			klog.Errorf("skipping the RBAC validation for %v/%v, err: %v", instance.GetNamespace(), instance.GetName(), err)
+			return nil
+		}
+
 		if kerr.IsNotFound(err) {
 			return nil
 		}
