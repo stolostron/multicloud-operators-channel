@@ -101,7 +101,7 @@ func FakeClone(repoRoot string, isBare bool, gOpt *git.CloneOptions) (*git.Repos
 }
 
 // CloneGitRepo clones the GitHub repo
-func CloneGitRepo(chn *chv1.Channel, kubeClient client.Client, cOpt ...CloneFunc) (*repo.IndexFile, map[string]string, error) {
+func CloneGitRepo(chn *chv1.Channel, kubeClient client.Client, cOpt ...CloneFunc) (string, *repo.IndexFile, map[string]string, error) {
 	var cFunc CloneFunc
 	if len(cOpt) == 0 {
 		cFunc = git.PlainClone
@@ -120,7 +120,7 @@ func CloneGitRepo(chn *chv1.Channel, kubeClient client.Client, cOpt ...CloneFunc
 	if chn.Spec.SecretRef != nil {
 		gitCred, err := fetchCredentialOfGithub(chn, kubeClient)
 		if err != nil {
-			return nil, nil, errors.Wrap(err, "failed to clone git")
+			return "", nil, nil, errors.Wrap(err, "failed to clone git")
 		}
 
 		options.Auth = &githttp.BasicAuth{
@@ -131,23 +131,23 @@ func CloneGitRepo(chn *chv1.Channel, kubeClient client.Client, cOpt ...CloneFunc
 
 	repoRoot, err := createTmpDir(chn.Namespace, chn.Name)
 	if err != nil {
-		return nil, nil, errors.Wrap(err, "failed to clone git")
+		return "", nil, nil, errors.Wrap(err, "failed to clone git")
 	}
 
 	klog.V(debugLevel).Info("Cloning ", chn.Spec.Pathname, " into ", repoRoot)
 
 	if _, err := cFunc(repoRoot, false, options); err != nil {
-		return nil, nil, errors.Wrap(err, "failed to clone git")
+		return "", nil, nil, errors.Wrap(err, "failed to clone git")
 	}
 
 	// Generate index.yaml
 	indexFile, resourceDirs, err := generateIndexYAML(repoRoot)
 	if err != nil {
 		klog.Error("Failed to generate helm chart index file", err.Error())
-		return nil, nil, err
+		return "", nil, nil, err
 	}
 	// Generate list of resource dirs
-	return indexFile, resourceDirs, nil
+	return repoRoot, indexFile, resourceDirs, nil
 }
 
 func generateIndexYAML(repoRoot string) (*repo.IndexFile, map[string]string, error) {
@@ -173,7 +173,12 @@ func generateIndexYAML(repoRoot string) (*repo.IndexFile, map[string]string, err
 					}
 				} else if !strings.HasPrefix(path, currentChartDir) && !strings.HasPrefix(path, repoRoot+"/.git") {
 					klog.V(debugLevel).Info("This is not a helm chart directory. ", path)
-					resourceDirs[path+"/"] = path + "/"
+					// Get the relative parent directory from the git repo root
+					baseDir := ""
+					if !strings.EqualFold(path, repoRoot) {
+						baseDir = strings.SplitAfter(path, repoRoot+"/")[1]
+					}
+					resourceDirs[path+"/"] = baseDir + "/"
 				}
 			}
 			return nil
