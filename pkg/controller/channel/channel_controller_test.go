@@ -46,7 +46,6 @@ const (
 	targetNamespace   = "default"
 	tragetChannelName = "foo"
 	targetChannelType = chv1.ChannelType("namespace")
-	testClusterName   = "test-cluster"
 )
 
 var expectedRequest = reconcile.Request{NamespacedName: types.NamespacedName{Name: tragetChannelName, Namespace: targetNamespace}}
@@ -127,14 +126,6 @@ func TestChannelAnnotateReferredSecertAndConfigMap(t *testing.T) {
 			ConfigMapRef: &corev1.ObjectReference{Name: refCmName, Namespace: targetNamespace, Kind: "ConfigMap"},
 		},
 	}
-
-	//	cluster := &clusterv1alpha1.Cluster{
-	//		ObjectMeta: metav1.ObjectMeta{
-	//			Name: testClusterName,
-	//		},
-	//	}
-	//	defer c.Delete(context.TODO(), cluster)
-	//	g.Expect(c.Create(context.TODO(), cluster)).NotTo(gomega.HaveOccurred())
 
 	// Setup the Manager and Controller.  Wrap the Controller Reconcile function so it writes each request to a
 	// channel when it is finished.
