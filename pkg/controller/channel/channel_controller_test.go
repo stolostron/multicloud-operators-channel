@@ -194,7 +194,9 @@ func TestChannelAnnotateReferredSecertAndConfigMap(t *testing.T) {
 		context.TODO(),
 		types.NamespacedName{Name: chn.Name, Namespace: chn.Namespace},
 		expectedChn)).NotTo(gomega.HaveOccurred())
+
 	assertRoleBinding(t, mgr.GetClient(), expectedChn, expectedRolebinding)
+
 	clusterCRD := &apiextensionsv1beta1.CustomResourceDefinition{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: clusterCRDName,
