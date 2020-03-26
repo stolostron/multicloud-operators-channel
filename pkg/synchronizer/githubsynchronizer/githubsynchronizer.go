@@ -35,6 +35,7 @@ import (
 
 	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/klog"
@@ -150,14 +151,14 @@ func (sync *ChannelSynchronizer) syncChannelsWithGitRepo() {
 	}
 }
 
-func (sync *ChannelSynchronizer) processYamlFile(chn *chv1.Channel, files []os.FileInfo, dir string, newDplList map[string]*dplv1.Deployable) {
+func (sync *ChannelSynchronizer) processYamlFile(chn *chv1.Channel, files []os.FileInfo, cloneDir, dir string, newDplList map[string]*dplv1.Deployable) {
 	for _, f := range files {
 		// If YAML or YML,
 		if f.Mode().IsRegular() {
 			if strings.EqualFold(filepath.Ext(f.Name()), ".yml") || strings.EqualFold(filepath.Ext(f.Name()), ".yaml") {
 				// check it it is Kubernetes resource
 				klog.V(debugLevel).Info("scanning file ", f.Name())
-				file, _ := ioutil.ReadFile(filepath.Join(filepath.Clean(dir), filepath.Clean(f.Name())))
+				file, _ := ioutil.ReadFile(filepath.Join(filepath.Clean(cloneDir), filepath.Clean(dir), filepath.Clean(f.Name())))
 				t := kubeResource{}
 
 				err := yaml.Unmarshal(file, &t)
@@ -168,7 +169,7 @@ func (sync *ChannelSynchronizer) processYamlFile(chn *chv1.Channel, files []os.F
 
 				if t.APIVersion == "" || t.Kind == "" {
 					klog.V(debugLevel).Info("Not a Kubernetes resource")
-				} else if err := sync.handleSingleDeployable(chn, f, file, t, newDplList); err != nil {
+				} else if err := sync.handleSingleDeployable(chn, dir, f, file, t, newDplList); err != nil {
 					klog.Errorf("Failed to handle single deployable, err: %+v", err)
 				}
 			}
@@ -178,6 +179,7 @@ func (sync *ChannelSynchronizer) processYamlFile(chn *chv1.Channel, files []os.F
 
 func (sync *ChannelSynchronizer) handleSingleDeployable(
 	chn *chv1.Channel,
+	dir string,
 	fileinfo os.FileInfo,
 	filecontent []byte,
 	t kubeResource,
@@ -199,10 +201,17 @@ func (sync *ChannelSynchronizer) handleSingleDeployable(
 	}
 
 	dplanno := make(map[string]string)
-	dplanno[dplv1.AnnotationExternalSource] = fileinfo.Name()
+	dplanno[chv1.KeyChannel] = chn.Name
+	dplanno[dplv1.AnnotationExternalSource] = filepath.Join(dir, fileinfo.Name())
 	dplanno[dplv1.AnnotationLocal] = "false"
 	dplanno[dplv1.AnnotationDeployableVersion] = t.APIVersion
 	dpl.SetAnnotations(dplanno)
+
+	dplLabels := make(map[string]string)
+	dplLabels[chv1.KeyChannel] = chn.Name
+	dplLabels[chv1.KeyChannelType] = string(chn.Spec.Type)
+	dpl.SetLabels(dplLabels)
+
 	dpl.Spec.Template = &runtime.RawExtension{}
 
 	var err error
@@ -231,7 +240,7 @@ func (sync *ChannelSynchronizer) syncChannel(chn *chv1.Channel, cloneOpt utils.C
 	}
 
 	// Clone the Git repo
-	idx, resourceDirs, err := utils.CloneGitRepo(chn, sync.kubeClient, cloneOpt)
+	cloneDir, idx, resourceDirs, err := utils.CloneGitRepo(chn, sync.kubeClient, cloneOpt)
 	if err != nil {
 		klog.Error("Failed to clone the git repo: ", err.Error())
 		return
@@ -243,12 +252,12 @@ func (sync *ChannelSynchronizer) syncChannel(chn *chv1.Channel, cloneOpt utils.C
 	newDplList := make(map[string]*dplv1.Deployable)
 	// sync kube resource deployables
 	for _, dir := range resourceDirs {
-		files, err := ioutil.ReadDir(dir)
+		files, err := ioutil.ReadDir(filepath.Join(filepath.Clean(cloneDir), filepath.Clean(dir)))
 		if err != nil {
 			klog.Error("Failed to list files in directory ", dir, err.Error())
 		}
 
-		sync.processYamlFile(chn, files, dir, newDplList)
+		sync.processYamlFile(chn, files, cloneDir, dir, newDplList)
 	}
 
 	// chartname, chartversion, exists
@@ -272,6 +281,23 @@ func (sync *ChannelSynchronizer) syncChannel(chn *chv1.Channel, cloneOpt utils.C
 
 	// retrieve deployable list in current channel namespace
 	listopt := &client.ListOptions{Namespace: chn.Namespace}
+
+	// Handle deployables from multiple channels in the same namespace
+	chLabel := make(map[string]string)
+	chLabel[chv1.KeyChannel] = chn.Name
+	chLabel[chv1.KeyChannelType] = string(chn.Spec.Type)
+	labelSelector := &metav1.LabelSelector{
+		MatchLabels: chLabel,
+	}
+
+	clSelector, err := deputils.ConvertLabels(labelSelector)
+	if err != nil {
+		klog.Error("Failed to set label selector. err: ", err)
+		return
+	}
+
+	listopt.LabelSelector = clSelector
+
 	dpllist := &dplv1.DeployableList{}
 
 	err = sync.kubeClient.List(context.TODO(), dpllist, listopt)
@@ -313,6 +339,13 @@ func (sync *ChannelSynchronizer) handleResourceDeployable(
 
 	if dpltpl.GetKind() == utils.HelmCRKind && dpltpl.GetAPIVersion() == utils.HelmCRAPIVersion {
 		klog.Info("Skipping helm release deployable:", dpltpl.GetKind(), ".", dpltpl.GetAPIVersion())
+		return nil
+	}
+
+	// Do not delete deployables with Subscription template kind. This causes problems if subscription
+	// and channel are in the same namespace.
+	if dpltpl.GetKind() == utils.SubscriptionCRKind {
+		klog.Info("Skipping subscription deployable:", dpl.Name, ".", dpltpl.GetKind())
 		return nil
 	}
 
@@ -457,10 +490,18 @@ func (sync *ChannelSynchronizer) processGeneralMap(idx *repo.IndexFile, chn *chv
 			}
 
 			dplanno := make(map[string]string)
-			dplanno[dplv1.AnnotationExternalSource] = k
+			chartVersion, _ := idx.Get(k, mv)
+			src.GitHub.ChartPath = chartVersion.URLs[0]
+			dplanno[dplv1.AnnotationExternalSource] = chartVersion.URLs[0]
 			dplanno[dplv1.AnnotationLocal] = "false"
 			dplanno[dplv1.AnnotationDeployableVersion] = mv
 			dpl.SetAnnotations(dplanno)
+
+			dplLabels := make(map[string]string)
+			dplLabels[chv1.KeyChannel] = chn.Name
+			dplLabels[chv1.KeyChannelType] = string(chn.Spec.Type)
+			dpl.SetLabels(dplLabels)
+
 			dpl.Spec.Template = &runtime.RawExtension{}
 			dpl.Spec.Template.Raw, err = json.Marshal(obj)
 

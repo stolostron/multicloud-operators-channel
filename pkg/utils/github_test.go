@@ -41,7 +41,7 @@ func Test_CloneGitRepo(t *testing.T) {
 		},
 	}
 
-	idx, resDirMap, err := CloneGitRepo(chn, nil, FakeClone)
+	_, idx, resDirMap, err := CloneGitRepo(chn, nil, FakeClone)
 
 	if err != nil {
 		t.Errorf("failed to clone %+v", err)

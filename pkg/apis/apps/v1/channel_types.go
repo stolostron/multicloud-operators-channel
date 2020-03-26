@@ -25,6 +25,10 @@ var (
 	KeyChannelSource = SchemeGroupVersion.Group + "/hosting-deployable"
 	// KeyChannel is namespacedname tells the source of the channel
 	KeyChannel = SchemeGroupVersion.Group + "/channel"
+	// KeyChannelType is the type of the source of the channel
+	KeyChannelType = SchemeGroupVersion.Group + "/channel-type"
+	// KeyChannelPath is the filter reference path of GitHub type channel
+	KeyChannelPath = SchemeGroupVersion.Group + "/channel-path"
 	// ServingChannel tells the channel that the secrect or configMap refers to
 	ServingChannel = SchemeGroupVersion.Group + "/serving-channel"
 )
