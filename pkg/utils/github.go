@@ -62,7 +62,8 @@ func fetchCredentialOfGithub(chn *chv1.Channel, c client.Client) (*cred, error) 
 		return nil, errors.Wrap(err, "unable to get secret.")
 	}
 
-	gitCred := &cred{}
+	gitCred := &cred{new(string), new(string)}
+
 	if err := yaml.Unmarshal(secret.Data[UserID], gitCred.accessKey); err != nil {
 		return nil, errors.Wrap(err, "unable to unmarshal github access key")
 	}

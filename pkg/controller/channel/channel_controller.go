@@ -248,23 +248,27 @@ func (r *ReconcileChannel) Reconcile(request reconcile.Request) (reconcile.Resul
 	//sync the channel to the serving-channel annotation in all involved secrets.
 	srtRef := instance.Spec.SecretRef
 
-	if err := r.updatedReferencedObjectLabels(srtRef, srtGvk); err != nil {
-		klog.Errorf("failed to update referred secret label %v", err)
-	}
+	if srtRef != nil {
+		if err := r.updatedReferencedObjectLabels(srtRef, srtGvk); err != nil {
+			klog.Errorf("failed to update referred secret label %v", err)
+		}
 
-	if err := r.syncReferredObjAnnotation(request, srtRef, srtGvk); err != nil {
-		klog.Errorf("faild to annotation %v", err)
+		if err := r.syncReferredObjAnnotation(request, srtRef, srtGvk); err != nil {
+			klog.Errorf("failed to annotate %v", err)
+		}
 	}
 
 	//sync the channel to the serving-channel annotation in all involved ConfigMaps.
 	//r.syncConfigAnnotation(instance, request.NamespacedName)
 	cmRef := instance.Spec.ConfigMapRef
-	if err := r.updatedReferencedObjectLabels(cmRef, cmGvk); err != nil {
-		klog.Errorf("failed to update referred configMap label %v", err)
-	}
+	if cmRef != nil {
+		if err := r.updatedReferencedObjectLabels(cmRef, cmGvk); err != nil {
+			klog.Errorf("failed to update referred configMap label %v", err)
+		}
 
-	if err := r.syncReferredObjAnnotation(request, cmRef, cmGvk); err != nil {
-		klog.Errorf("faild to annotation %v", err)
+		if err := r.syncReferredObjAnnotation(request, cmRef, cmGvk); err != nil {
+			klog.Errorf("failed to annotate %v", err)
+		}
 	}
 
 	return reconcile.Result{}, nil
@@ -284,7 +288,7 @@ func (r *ReconcileChannel) updatedReferencedObjectLabels(ref *corev1.ObjectRefer
 	obj.SetGroupVersionKind(objGvk)
 
 	if err := r.Get(context.TODO(), objKey, obj); err != nil {
-		return gerr.Wrapf(err, "failed to get the referred object %v", objGvk.Kind)
+		return gerr.Wrapf(err, "failed to get the reference object %v", objGvk.Kind)
 	}
 
 	localLabels := obj.GetLabels()
