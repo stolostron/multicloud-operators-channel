@@ -55,3 +55,113 @@ func Test_CloneGitRepo(t *testing.T) {
 		t.Errorf("faild to parse yaml objects, wanted %v, got %v", resDirNum, len(resDirMap))
 	}
 }
+
+func Test_ParseKubeResoures(t *testing.T) {
+	testYaml1 := `---
+---
+---
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: test-configmap-1
+  namespace: default
+data:
+  path: resource
+---
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: test-configmap-2
+  namespace: default
+data:
+  path: resource
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: test-configmap-3
+  namespace: default
+data:
+  path: resource
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: test-configmap-4
+  namespace: default
+data:
+  path: resource
+---`
+	ret := parseKubeResoures([]byte(testYaml1))
+
+	if len(ret) != 4 {
+		t.Errorf("faild to parse yaml objects, wanted %v, got %v", 4, len(ret))
+	}
+
+	testYaml2 := `---
+---
+---
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: test-configmap-1
+  namespace: default
+data:
+  path: resource
+---
+---`
+	ret = parseKubeResoures([]byte(testYaml2))
+
+	if len(ret) != 1 {
+		t.Errorf("faild to parse yaml objects, wanted %v, got %v", 1, len(ret))
+	}
+
+	testYaml3 := `---
+---
+---
+---
+apiVersiondfdfd: v1
+kinddfdfdfdf: ConfigMap
+metadata:
+  name: test-configmap-1
+  namespace: default
+data:
+  path: resource
+---
+---`
+	ret = parseKubeResoures([]byte(testYaml3))
+
+	if len(ret) != 0 {
+		t.Errorf("faild to parse yaml objects, wanted %v, got %v", 0, len(ret))
+	}
+
+	testYaml4 := `---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: test-configmap-1
+  namespace: default
+data:
+  path: resource`
+	ret = parseKubeResoures([]byte(testYaml4))
+
+	if len(ret) != 1 {
+		t.Errorf("faild to parse yaml objects, wanted %v, got %v", 1, len(ret))
+	}
+
+	testYaml5 := `apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: test-configmap-1
+  namespace: default
+data:
+  path: resource`
+	ret = parseKubeResoures([]byte(testYaml5))
+
+	if len(ret) != 1 {
+		t.Errorf("faild to parse yaml objects, wanted %v, got %v", 1, len(ret))
+	}
+}

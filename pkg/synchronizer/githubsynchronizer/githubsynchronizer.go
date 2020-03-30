@@ -158,19 +158,30 @@ func (sync *ChannelSynchronizer) processYamlFile(chn *chv1.Channel, files []os.F
 			if strings.EqualFold(filepath.Ext(f.Name()), ".yml") || strings.EqualFold(filepath.Ext(f.Name()), ".yaml") {
 				// check it it is Kubernetes resource
 				klog.V(debugLevel).Info("scanning file ", f.Name())
-				file, _ := ioutil.ReadFile(filepath.Join(filepath.Clean(cloneDir), filepath.Clean(dir), filepath.Clean(f.Name())))
-				t := kubeResource{}
+				resources, err := utils.ParseKubeYAML(filepath.Join(filepath.Clean(cloneDir), filepath.Clean(dir), filepath.Clean(f.Name())))
 
-				err := yaml.Unmarshal(file, &t)
 				if err != nil {
-					klog.Info("Failed to unmarshal Kubernetes resource, err:", err)
-					break
+					klog.Error(err, "Failed to parse YAML file "+filepath.Join(filepath.Clean(cloneDir), filepath.Clean(dir), filepath.Clean(f.Name())))
+					continue
 				}
 
-				if t.APIVersion == "" || t.Kind == "" {
-					klog.V(debugLevel).Info("Not a Kubernetes resource")
-				} else if err := sync.handleSingleDeployable(chn, dir, f, file, t, newDplList); err != nil {
-					klog.Errorf("Failed to handle single deployable, err: %+v", err)
+				if len(resources) == 0 {
+					klog.Info("The file contains no Kubernetes resource.")
+					continue
+				} else {
+					for _, resource := range resources {
+						t := kubeResource{}
+						err := yaml.Unmarshal(resource, &t)
+						if err != nil {
+							klog.Info("Failed to unmarshal Kubernetes resource, err:", err)
+							continue
+						}
+
+						err = sync.handleSingleDeployable(chn, dir, resource, t, newDplList)
+						if err != nil {
+							klog.Error(err.Error())
+						}
+					}
 				}
 			}
 		}
@@ -180,7 +191,6 @@ func (sync *ChannelSynchronizer) processYamlFile(chn *chv1.Channel, files []os.F
 func (sync *ChannelSynchronizer) handleSingleDeployable(
 	chn *chv1.Channel,
 	dir string,
-	fileinfo os.FileInfo,
 	filecontent []byte,
 	t kubeResource,
 	newDplList map[string]*dplv1.Deployable) error {
@@ -202,7 +212,7 @@ func (sync *ChannelSynchronizer) handleSingleDeployable(
 
 	dplanno := make(map[string]string)
 	dplanno[chv1.KeyChannel] = chn.Name
-	dplanno[dplv1.AnnotationExternalSource] = filepath.Join(dir, fileinfo.Name())
+	dplanno[dplv1.AnnotationExternalSource] = dir
 	dplanno[dplv1.AnnotationLocal] = "false"
 	dplanno[dplv1.AnnotationDeployableVersion] = t.APIVersion
 	dpl.SetAnnotations(dplanno)

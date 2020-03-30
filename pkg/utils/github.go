@@ -15,6 +15,8 @@
 package utils
 
 import (
+	"io/ioutil"
+
 	"gopkg.in/src-d/go-git.v4"
 	"gopkg.in/src-d/go-git.v4/plumbing"
 	githttp "gopkg.in/src-d/go-git.v4/plumbing/transport/http"
@@ -48,6 +50,11 @@ const (
 type cred struct {
 	accessKey *string
 	pwd       *string
+}
+
+type kubeResource struct {
+	APIVersion string `yaml:"apiVersion"`
+	Kind       string `yaml:"kind"`
 }
 
 func fetchCredentialOfGithub(chn *chv1.Channel, c client.Client) (*cred, error) {
@@ -217,4 +224,42 @@ func generateIndexYAML(repoRoot string) (*repo.IndexFile, map[string]string, err
 	klog.V(debugLevel).Info("New index file ", string(b))
 
 	return indexFile, resourceDirs, nil
+}
+
+// ParseKubeYAML parses a YAML file and returns kube resources in byte array from the file
+func ParseKubeYAML(filePath string) ([][]byte, error) {
+	file, err := ioutil.ReadFile(filePath)
+	if err != nil {
+		return nil, err
+	}
+
+	return parseKubeResoures(file), nil
+}
+
+func parseKubeResoures(file []byte) [][]byte {
+	var ret [][]byte
+
+	items := strings.Split(string(file), "---")
+
+	for _, i := range items {
+		item := []byte(strings.Trim(i, "\t \n"))
+
+		t := kubeResource{}
+		err := yaml.Unmarshal(item, &t)
+
+		if err != nil {
+			// Ignore item that cannot be unmarshalled..
+			klog.Warning(err, "Failed to unmarshal YAML content")
+			continue
+		}
+
+		if t.APIVersion == "" || t.Kind == "" {
+			// Ignore item that does not have apiVersion or kind.
+			klog.Warning("Not a Kubernetes resource")
+		} else {
+			ret = append(ret, item)
+		}
+	}
+
+	return ret
 }
