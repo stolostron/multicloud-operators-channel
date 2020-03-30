@@ -175,21 +175,15 @@ func TestChannelAnnotateReferredSecertAndConfigMap(t *testing.T) {
 
 	assertReferredObjAnno(t, updatedCm, chKey.String())
 
-	clusterCRD := &apiextensionsv1beta1.CustomResourceDefinition{
-		ObjectMeta: metav1.ObjectMeta{
-			Name: "clusters.clusterregistry.k8s.io",
-		},
-	}
-
-	g.Expect(c.Delete(context.TODO(), clusterCRD))
-
 	expectedRole := &rbac.Role{}
+	defer c.Delete(context.TODO(), expectedRole)
 	g.Expect(c.Get(
 		context.TODO(),
 		types.NamespacedName{Name: chn.Name, Namespace: chn.Namespace},
 		expectedRole)).NotTo(gomega.HaveOccurred())
 
 	expectedRolebinding := &rbac.RoleBinding{}
+	defer c.Delete(context.TODO(), expectedRolebinding)
 	g.Expect(c.Get(
 		context.TODO(),
 		types.NamespacedName{Name: chn.Name, Namespace: chn.Namespace},
@@ -200,7 +194,16 @@ func TestChannelAnnotateReferredSecertAndConfigMap(t *testing.T) {
 		context.TODO(),
 		types.NamespacedName{Name: chn.Name, Namespace: chn.Namespace},
 		expectedChn)).NotTo(gomega.HaveOccurred())
+
 	assertRoleBinding(t, mgr.GetClient(), expectedChn, expectedRolebinding)
+
+	clusterCRD := &apiextensionsv1beta1.CustomResourceDefinition{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: clusterCRDName,
+		},
+	}
+
+	g.Expect(c.Delete(context.TODO(), clusterCRD))
 }
 
 func assertReferredObjAnno(t *testing.T, obj metav1.Object, chKeyStr string) {
@@ -283,14 +286,6 @@ func TestChannelReconcileWithoutClusterCRD(t *testing.T) {
 
 	c = mgr.GetClient()
 
-	clusterCRD := &apiextensionsv1beta1.CustomResourceDefinition{
-		ObjectMeta: metav1.ObjectMeta{
-			Name: clusterCRDName,
-		},
-	}
-
-	g.Expect(c.Delete(context.TODO(), clusterCRD))
-
 	tRecorder := record.NewBroadcaster().NewRecorder(mgr.GetScheme(), corev1.EventSource{Component: "channel"})
 
 	stopMgr, mgrStopped := StartTestManager(mgr, g)
@@ -311,11 +306,18 @@ func TestChannelReconcileWithoutClusterCRD(t *testing.T) {
 	rq := reconcile.Request{NamespacedName: chKey}
 
 	_, err = rec.Reconcile(rq)
-	g.Expect(err).Should(gomega.HaveOccurred())
+	g.Expect(err).NotTo(gomega.HaveOccurred())
 
 	expectedRole := &rbac.Role{}
+	defer c.Delete(context.TODO(), expectedRole)
 	g.Expect(c.Get(
 		context.TODO(),
 		types.NamespacedName{Name: chn.Name, Namespace: chn.Namespace},
 		expectedRole)).NotTo(gomega.HaveOccurred())
+
+	expectedRoleBinding := &rbac.RoleBinding{}
+	g.Expect(c.Get(
+		context.TODO(),
+		types.NamespacedName{Name: chn.Name, Namespace: chn.Namespace},
+		expectedRoleBinding)).Should(gomega.HaveOccurred())
 }
