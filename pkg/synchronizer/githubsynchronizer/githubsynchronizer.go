@@ -161,7 +161,7 @@ func (sync *ChannelSynchronizer) processYamlFile(chn *chv1.Channel, files []os.F
 				file, err := ioutil.ReadFile(filepath.Join(filepath.Clean(cloneDir), filepath.Clean(dir), filepath.Clean(f.Name())))
 
 				if err != nil {
-					klog.Error(err, "Failed to parse YAML file "+filepath.Join(filepath.Clean(cloneDir), filepath.Clean(dir), filepath.Clean(f.Name())))
+					klog.Error(err, "Failed to read YAML file "+filepath.Join(filepath.Clean(cloneDir), filepath.Clean(dir), filepath.Clean(f.Name())))
 					continue
 				}
 
