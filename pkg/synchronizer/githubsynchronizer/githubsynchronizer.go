@@ -169,7 +169,6 @@ func (sync *ChannelSynchronizer) processYamlFile(chn *chv1.Channel, files []os.F
 
 				if len(resources) == 0 {
 					klog.Info("The file contains no Kubernetes resource.")
-					continue
 				} else {
 					for _, resource := range resources {
 						t := kubeResource{}
