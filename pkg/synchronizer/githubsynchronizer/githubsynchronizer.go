@@ -159,15 +159,13 @@ func (sync *ChannelSynchronizer) processYamlFile(chn *chv1.Channel, files []os.F
 				// check it it is Kubernetes resource
 				klog.V(debugLevel).Info("scanning file ", f.Name())
 				file, err := ioutil.ReadFile(filepath.Join(filepath.Clean(cloneDir), filepath.Clean(dir), filepath.Clean(f.Name())))
-				if err != nil {
-					return nil, err
-				}
-				resources := utils.ParseKubeResoures(file)
 
 				if err != nil {
 					klog.Error(err, "Failed to parse YAML file "+filepath.Join(filepath.Clean(cloneDir), filepath.Clean(dir), filepath.Clean(f.Name())))
 					continue
 				}
+
+				resources := utils.ParseKubeResoures(file)
 
 				if len(resources) == 0 {
 					klog.Info("The file contains no Kubernetes resource.")
