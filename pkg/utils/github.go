@@ -15,8 +15,6 @@
 package utils
 
 import (
-	"io/ioutil"
-
 	"gopkg.in/src-d/go-git.v4"
 	"gopkg.in/src-d/go-git.v4/plumbing"
 	githttp "gopkg.in/src-d/go-git.v4/plumbing/transport/http"
@@ -226,17 +224,8 @@ func generateIndexYAML(repoRoot string) (*repo.IndexFile, map[string]string, err
 	return indexFile, resourceDirs, nil
 }
 
-// ParseKubeYAML parses a YAML file and returns kube resources in byte array from the file
-func ParseKubeYAML(filePath string) ([][]byte, error) {
-	file, err := ioutil.ReadFile(filePath)
-	if err != nil {
-		return nil, err
-	}
-
-	return parseKubeResoures(file), nil
-}
-
-func parseKubeResoures(file []byte) [][]byte {
+// ParseKubeResoures parses a YAML content and returns kube resources in byte array from the file
+func ParseKubeResoures(file []byte) [][]byte {
 	var ret [][]byte
 
 	items := strings.Split(string(file), "---")

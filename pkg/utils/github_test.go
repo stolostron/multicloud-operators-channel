@@ -94,7 +94,7 @@ metadata:
 data:
   path: resource
 ---`
-	ret := parseKubeResoures([]byte(testYaml1))
+	ret := ParseKubeResoures([]byte(testYaml1))
 
 	if len(ret) != 4 {
 		t.Errorf("faild to parse yaml objects, wanted %v, got %v", 4, len(ret))
@@ -113,7 +113,7 @@ data:
   path: resource
 ---
 ---`
-	ret = parseKubeResoures([]byte(testYaml2))
+	ret = ParseKubeResoures([]byte(testYaml2))
 
 	if len(ret) != 1 {
 		t.Errorf("faild to parse yaml objects, wanted %v, got %v", 1, len(ret))
@@ -132,7 +132,7 @@ data:
   path: resource
 ---
 ---`
-	ret = parseKubeResoures([]byte(testYaml3))
+	ret = ParseKubeResoures([]byte(testYaml3))
 
 	if len(ret) != 0 {
 		t.Errorf("faild to parse yaml objects, wanted %v, got %v", 0, len(ret))
@@ -146,7 +146,7 @@ metadata:
   namespace: default
 data:
   path: resource`
-	ret = parseKubeResoures([]byte(testYaml4))
+	ret = ParseKubeResoures([]byte(testYaml4))
 
 	if len(ret) != 1 {
 		t.Errorf("faild to parse yaml objects, wanted %v, got %v", 1, len(ret))
@@ -159,7 +159,7 @@ metadata:
   namespace: default
 data:
   path: resource`
-	ret = parseKubeResoures([]byte(testYaml5))
+	ret = ParseKubeResoures([]byte(testYaml5))
 
 	if len(ret) != 1 {
 		t.Errorf("faild to parse yaml objects, wanted %v, got %v", 1, len(ret))

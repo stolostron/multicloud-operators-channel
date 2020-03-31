@@ -158,7 +158,11 @@ func (sync *ChannelSynchronizer) processYamlFile(chn *chv1.Channel, files []os.F
 			if strings.EqualFold(filepath.Ext(f.Name()), ".yml") || strings.EqualFold(filepath.Ext(f.Name()), ".yaml") {
 				// check it it is Kubernetes resource
 				klog.V(debugLevel).Info("scanning file ", f.Name())
-				resources, err := utils.ParseKubeYAML(filepath.Join(filepath.Clean(cloneDir), filepath.Clean(dir), filepath.Clean(f.Name())))
+				file, err := ioutil.ReadFile(filepath.Join(filepath.Clean(cloneDir), filepath.Clean(dir), filepath.Clean(f.Name())))
+				if err != nil {
+					return nil, err
+				}
+				resources := utils.ParseKubeResoures(file)
 
 				if err != nil {
 					klog.Error(err, "Failed to parse YAML file "+filepath.Join(filepath.Clean(cloneDir), filepath.Clean(dir), filepath.Clean(f.Name())))
