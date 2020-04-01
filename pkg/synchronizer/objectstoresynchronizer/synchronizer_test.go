@@ -17,15 +17,16 @@ package objectstoresynchronizer
 import (
 	"context"
 	"encoding/json"
-	"testing"
+	"fmt"
+	"time"
 
-	"github.com/onsi/gomega"
+	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/gomega"
 	corev1 "k8s.io/api/core/v1"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
-	"sigs.k8s.io/controller-runtime/pkg/manager"
 
 	chv1 "github.com/open-cluster-management/multicloud-operators-channel/pkg/apis/apps/v1"
 	"github.com/open-cluster-management/multicloud-operators-channel/pkg/utils"
@@ -38,337 +39,441 @@ import (
 // Test_alginClusterResourceWithHost_createDplBasedOnHost
 //3. some deployables changed at objectstore then the local deployables should be updated as well
 // Test_alginClusterResourceWithHost_updateDplBasedOnHost
-func Test_syncChannelsWithObjStore(t *testing.T) {
-	g := gomega.NewGomegaWithT(t)
 
-	// Setup the Manager and Controller.  Wrap the Controller Reconcile function so it writes each request to a
-	// channel when it is finished.
-	mgr, err := manager.New(cfg, manager.Options{MetricsBindAddress: "0"})
-	g.Expect(err).NotTo(gomega.HaveOccurred())
+var _ = Describe("sync channel and object store", func() {
+	Context("simple run with fake bucket client", func() {
 
-	g.Expect(err).NotTo(gomega.HaveOccurred())
+		It("simple start up", func() {
+			chdesc, _ := utils.CreateObjectStorageChannelDescriptor()
+			objsync, _ := CreateObjectStoreSynchronizer(k8sManager.GetConfig(), chdesc, 2)
+			objsync.ObjectStore = &utils.FakeObjectStore{}
+			Expect(objsync.syncChannelsWithObjStore()).ShouldNot(HaveOccurred())
+		})
 
-	stopMgr, mgrStopped := StartTestManager(mgr, g)
+	})
 
-	defer func() {
-		close(stopMgr)
-		mgrStopped.Wait()
-	}()
+	//empty host
+	Context("delete resource on cluster due to empty bucket", func() {
 
-	chdesc, _ := utils.CreateObjectStorageChannelDescriptor()
+		var (
+			tKey = types.NamespacedName{Name: "tch-1", Namespace: "tns-1"}
 
-	objsync, _ := CreateObjectStoreSynchronizer(mgr.GetConfig(), chdesc, 2)
+			srtName = "srt-ref-1"
+			refSrt  = &corev1.Secret{
+				ObjectMeta: v1.ObjectMeta{
+					Name:      srtName,
+					Namespace: tKey.Namespace,
+				},
+				Data: map[string][]byte{
+					utils.SecretMapKeyAccessKeyID:     {},
+					utils.SecretMapKeySecretAccessKey: {},
+				},
+			}
 
-	g.Expect(objsync.syncChannelsWithObjStore()).ShouldNot(gomega.HaveOccurred())
-}
-
-//empty host
-func Test_alginClusterResourceWithHost_emptyHost(t *testing.T) {
-	g := gomega.NewGomegaWithT(t)
-
-	// Setup the Manager and Controller.  Wrap the Controller Reconcile function so it writes each request to a
-	// channel when it is finished.
-	mgr, err := manager.New(cfg, manager.Options{MetricsBindAddress: "0"})
-	g.Expect(err).NotTo(gomega.HaveOccurred())
-
-	g.Expect(err).NotTo(gomega.HaveOccurred())
-
-	stopMgr, mgrStopped := StartTestManager(mgr, g)
-
-	c := mgr.GetClient()
-
-	defer func() {
-		close(stopMgr)
-		mgrStopped.Wait()
-	}()
-
-	tKey := types.NamespacedName{Name: "tch", Namespace: "tns"}
-
-	srtName := "srt-ref"
-	refSrt := &corev1.Secret{
-		ObjectMeta: v1.ObjectMeta{
-			Name:      srtName,
-			Namespace: tKey.Namespace,
-		},
-		Data: map[string][]byte{
-			utils.SecretMapKeyAccessKeyID:     {},
-			utils.SecretMapKeySecretAccessKey: {},
-		},
-	}
-
-	tCh := &chv1.Channel{
-		ObjectMeta: v1.ObjectMeta{
-			Name:      tKey.Name,
-			Namespace: tKey.Namespace,
-		},
-		Spec: chv1.ChannelSpec{
-			Type:     chv1.ChannelType("objectbucket"),
-			Pathname: "/" + tKey.Namespace,
-			SecretRef: &corev1.ObjectReference{
-				Name:      srtName,
-				Namespace: tKey.Namespace,
-			},
-		},
-	}
-
-	dplName := "t-dpl"
-	tDpl := &dplv1.Deployable{
-		ObjectMeta: v1.ObjectMeta{
-			Name:      dplName,
-			Namespace: tKey.Namespace,
-		},
-		Spec: dplv1.DeployableSpec{
-			Template: &runtime.RawExtension{
-				Object: &corev1.ConfigMap{
-					TypeMeta: v1.TypeMeta{
-						Kind: "ConfigMap",
+			tCh = &chv1.Channel{
+				ObjectMeta: v1.ObjectMeta{
+					Name:      tKey.Name,
+					Namespace: tKey.Namespace,
+				},
+				Spec: chv1.ChannelSpec{
+					Type:     chv1.ChannelType("objectbucket"),
+					Pathname: "/" + tKey.Namespace,
+					SecretRef: &corev1.ObjectReference{
+						Name:      srtName,
+						Namespace: tKey.Namespace,
 					},
-					ObjectMeta: v1.ObjectMeta{
-						Name: "cm",
-						Annotations: map[string]string{
-							dplv1.AnnotationExternalSource: "true",
+				},
+			}
+
+			dplName = "t-dpl-1"
+			tDpl    = &dplv1.Deployable{
+				ObjectMeta: v1.ObjectMeta{
+					Name:      dplName,
+					Namespace: tKey.Namespace,
+				},
+				Spec: dplv1.DeployableSpec{
+					Template: &runtime.RawExtension{
+						Object: &corev1.ConfigMap{
+							TypeMeta: v1.TypeMeta{
+								Kind: "ConfigMap",
+							},
+							ObjectMeta: v1.ObjectMeta{
+								Name: "cm-1",
+								Annotations: map[string]string{
+									dplv1.AnnotationExternalSource: "true",
+								},
+							},
 						},
 					},
 				},
-			},
-		},
-	}
+			}
 
-	defer c.Delete(context.TODO(), refSrt)
-	g.Expect(c.Create(context.TODO(), refSrt)).NotTo(gomega.HaveOccurred())
+			objsync *ChannelSynchronizer
+		)
 
-	defer c.Delete(context.TODO(), tCh)
-	g.Expect(c.Create(context.TODO(), tCh)).NotTo(gomega.HaveOccurred())
+		It("should not have deployable on cluster when query given the bucket is empty", func() {
+			Expect(k8sClient.Create(context.TODO(), refSrt)).Should(Succeed())
+			defer func() {
+				Expect(k8sClient.Delete(context.TODO(), refSrt)).Should(Succeed())
+			}()
+			Expect(k8sClient.Create(context.TODO(), tCh)).Should(Succeed())
+			defer func() {
+				Expect(k8sClient.Delete(context.TODO(), tCh)).Should(Succeed())
+			}()
+			Expect(k8sClient.Create(context.TODO(), tDpl)).Should(Succeed())
 
-	g.Expect(c.Create(context.TODO(), tDpl)).NotTo(gomega.HaveOccurred())
+			chdesc, _ := utils.CreateObjectStorageChannelDescriptor()
+			objsync, _ = CreateObjectStoreSynchronizer(k8sManager.GetConfig(), chdesc, 2)
+			objsync.ObjectStore = &utils.FakeObjectStore{}
+			Expect(objsync.alginClusterResourceWithHost(tCh)).ShouldNot(HaveOccurred())
+			res := &dplv1.Deployable{}
+			time.Sleep(time.Second * 5)
+			Expect(k8sClient.Get(context.TODO(), types.NamespacedName{Name: dplName, Namespace: tKey.Namespace}, res)).Should(HaveOccurred())
+		})
+	})
 
-	chdesc, _ := utils.CreateObjectStorageChannelDescriptor()
+	Context("create deployable on cluster since we get new record(from a user) on bucket", func() {
+		var (
+			tKey = types.NamespacedName{Name: "tch-2", Namespace: "tns-2"}
 
-	objsync, _ := CreateObjectStoreSynchronizer(mgr.GetConfig(), chdesc, 2)
+			srtName = "srt-ref-2"
+			dplName = "t-dpl-2"
 
-	objsync.ObjectStore = &utils.FakeObjectStore{}
-	g.Expect(objsync.alginClusterResourceWithHost(tCh)).ShouldNot(gomega.HaveOccurred())
-
-	res := &dplv1.Deployable{}
-	g.Expect(c.Get(context.TODO(), types.NamespacedName{Name: dplName, Namespace: tKey.Namespace}, res)).Should(gomega.HaveOccurred())
-}
-
-//new deployable should create from hostResMap
-func Test_alginClusterResourceWithHost_createDplBasedOnHost(t *testing.T) {
-	g := gomega.NewGomegaWithT(t)
-
-	// Setup the Manager and Controller.  Wrap the Controller Reconcile function so it writes each request to a
-	// channel when it is finished.
-	mgr, err := manager.New(cfg, manager.Options{MetricsBindAddress: "0"})
-	g.Expect(err).NotTo(gomega.HaveOccurred())
-
-	g.Expect(err).NotTo(gomega.HaveOccurred())
-
-	stopMgr, mgrStopped := StartTestManager(mgr, g)
-
-	c := mgr.GetClient()
-
-	defer func() {
-		close(stopMgr)
-		mgrStopped.Wait()
-	}()
-
-	tKey := types.NamespacedName{Name: "tch", Namespace: "tns"}
-
-	srtName := "srt-ref"
-	refSrt := &corev1.Secret{
-		ObjectMeta: v1.ObjectMeta{
-			Name:      srtName,
-			Namespace: tKey.Namespace,
-		},
-		Data: map[string][]byte{
-			utils.SecretMapKeyAccessKeyID:     {},
-			utils.SecretMapKeySecretAccessKey: {},
-		},
-	}
-
-	tCh := &chv1.Channel{
-		ObjectMeta: v1.ObjectMeta{
-			Name:      tKey.Name,
-			Namespace: tKey.Namespace,
-		},
-		Spec: chv1.ChannelSpec{
-			Type:     chv1.ChannelType("objectbucket"),
-			Pathname: "/" + tKey.Name,
-			SecretRef: &corev1.ObjectReference{
-				Name:      srtName,
-				Namespace: tKey.Namespace,
-			},
-		},
-	}
-
-	dplName := "t-dpl"
-
-	defer c.Delete(context.TODO(), refSrt)
-	g.Expect(c.Create(context.TODO(), refSrt)).NotTo(gomega.HaveOccurred())
-
-	defer c.Delete(context.TODO(), tCh)
-	g.Expect(c.Create(context.TODO(), tCh)).NotTo(gomega.HaveOccurred())
-
-	chdesc, _ := utils.CreateObjectStorageChannelDescriptor()
-
-	objsync, _ := CreateObjectStoreSynchronizer(mgr.GetConfig(), chdesc, 2)
-
-	objsync.ObjectStore = &utils.FakeObjectStore{
-		Clt: map[string]map[string]utils.DeployableObject{
-			tKey.Name: {
-				dplName: {
-					Name:    dplName,
-					Content: []byte{},
+			refSrt = &corev1.Secret{
+				ObjectMeta: v1.ObjectMeta{
+					Name:      srtName,
+					Namespace: tKey.Namespace,
 				},
-			},
-		},
-	}
+				Data: map[string][]byte{
+					utils.SecretMapKeyAccessKeyID:     {},
+					utils.SecretMapKeySecretAccessKey: {},
+				},
+			}
 
-	g.Expect(objsync.alginClusterResourceWithHost(tCh)).ShouldNot(gomega.HaveOccurred())
-
-	res := &dplv1.Deployable{}
-	g.Expect(c.Get(context.TODO(), types.NamespacedName{Name: dplName, Namespace: tKey.Namespace}, res)).ShouldNot(gomega.HaveOccurred())
-
-	c.Delete(context.TODO(), res)
-}
-
-//deployable should update from hostResMap
-func Test_alginClusterResourceWithHost_updateDplBasedOnHost(t *testing.T) {
-	g := gomega.NewGomegaWithT(t)
-
-	// Setup the Manager and Controller.  Wrap the Controller Reconcile function so it writes each request to a
-	// channel when it is finished.
-	mgr, err := manager.New(cfg, manager.Options{MetricsBindAddress: "0"})
-	g.Expect(err).NotTo(gomega.HaveOccurred())
-
-	g.Expect(err).NotTo(gomega.HaveOccurred())
-
-	stopMgr, mgrStopped := StartTestManager(mgr, g)
-
-	c := mgr.GetClient()
-
-	defer func() {
-		close(stopMgr)
-		mgrStopped.Wait()
-	}()
-
-	tKey := types.NamespacedName{Name: "tch", Namespace: "tns"}
-
-	srtName := "srt-ref"
-	refSrt := &corev1.Secret{
-		ObjectMeta: v1.ObjectMeta{
-			Name:      srtName,
-			Namespace: tKey.Namespace,
-		},
-		Data: map[string][]byte{
-			utils.SecretMapKeyAccessKeyID:     {},
-			utils.SecretMapKeySecretAccessKey: {},
-		},
-	}
-
-	tCh := &chv1.Channel{
-		ObjectMeta: v1.ObjectMeta{
-			Name:      tKey.Name,
-			Namespace: tKey.Namespace,
-		},
-		Spec: chv1.ChannelSpec{
-			Type:     chv1.ChannelType("objectbucket"),
-			Pathname: "/" + tKey.Name,
-			SecretRef: &corev1.ObjectReference{
-				Name:      srtName,
-				Namespace: tKey.Namespace,
-			},
-		},
-	}
-
-	dplName := "t-dpl"
-	tDpl := &dplv1.Deployable{
-		TypeMeta: v1.TypeMeta{
-			Kind:       "ConfigMap",
-			APIVersion: "apps.open-cluster-management.io/v1",
-		},
-		ObjectMeta: v1.ObjectMeta{
-			Name:      dplName,
-			Namespace: tKey.Namespace,
-		},
-		Spec: dplv1.DeployableSpec{
-			Template: &runtime.RawExtension{
-				Object: &corev1.ConfigMap{
-					TypeMeta: v1.TypeMeta{
-						Kind:       "ConfigMap",
-						APIVersion: "v1",
+			tCh = &chv1.Channel{
+				ObjectMeta: v1.ObjectMeta{
+					Name:      tKey.Name,
+					Namespace: tKey.Namespace,
+				},
+				Spec: chv1.ChannelSpec{
+					Type:     chv1.ChannelType("objectbucket"),
+					Pathname: "/" + tKey.Name,
+					SecretRef: &corev1.ObjectReference{
+						Name:      srtName,
+						Namespace: tKey.Namespace,
 					},
-					ObjectMeta: v1.ObjectMeta{
-						Name: "cm",
-						Annotations: map[string]string{
-							dplv1.AnnotationExternalSource: "true",
+				},
+			}
+
+			expectedConfigMapName = "cm-v2"
+			bucketCm              = &unstructured.Unstructured{
+				Object: map[string]interface{}{
+					"kind":       "ConfigMap",
+					"apiVersion": "v1",
+					"metadata": map[string]interface{}{
+						"name":      expectedConfigMapName,
+						"namespace": tKey.Namespace,
+					},
+					"spec": map[string]interface{}{},
+				},
+			}
+
+			res = &dplv1.Deployable{}
+
+			objsync *ChannelSynchronizer
+		)
+
+		It("should grab from bucket and deploy to cluster", func() {
+			Expect(k8sClient.Create(context.TODO(), refSrt)).NotTo(HaveOccurred())
+			defer func() {
+				Expect(k8sClient.Delete(context.TODO(), refSrt)).Should(Succeed())
+			}()
+			Expect(k8sClient.Create(context.TODO(), tCh)).NotTo(HaveOccurred())
+			defer func() {
+				Expect(k8sClient.Delete(context.TODO(), tCh)).Should(Succeed())
+			}()
+
+			chdesc, _ := utils.CreateObjectStorageChannelDescriptor()
+			objsync, _ = CreateObjectStoreSynchronizer(k8sManager.GetConfig(), chdesc, 2)
+
+			bucketTpl, err := json.Marshal(bucketCm)
+
+			Expect(err).To(BeNil())
+
+			objsync.ObjectStore = &utils.FakeObjectStore{
+				Clt: map[string]map[string]utils.DeployableObject{
+					tKey.Name: {
+						dplName: {
+							Name:    dplName,
+							Content: bucketTpl,
 						},
 					},
 				},
-			},
-		},
-	}
+			}
 
-	expectedConfigMapName := "cm-v2"
-	hostDpl := &unstructured.Unstructured{
-		Object: map[string]interface{}{
-			"kind":       "ConfigMap",
-			"apiVersion": "v1",
-			"metadata": map[string]interface{}{
-				"name":      expectedConfigMapName,
-				"namespace": tKey.Namespace,
-				"annotations": map[string]string{
-					dplv1.AnnotationExternalSource: "true",
-					dplv1.AnnotationHosting:        tKey.String(),
+			Expect(objsync.alginClusterResourceWithHost(tCh)).Should(Succeed())
+			time.Sleep(time.Second * 5)
+
+			Expect(k8sClient.Get(context.TODO(), types.NamespacedName{Name: dplName, Namespace: tCh.GetNamespace()}, res)).Should(Succeed())
+			defer func() {
+				Expect(k8sClient.Delete(context.TODO(), res)).Should(Succeed())
+			}()
+		})
+
+	})
+
+	Context("update deployable on cluster, since the linked resource on bucket updated", func() {
+		var (
+			tKey = types.NamespacedName{Name: "tch-3", Namespace: "tns-3"}
+
+			srtName = "srt-ref-3"
+			refSrt  = &corev1.Secret{
+				ObjectMeta: v1.ObjectMeta{
+					Name:      srtName,
+					Namespace: tKey.Namespace,
 				},
-			},
-			"spec": map[string]interface{}{},
-		},
-	}
-
-	defer c.Delete(context.TODO(), refSrt)
-	g.Expect(c.Create(context.TODO(), refSrt)).NotTo(gomega.HaveOccurred())
-
-	defer c.Delete(context.TODO(), tCh)
-	g.Expect(c.Create(context.TODO(), tCh)).NotTo(gomega.HaveOccurred())
-
-	g.Expect(c.Create(context.TODO(), tDpl)).NotTo(gomega.HaveOccurred())
-
-	chdesc, _ := utils.CreateObjectStorageChannelDescriptor()
-
-	objsync, _ := CreateObjectStoreSynchronizer(mgr.GetConfig(), chdesc, 2)
-
-	eTpl, err := hostDpl.MarshalJSON()
-
-	g.Expect(err).Should(gomega.BeNil())
-
-	objsync.ObjectStore = &utils.FakeObjectStore{
-		Clt: map[string]map[string]utils.DeployableObject{
-			tKey.Name: {
-				dplName: {
-					Name:    dplName,
-					Content: eTpl,
+				Data: map[string][]byte{
+					utils.SecretMapKeyAccessKeyID:     {},
+					utils.SecretMapKeySecretAccessKey: {},
 				},
-			},
-		},
-	}
+			}
 
-	g.Expect(objsync.alginClusterResourceWithHost(tCh)).ShouldNot(gomega.HaveOccurred())
+			tCh = &chv1.Channel{
+				ObjectMeta: v1.ObjectMeta{
+					Name:      tKey.Name,
+					Namespace: tKey.Namespace,
+				},
+				Spec: chv1.ChannelSpec{
+					Type:     chv1.ChannelType("objectbucket"),
+					Pathname: "/" + tKey.Name,
+					SecretRef: &corev1.ObjectReference{
+						Name:      srtName,
+						Namespace: tKey.Namespace,
+					},
+				},
+			}
 
-	res := &dplv1.Deployable{}
-	g.Expect(c.Get(context.TODO(), types.NamespacedName{Name: dplName, Namespace: tKey.Namespace}, res)).ShouldNot(gomega.HaveOccurred())
+			dplName = "t-dpl-3"
+			tDpl    = &dplv1.Deployable{
+				TypeMeta: v1.TypeMeta{
+					Kind:       "ConfigMap",
+					APIVersion: "apps.open-cluster-management.io/v1",
+				},
+				ObjectMeta: v1.ObjectMeta{
+					Name:      dplName,
+					Namespace: tKey.Namespace,
+				},
+				Spec: dplv1.DeployableSpec{
+					Template: &runtime.RawExtension{
+						Object: &corev1.ConfigMap{
+							TypeMeta: v1.TypeMeta{
+								Kind:       "ConfigMap",
+								APIVersion: "v1",
+							},
+							ObjectMeta: v1.ObjectMeta{
+								Name: "cm-3",
+								Annotations: map[string]string{
+									dplv1.AnnotationExternalSource: "true",
+								},
+							},
+						},
+					},
+				},
+			}
 
-	assertDeployableTemplate(t, res, expectedConfigMapName)
-}
+			expectedConfigMapName = "cm-v3"
+			bucketDpl             = &unstructured.Unstructured{
+				Object: map[string]interface{}{
+					"kind":       "ConfigMap",
+					"apiVersion": "v1",
+					"metadata": map[string]interface{}{
+						"name":      expectedConfigMapName,
+						"namespace": tKey.Namespace,
+						"annotations": map[string]string{
+							dplv1.AnnotationExternalSource: "true",
+							dplv1.AnnotationHosting:        tKey.String(),
+						},
+					},
+					"spec": map[string]interface{}{},
+				},
+			}
 
-func assertDeployableTemplate(t *testing.T, dpl *dplv1.Deployable, eCmName string) {
-	tpl := &unstructured.Unstructured{}
-	if err := json.Unmarshal(dpl.Spec.Template.Raw, tpl); err != nil {
-		t.Errorf("failed to unmarshal template for %v\n", dpl.Name)
-	}
+			objsync *ChannelSynchronizer
+			res     = &dplv1.Deployable{}
+		)
 
-	if tpl.GetName() != eCmName {
-		t.Errorf("failed to update the deployable %v payload when object host updated, got template %v", dpl.Name, tpl)
-	}
-}
+		It("should update the deployable on cluster based on the bucket resource", func() {
+			Expect(k8sClient.Create(context.TODO(), refSrt)).Should(Succeed())
+			defer func() {
+				Expect(k8sClient.Delete(context.TODO(), refSrt)).Should(Succeed())
+			}()
+			Expect(k8sClient.Create(context.TODO(), tCh)).Should(Succeed())
+			defer func() {
+				Expect(k8sClient.Delete(context.TODO(), tCh)).Should(Succeed())
+			}()
+
+			Expect(k8sClient.Create(context.TODO(), tDpl)).Should(Succeed())
+			defer func() {
+				Expect(k8sClient.Delete(context.TODO(), tDpl)).Should(Succeed())
+			}()
+
+			chdesc, _ := utils.CreateObjectStorageChannelDescriptor()
+
+			objsync, _ = CreateObjectStoreSynchronizer(k8sManager.GetConfig(), chdesc, 2)
+
+			eTpl, err := bucketDpl.MarshalJSON()
+
+			Expect(err).Should(BeNil())
+
+			objsync.ObjectStore = &utils.FakeObjectStore{
+				Clt: map[string]map[string]utils.DeployableObject{
+					tKey.Name: {
+						dplName: {
+							Name:    dplName,
+							Content: eTpl,
+						},
+					},
+				},
+			}
+			Expect(objsync.alginClusterResourceWithHost(tCh)).Should(Succeed())
+			time.Sleep(time.Second * 5)
+
+			Expect(k8sClient.Get(context.TODO(), types.NamespacedName{Name: dplName, Namespace: tKey.Namespace}, res)).ShouldNot(HaveOccurred())
+
+			tpl := &unstructured.Unstructured{}
+			Expect(json.Unmarshal(res.Spec.Template.Raw, tpl)).Should(Succeed())
+			fmt.Fprintf(GinkgoWriter, "Some log text: %v\n", tpl)
+
+			Expect(tpl.GetName()).To(Equal(expectedConfigMapName))
+		})
+
+	})
+
+	Context("delete updated deployable on cluster, since the linked resource on bucket resource is delete", func() {
+		var (
+			tKey = types.NamespacedName{Name: "tch-3", Namespace: "tns-3"}
+
+			srtName = "srt-ref-3"
+			refSrt  = &corev1.Secret{
+				ObjectMeta: v1.ObjectMeta{
+					Name:      srtName,
+					Namespace: tKey.Namespace,
+				},
+				Data: map[string][]byte{
+					utils.SecretMapKeyAccessKeyID:     {},
+					utils.SecretMapKeySecretAccessKey: {},
+				},
+			}
+
+			tCh = &chv1.Channel{
+				ObjectMeta: v1.ObjectMeta{
+					Name:      tKey.Name,
+					Namespace: tKey.Namespace,
+				},
+				Spec: chv1.ChannelSpec{
+					Type:     chv1.ChannelType("objectbucket"),
+					Pathname: "/" + tKey.Name,
+					SecretRef: &corev1.ObjectReference{
+						Name:      srtName,
+						Namespace: tKey.Namespace,
+					},
+				},
+			}
+
+			dplName = "t-dpl-3"
+			tDpl    = &dplv1.Deployable{
+				TypeMeta: v1.TypeMeta{
+					Kind:       "ConfigMap",
+					APIVersion: "apps.open-cluster-management.io/v1",
+				},
+				ObjectMeta: v1.ObjectMeta{
+					Name:      dplName,
+					Namespace: tKey.Namespace,
+				},
+				Spec: dplv1.DeployableSpec{
+					Template: &runtime.RawExtension{
+						Object: &corev1.ConfigMap{
+							TypeMeta: v1.TypeMeta{
+								Kind:       "ConfigMap",
+								APIVersion: "v1",
+							},
+							ObjectMeta: v1.ObjectMeta{
+								Name: "cm-3",
+								Annotations: map[string]string{
+									dplv1.AnnotationExternalSource: "true",
+								},
+							},
+						},
+					},
+				},
+			}
+
+			expectedConfigMapName = "cm-v3"
+			bucketDpl             = &unstructured.Unstructured{
+				Object: map[string]interface{}{
+					"kind":       "ConfigMap",
+					"apiVersion": "v1",
+					"metadata": map[string]interface{}{
+						"name":      expectedConfigMapName,
+						"namespace": tKey.Namespace,
+						"annotations": map[string]string{
+							dplv1.AnnotationExternalSource: "true",
+							dplv1.AnnotationHosting:        tKey.String(),
+						},
+					},
+					"spec": map[string]interface{}{},
+				},
+			}
+
+			objsync *ChannelSynchronizer
+			res     = &dplv1.Deployable{}
+			ctx     = context.TODO()
+		)
+
+		It("should delete the deployable on cluster after the resource is delete from bucket", func() {
+			Expect(k8sClient.Create(context.TODO(), refSrt)).Should(Succeed())
+			defer func() {
+				Expect(k8sClient.Delete(context.TODO(), refSrt)).Should(Succeed())
+			}()
+
+			Expect(k8sClient.Create(context.TODO(), tCh)).Should(Succeed())
+			defer func() {
+				Expect(k8sClient.Delete(context.TODO(), tCh)).Should(Succeed())
+			}()
+			Expect(k8sClient.Create(context.TODO(), tDpl)).Should(Succeed())
+
+			chdesc, _ := utils.CreateObjectStorageChannelDescriptor()
+			objsync, _ = CreateObjectStoreSynchronizer(k8sManager.GetConfig(), chdesc, 2)
+			eTpl, err := bucketDpl.MarshalJSON()
+			Expect(err).Should(BeNil())
+
+			objsync.ObjectStore = &utils.FakeObjectStore{
+				Clt: map[string]map[string]utils.DeployableObject{
+					tKey.Name: {
+						dplName: {
+							Name:    dplName,
+							Content: eTpl,
+						},
+					},
+				},
+			}
+			Expect(objsync.alginClusterResourceWithHost(tCh)).Should(Succeed())
+			time.Sleep(time.Second * 5)
+
+			Expect(k8sClient.Get(ctx, types.NamespacedName{Name: dplName, Namespace: tKey.Namespace}, res)).ShouldNot(HaveOccurred())
+
+			tpl := &unstructured.Unstructured{}
+			Expect(json.Unmarshal(res.Spec.Template.Raw, tpl)).Should(Succeed())
+
+			Expect(tpl.GetName()).To(Equal(expectedConfigMapName))
+
+			objsync.ObjectStore = &utils.FakeObjectStore{}
+			Expect(objsync.alginClusterResourceWithHost(tCh)).Should(Succeed())
+			time.Sleep(time.Second * 5)
+
+			err = k8sClient.Get(ctx, types.NamespacedName{Name: dplName, Namespace: tKey.Namespace}, &dplv1.Deployable{})
+			fmt.Fprintf(GinkgoWriter, "we get error while deleting the deployable, err %v", err)
+			Expect(err).ShouldNot(BeNil())
+		})
+	})
+})

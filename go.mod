@@ -7,7 +7,7 @@ require (
 	github.com/ghodss/yaml v1.0.1-0.20180820084758-c7ce16629ff4
 	github.com/go-openapi/spec v0.19.0
 	github.com/google/go-cmp v0.3.1
-	github.com/onsi/ginkgo v1.12.0 // indirect
+	github.com/onsi/ginkgo v1.12.0
 	github.com/onsi/gomega v1.9.0
 	github.com/open-cluster-management/multicloud-operators-deployable v0.0.0-20200324042552-efcef6528509
 	github.com/open-cluster-management/multicloud-operators-placementrule v0.0.0-20200324034428-30b1b40184d3

@@ -17,10 +17,13 @@ package objectstore
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"testing"
 	"time"
 
+	. "github.com/onsi/ginkgo"
 	"github.com/onsi/gomega"
+	. "github.com/onsi/gomega"
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -33,201 +36,304 @@ import (
 	dplv1 "github.com/open-cluster-management/multicloud-operators-deployable/pkg/apis/apps/v1"
 )
 
-const timeout = time.Second * 2
+const (
+	timeout = time.Second * 2
+	k8swait = time.Second * 5
+)
 
-func TestObjstoreController(t *testing.T) {
-	testNamespace := "a-ns"
-	testDplName := "tdpl"
-	theAnno := map[string]string{"who": "bear"}
+var _ = Describe("object bucket controller", func() {
+	BeforeEach(func() {
+	})
 
-	expectedResult := reconcile.Result{}
+	AfterEach(func() {
+	})
 
-	g := gomega.NewGomegaWithT(t)
+	Context("detect any deployable reconcile signal", func() {
+		var (
+			testNamespace = "a-ns"
+			testDplName   = "tdpl"
+			theAnno       = map[string]string{"who": "bear"}
 
-	// Setup the Manager and Controller.  Wrap the Controller Reconcile function so it writes each request to a
-	// channel when it is finished.
-	mgr, err := manager.New(cfg, manager.Options{MetricsBindAddress: "0"})
-	g.Expect(err).NotTo(gomega.HaveOccurred())
-
-	chDesc, err := utils.CreateObjectStorageChannelDescriptor()
-	g.Expect(err).NotTo(gomega.HaveOccurred())
-
-	rec := newReconciler(mgr, chDesc)
-	recFn, result := SetupTestReconcile(rec)
-
-	g.Expect(add(mgr, recFn)).NotTo(gomega.HaveOccurred())
-
-	stopMgr, mgrStopped := StartTestManager(mgr, g)
-
-	c := mgr.GetClient()
-
-	defer func() {
-		close(stopMgr)
-		mgrStopped.Wait()
-	}()
-
-	dpl := &dplv1.Deployable{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:        testDplName,
-			Namespace:   testNamespace,
-			Annotations: theAnno,
-		},
-		Spec: dplv1.DeployableSpec{
-			Template: &runtime.RawExtension{
-				Object: &v1.ConfigMap{},
-			},
-		},
-	}
-
-	ctx := context.TODO()
-	g.Expect(c.Create(ctx, dpl)).NotTo(gomega.HaveOccurred())
-
-	defer c.Delete(ctx, dpl)
-
-	g.Eventually(result, timeout).Should(gomega.Receive(gomega.Equal(expectedResult)))
-}
-
-func Test_getChannelForNamespace(t *testing.T) {
-	testNamespace := "a-ns"
-	testCh := "obj"
-
-	g := gomega.NewGomegaWithT(t)
-	// Setup the Manager and Controller.  Wrap the Controller Reconcile function so it writes each request to a
-	// channel when it is finished.
-	mgr, err := manager.New(cfg, manager.Options{MetricsBindAddress: "0"})
-	g.Expect(err).NotTo(gomega.HaveOccurred())
-
-	chDesc, err := utils.CreateObjectStorageChannelDescriptor()
-	g.Expect(err).NotTo(gomega.HaveOccurred())
-
-	rec := newReconciler(mgr, chDesc)
-	recFn, _ := SetupTestReconcile(rec)
-
-	g.Expect(add(mgr, recFn)).NotTo(gomega.HaveOccurred())
-
-	stopMgr, mgrStopped := StartTestManager(mgr, g)
-
-	c := mgr.GetClient()
-
-	defer func() {
-		close(stopMgr)
-		mgrStopped.Wait()
-	}()
-
-	testCases := []struct {
-		desc   string
-		tRec   *ReconcileDeployable
-		dfChan *chv1.Channel
-		tName  string
-		wantCh *chv1.Channel
-	}{
-		{
-			desc: "none channel at hub",
-			tRec: &ReconcileDeployable{
-				KubeClient:        c,
-				ChannelDescriptor: &utils.ChannelDescriptor{},
-			},
-			tName:  testNamespace,
-			wantCh: nil,
-		},
-		{
-			desc: "channel without spec type at hub",
-			tRec: &ReconcileDeployable{
-				KubeClient:        c,
-				ChannelDescriptor: &utils.ChannelDescriptor{},
-			},
-			dfChan: &chv1.Channel{
+			// this is trvial, since we are only to test if the controller is
+			// singal on the given deployable
+			expectedResult = reconcile.Request{
+				NamespacedName: types.NamespacedName{
+					Namespace: testNamespace,
+					Name:      testDplName,
+				},
+			}
+			dpl = &dplv1.Deployable{
 				ObjectMeta: metav1.ObjectMeta{
-					Name:        testCh,
+					Name:        testDplName,
 					Namespace:   testNamespace,
-					Annotations: map[string]string{},
+					Annotations: theAnno,
 				},
-			},
-			tName:  testNamespace,
-			wantCh: nil,
-		},
-		{
-			desc: "channel with spec type at hub",
-			tRec: &ReconcileDeployable{
-				KubeClient:        c,
-				ChannelDescriptor: &utils.ChannelDescriptor{},
-			},
-			dfChan: &chv1.Channel{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:        testCh,
-					Namespace:   testNamespace,
-					Annotations: map[string]string{},
+				Spec: dplv1.DeployableSpec{
+					Template: &runtime.RawExtension{
+						Object: &v1.ConfigMap{},
+					},
 				},
-				Spec: chv1.ChannelSpec{
-					Type: chv1.ChannelTypeObjectBucket,
-				},
-			},
-			tName: testNamespace,
-			wantCh: &chv1.Channel{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:        testCh,
-					Namespace:   testNamespace,
-					Annotations: map[string]string{},
-				},
-				Spec: chv1.ChannelSpec{
-					Type: chv1.ChannelTypeObjectBucket,
-				},
-			},
-		},
-		{
-			desc: "channel with spec type at hub",
-			tRec: &ReconcileDeployable{
-				KubeClient:        c,
-				ChannelDescriptor: &utils.ChannelDescriptor{},
-			},
-			dfChan: &chv1.Channel{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:        testCh,
-					Namespace:   testNamespace,
-					Annotations: map[string]string{},
-				},
-				Spec: chv1.ChannelSpec{
-					Type: chv1.ChannelTypeGitHub,
-				},
-			},
-			tName:  testNamespace,
-			wantCh: nil,
-		},
-	}
-	ctx := context.TODO()
+			}
+			ctx = context.TODO()
+		)
 
-	for _, tC := range testCases {
-		t.Run(tC.desc, func(t *testing.T) {
-			tC.tRec.KubeClient.Create(ctx, tC.dfChan)
-			defer tC.tRec.KubeClient.Delete(ctx, tC.dfChan)
-			time.Sleep(1 * time.Second)
-			gotCh := tC.tRec.getChannelForNamespace(testNamespace)
+		BeforeEach(func() {
 
-			assertChannelObject(t, tC.wantCh, gotCh)
 		})
-	}
-}
 
-func assertChannelObject(t *testing.T, want, got *chv1.Channel) {
-	t.Helper()
+		It("should reconcile on creation of a deployable", func() {
 
+			chRegistry, err := utils.CreateObjectStorageChannelDescriptor()
+			Expect(err).NotTo(HaveOccurred())
+
+			rec := newReconciler(k8sManager, chRegistry)
+			recFn, result := SetupTestReconcile(rec)
+
+			Expect(add(k8sManager, recFn)).NotTo(HaveOccurred())
+
+			Expect(k8sClient.Create(ctx, dpl)).NotTo(HaveOccurred())
+
+			defer func() {
+				Expect(k8sClient.Delete(ctx, dpl)).Should(Succeed())
+			}()
+
+			Eventually(result, timeout).Should(Receive(Equal(expectedResult)))
+
+		})
+	})
+
+	Context("get channel info from channel registry", func() {
+		var (
+			testNamespace = "a-ns"
+			testCh        = "obj"
+			ctx           = context.TODO()
+		)
+
+		type testCase struct {
+			desc   string
+			tRec   *ReconcileDeployable
+			dfChan *chv1.Channel
+			tName  string
+			wantCh *chv1.Channel
+		}
+
+		It("should return nil, since channel registry is empty", func() {
+			tC := testCase{
+				desc: "none channel at hub",
+				tRec: &ReconcileDeployable{
+					KubeClient:        k8sClient,
+					ChannelDescriptor: &utils.ChannelDescriptor{},
+				},
+				tName:  testNamespace,
+				wantCh: nil,
+			}
+			gotCh := tC.tRec.getChannelForNamespace(testNamespace)
+			Expect(assertChannelObject(tC.wantCh, gotCh)).To(BeNil())
+		})
+
+		It("should return nil, querying channel doesn't have a type", func() {
+			tC := testCase{
+				desc: "channel without spec type at hub",
+				tRec: &ReconcileDeployable{
+					KubeClient:        k8sClient,
+					ChannelDescriptor: &utils.ChannelDescriptor{},
+				},
+				dfChan: &chv1.Channel{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:        testCh,
+						Namespace:   testNamespace,
+						Annotations: map[string]string{},
+					},
+					Spec: chv1.ChannelSpec{
+						Type: chv1.ChannelTypeGitHub,
+					},
+				},
+				tName:  testNamespace,
+				wantCh: nil,
+			}
+			Expect(tC.tRec.KubeClient.Create(ctx, tC.dfChan)).Should(Succeed())
+			defer func() {
+				Expect(tC.tRec.KubeClient.Delete(ctx, tC.dfChan)).Should(Succeed())
+			}()
+			time.Sleep(k8swait)
+			gotCh := tC.tRec.getChannelForNamespace(testNamespace)
+			fmt.Fprintf(GinkgoWriter, "%v", gotCh)
+			Expect(assertChannelObject(tC.wantCh, gotCh)).To(BeNil())
+		})
+
+		It("should return a valid channel ", func() {
+			tC := testCase{
+				desc: "channel with spec type at hub",
+				tRec: &ReconcileDeployable{
+					KubeClient:        k8sClient,
+					ChannelDescriptor: &utils.ChannelDescriptor{},
+				},
+				dfChan: &chv1.Channel{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:        testCh,
+						Namespace:   testNamespace,
+						Annotations: map[string]string{},
+					},
+					Spec: chv1.ChannelSpec{
+						Type: chv1.ChannelTypeObjectBucket,
+					},
+				},
+				tName: testNamespace,
+				wantCh: &chv1.Channel{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:        testCh,
+						Namespace:   testNamespace,
+						Annotations: map[string]string{},
+					},
+					Spec: chv1.ChannelSpec{
+						Type: chv1.ChannelTypeObjectBucket,
+					},
+				},
+			}
+			Expect(tC.tRec.KubeClient.Create(ctx, tC.dfChan)).Should(Succeed())
+			defer func() {
+				Expect(tC.tRec.KubeClient.Delete(ctx, tC.dfChan)).Should(Succeed())
+			}()
+			time.Sleep(k8swait)
+			gotCh := tC.tRec.getChannelForNamespace(testNamespace)
+			Expect(assertChannelObject(tC.wantCh, gotCh)).To(BeNil())
+		})
+
+		It("should return nil", func() {
+			tC := testCase{
+				desc: "channel with spec type at hub",
+				tRec: &ReconcileDeployable{
+					KubeClient:        k8sClient,
+					ChannelDescriptor: &utils.ChannelDescriptor{},
+				},
+				dfChan: &chv1.Channel{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:        testCh,
+						Namespace:   testNamespace,
+						Annotations: map[string]string{},
+					},
+					Spec: chv1.ChannelSpec{
+						Type: chv1.ChannelTypeGitHub,
+					},
+				},
+				tName:  testNamespace,
+				wantCh: nil,
+			}
+
+			Expect(tC.tRec.KubeClient.Create(ctx, tC.dfChan)).Should(Succeed())
+			defer func() {
+				Expect(tC.tRec.KubeClient.Delete(ctx, tC.dfChan)).Should(Succeed())
+			}()
+			time.Sleep(k8swait)
+			gotCh := tC.tRec.getChannelForNamespace(testNamespace)
+			Expect(assertChannelObject(tC.wantCh, gotCh)).To(BeNil())
+		})
+	})
+
+	Context("with fake client to see the push to bucket logic", func() {
+		var (
+			testNamespace = "a-ns"
+			testDplName   = "tdpl-1"
+			theAnno       = map[string]string{"who": "bear"}
+			chname        = "my-objectstore-chn"
+			bucket        = "fake"
+
+			chn = &chv1.Channel{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      chname,
+					Namespace: testNamespace,
+				},
+				Spec: chv1.ChannelSpec{
+					Type:     chv1.ChannelType("ObjectBucket"),
+					Pathname: "/" + bucket,
+				},
+			}
+
+			refCmName = "ch-cm"
+			refCm     = v1.ConfigMap{
+				TypeMeta: metav1.TypeMeta{
+					Kind: "ConfigMap",
+				},
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      refCmName,
+					Namespace: testNamespace,
+				},
+			}
+			ctx = context.TODO()
+		)
+
+		It("should generate object at the fake client", func() {
+			chReg, err := utils.CreateObjectStorageChannelDescriptor()
+			Expect(err).NotTo(HaveOccurred())
+
+			myStoreage := &utils.FakeObjectStore{}
+			myStoreage.InitObjectStoreConnection("", "", "")
+
+			chReg.SetObjectStorageForChannel(chn, myStoreage)
+
+			cmRaw, _ := json.Marshal(refCm)
+
+			dpl := &dplv1.Deployable{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:        testDplName,
+					Namespace:   testNamespace,
+					Annotations: theAnno,
+				},
+				Spec: dplv1.DeployableSpec{
+					Template: &runtime.RawExtension{Raw: cmRaw},
+					Channels: []string{chname},
+				},
+			}
+
+			defer func() {
+				Expect(k8sClient.Delete(ctx, dpl)).Should(Succeed())
+			}()
+			Expect(k8sClient.Create(ctx, dpl)).Should(Succeed())
+
+			defer func() {
+				Expect(k8sClient.Delete(ctx, chn)).Should(Succeed())
+			}()
+			Expect(k8sClient.Create(ctx, chn)).Should(Succeed())
+
+			time.Sleep(k8swait)
+
+			req := reconcile.Request{
+				NamespacedName: types.NamespacedName{
+					Name:      dpl.Name,
+					Namespace: dpl.Namespace,
+				},
+			}
+
+			rec := newReconciler(k8sManager, chReg)
+
+			_, err = rec.Reconcile(req)
+			Expect(err).Should(BeNil())
+
+			_, err = myStoreage.Get(bucket, dpl.Name)
+			Expect(err).Should(BeNil())
+		})
+	})
+
+})
+
+func assertChannelObject(want, got *chv1.Channel) error {
 	if want == nil && got == nil {
-		return
+		return nil
 	}
 
 	if want == nil && got != nil {
-		t.Errorf("wanted %v got %v", want, got)
-		return
+		return fmt.Errorf("got nil")
 	}
 
 	if want != nil && got == nil {
-		t.Errorf("wanted %v got %v", want, got)
-		return
+		return fmt.Errorf("wanted %v got %v", want, got)
 	}
 
 	if want.GetName() == got.GetName() && want.GetNamespace() == got.GetNamespace() {
-		return
+		return nil
 	}
+
+	return fmt.Errorf("got wrong channel")
 }
 
 func TestObjstoreControllerWithFakeObjectStore(t *testing.T) {
