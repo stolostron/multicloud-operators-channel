@@ -204,7 +204,7 @@ func (sync *ChannelSynchronizer) handleSingleDeployable(
 	}
 
 	dpl := &dplv1.Deployable{}
-	dpl.Name = strings.ToLower(chn.GetName() + "-" + t.Kind + "-" + t.Metadata.Namespace + "-" + t.Metadata.Name)
+	dpl.Name = strings.ToLower(t.Metadata.Name + "-" + strings.ReplaceAll(dir, "/", ""))
 	dpl.Namespace = chn.GetNamespace()
 
 	if err := controllerutil.SetControllerReference(chn, dpl, sync.Scheme); err != nil {
@@ -350,13 +350,6 @@ func (sync *ChannelSynchronizer) handleResourceDeployable(
 
 	if dpltpl.GetKind() == utils.HelmCRKind && dpltpl.GetAPIVersion() == utils.HelmCRAPIVersion {
 		klog.Info("Skipping helm release deployable:", dpltpl.GetKind(), ".", dpltpl.GetAPIVersion())
-		return nil
-	}
-
-	// Do not delete deployables with Subscription template kind. This causes problems if subscription
-	// and channel are in the same namespace.
-	if dpltpl.GetKind() == utils.SubscriptionCRKind {
-		klog.Info("Skipping subscription deployable:", dpl.Name, ".", dpltpl.GetKind())
 		return nil
 	}
 
