@@ -204,7 +204,12 @@ func (sync *ChannelSynchronizer) handleSingleDeployable(
 	}
 
 	dpl := &dplv1.Deployable{}
-	dpl.Name = strings.ToLower(t.Metadata.Name + "-" + strings.ReplaceAll(dir, "/", ""))
+	dpl.Name = strings.ToLower(strings.ReplaceAll(dir, "/", "-") + "-" + t.Metadata.Name)
+
+	if len(dpl.Name) > 252 { // kubernetest resource name length limit
+		dpl.Name = dpl.Name[0:251]
+	}
+
 	dpl.Namespace = chn.GetNamespace()
 
 	if err := controllerutil.SetControllerReference(chn, dpl, sync.Scheme); err != nil {
