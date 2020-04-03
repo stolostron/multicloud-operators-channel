@@ -98,7 +98,6 @@ var _ = Describe("reconcile github channel", func() {
 			}()
 
 			time.Sleep(k8swait)
-			defer k8sClient.Delete(ctx, chn)
 
 			_, err = rec.Reconcile(req)
 			Expect(err).NotTo(HaveOccurred())
