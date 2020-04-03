@@ -31,7 +31,10 @@ var _ = Describe("reconcile github channel", func() {
 
 	const (
 		timeout  = time.Second * 5
+<<<<<<< HEAD
 		k8swait  = time.Second * 5
+=======
+>>>>>>> origin/ianzhang-improve-test-coverage-3
 		interval = 3
 	)
 
@@ -92,11 +95,16 @@ var _ = Describe("reconcile github channel", func() {
 			}
 
 			Expect(k8sClient.Create(ctx, chn)).Should(Succeed())
+<<<<<<< HEAD
 			defer func() {
 				Expect(k8sClient.Delete(ctx, chn)).Should(Succeed())
 			}()
 
 			time.Sleep(k8swait)
+=======
+			defer k8sClient.Delete(ctx, chn)
+
+>>>>>>> origin/ianzhang-improve-test-coverage-3
 			_, err = rec.Reconcile(req)
 			Expect(err).NotTo(HaveOccurred())
 		})
@@ -147,10 +155,14 @@ var _ = Describe("reconcile github channel", func() {
 			}
 
 			Expect(k8sClient.Create(ctx, chn)).Should(Succeed())
+<<<<<<< HEAD
 			defer func() {
 				Expect(k8sClient.Delete(ctx, chn)).Should(Succeed())
 			}()
 			time.Sleep(k8swait)
+=======
+			defer k8sClient.Delete(ctx, chn)
+>>>>>>> origin/ianzhang-improve-test-coverage-3
 
 			_, err = rec.Reconcile(req)
 			Expect(err).NotTo(HaveOccurred())

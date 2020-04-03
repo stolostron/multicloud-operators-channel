@@ -16,10 +16,6 @@ package utils
 
 import (
 	"context"
-<<<<<<< HEAD
-=======
-	"reflect"
->>>>>>> be42f05... adding the object bucket test case
 	"strings"
 	"sync"
 
@@ -82,7 +78,6 @@ func (desc *ChannelDescriptor) SetObjectStorageForChannel(chn *chv1.Channel, obj
 func (desc *ChannelDescriptor) ConnectWithResourceHost(chn *chv1.Channel, kubeClient client.Client, objStoreHandler ...ObjectStore) error {
 	var storageHanler ObjectStore
 
-<<<<<<< HEAD
 	chUnit, _ := desc.Get(chn.Name)
 
 	// the objStoreHandler will be picked up by the following order,
@@ -93,14 +88,6 @@ func (desc *ChannelDescriptor) ConnectWithResourceHost(chn *chv1.Channel, kubeCl
 		storageHanler = objStoreHandler[0]
 	} else if chUnit != nil && chUnit.ObjectStore != nil {
 		storageHanler = chUnit.ObjectStore
-=======
-	chndesc, _ := desc.Get(chn.Name)
-
-	if chndesc != nil && chndesc.ObjectStore == nil {
-		storageHanler = chndesc.ObjectStore
-	} else if len(objStoreHandler) != 0 && objStoreHandler[0] != nil {
-		storageHanler = objStoreHandler[0]
->>>>>>> be42f05... adding the object bucket test case
 	} else {
 		storageHanler = &AWSHandler{}
 	}
@@ -112,38 +99,13 @@ func (desc *ChannelDescriptor) ConnectWithResourceHost(chn *chv1.Channel, kubeCl
 		accessID, secretAccessKey, err = getCredentialFromKube(chn.Spec.SecretRef, chn.GetNamespace(), kubeClient)
 		if err != nil {
 			klog.Error(err)
-<<<<<<< HEAD
-=======
 			return err
 		}
 	}
-	// Add new channel to the map
-	if chndesc == nil {
-		if err := desc.initChannelDescription(chn, accessID, secretAccessKey, storageHanler); err != nil {
-			klog.Error(err, "unable to initialize channel ObjectStore description")
->>>>>>> be42f05... adding the object bucket test case
-			return err
-		}
-	}
-<<<<<<< HEAD
 	// Add new channel to the map
 	if err := desc.updateChannelRegistry(chn, accessID, secretAccessKey, storageHanler); err != nil {
 		klog.Error(err, "unable to initialize channel ObjectStore description")
 		return err
-=======
-
-	// Check whether channel description and its object store connection are still valid
-	err = chndesc.ObjectStore.Exists(chndesc.Bucket)
-	if err != nil || !reflect.DeepEqual(chndesc.Channel, chn) {
-		// remove invalid channel description
-		desc.Delete(chn.Name)
-		klog.Info("updating ObjectStore description for channel ", chn.Name)
-
-		if err := desc.initChannelDescription(chn, accessID, secretAccessKey, chndesc.ObjectStore); err != nil {
-			klog.Error(err, "unable to initialize channel ObjectStore description")
-			return err
-		}
->>>>>>> be42f05... adding the object bucket test case
 	}
 
 	return nil
@@ -200,11 +162,7 @@ func parseBucketAndEndpoint(pathName string) (string, string) {
 	return endpoint, bucket
 }
 
-<<<<<<< HEAD
 func (desc *ChannelDescriptor) updateChannelRegistry(chn *chv1.Channel, accessKeyID, secretAccessKey string, objStoreHandler ObjectStore) error {
-=======
-func (desc *ChannelDescriptor) initChannelDescription(chn *chv1.Channel, accessKeyID, secretAccessKey string, objStoreHandler ObjectStore) error {
->>>>>>> be42f05... adding the object bucket test case
 	chndesc := &ChannelDescription{}
 
 	endpoint, bucket := parseBucketAndEndpoint(chn.Spec.Pathname)
