@@ -31,7 +31,6 @@ import (
 var _ = Describe("reconcile github channel", func() {
 
 	const (
-		timeout  = time.Second * 5
 		k8swait  = time.Second * 5
 		interval = 3
 	)

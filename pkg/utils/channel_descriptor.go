@@ -93,6 +93,7 @@ func (desc *ChannelDescriptor) ConnectWithResourceHost(chn *chv1.Channel, kubeCl
 	}
 
 	var accessID, secretAccessKey string
+
 	var err error
 
 	if chn.Spec.SecretRef != nil {
