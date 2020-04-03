@@ -46,7 +46,10 @@ type ChannelSynchronizer struct {
 	ObjectStore               utils.ObjectStore
 	Signal                    <-chan struct{}
 	SyncInterval              int
-	ChannelDescriptor         *utils.ChannelDescriptor
+
+	//this is created during manager start up time and shared with reconcile.
+	// ChannelDescriptor, holds a map of channels unit
+	ChannelDescriptor *utils.ChannelDescriptor
 }
 
 // CreateSynchronizer - creates an instance of ChannelSynchronizer
@@ -122,12 +125,12 @@ func (sync *ChannelSynchronizer) alginClusterResourceWithHost(chn *chv1.Channel)
 	}
 
 	//chndesc bundles channel and object bucket info and an objectstore interface
-	chndesc, ok := sync.ChannelDescriptor.Get(chn.Name)
+	chUnit, ok := sync.ChannelDescriptor.Get(chn.Name)
 	if !ok {
 		return errors.New(fmt.Sprintf("failed to get channel description for %v", chn.Name))
 	}
 
-	hostResMap, err := getResourceMapFromHost(chndesc.ObjectStore, chndesc.Bucket)
+	hostResMap, err := getResourceMapFromHost(chUnit.ObjectStore, chUnit.Bucket)
 	if err != nil {
 		return errors.Wrap(err, "failed to get resources map from host")
 	}

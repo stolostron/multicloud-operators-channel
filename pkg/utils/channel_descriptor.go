@@ -16,8 +16,6 @@ package utils
 
 import (
 	"context"
-	"fmt"
-	"reflect"
 	"strings"
 	"sync"
 
@@ -41,63 +39,74 @@ type ChannelDescription struct {
 // ChannelDescriptor stores channel descriptions and object store connections
 type ChannelDescriptor struct {
 	sync.RWMutex
-	channelDescriptorMap map[string]*ChannelDescription // key: channel name
+	channelUnitRegistry map[string]*ChannelDescription // key: channel name
 }
 
 func (desc *ChannelDescriptor) GetBucketNameByChannel(chName string) string {
-	if _, ok := desc.channelDescriptorMap[chName]; !ok {
+	if _, ok := desc.channelUnitRegistry[chName]; !ok {
 		return ""
 	}
 
-	return desc.channelDescriptorMap[chName].Bucket
+	return desc.channelUnitRegistry[chName].Bucket
 }
 
 // CreateChannelDescriptor - creates an instance of ChannelDescriptor
 func CreateObjectStorageChannelDescriptor() (*ChannelDescriptor, error) {
 	c := &ChannelDescriptor{
-		channelDescriptorMap: make(map[string]*ChannelDescription),
+		channelUnitRegistry: make(map[string]*ChannelDescription),
 	}
 
 	return c, nil
+}
+
+//SetObjectStorageForChannel is mainly for testing purpose
+func (desc *ChannelDescriptor) SetObjectStorageForChannel(chn *chv1.Channel, objStoreHandler ObjectStore) bool {
+	if _, ok := desc.channelUnitRegistry[chn.Name]; !ok {
+		desc.channelUnitRegistry[chn.Name] = &ChannelDescription{}
+	}
+
+	_, bucket := parseBucketAndEndpoint(chn.Spec.Pathname)
+	t := desc.channelUnitRegistry[chn.Name]
+	t.Channel = chn.DeepCopy()
+	t.Bucket = bucket
+	t.ObjectStore = objStoreHandler
+
+	return true
 }
 
 // ConnectWithResourceHost validates and makes channel object store connection
 func (desc *ChannelDescriptor) ConnectWithResourceHost(chn *chv1.Channel, kubeClient client.Client, objStoreHandler ...ObjectStore) error {
 	var storageHanler ObjectStore
 
-	if len(objStoreHandler) == 0 || objStoreHandler[0] == nil {
-		storageHanler = &AWSHandler{}
-	} else {
+	chUnit, _ := desc.Get(chn.Name)
+
+	// the objStoreHandler will be picked up by the following order,
+	// 1, injected on of this func
+	// 2, if not injected, and there's old one for the channel, then use the old one
+	// 3, otherwise, use the AWS one
+	if len(objStoreHandler) != 0 && objStoreHandler[0] != nil {
 		storageHanler = objStoreHandler[0]
+	} else if chUnit != nil && chUnit.ObjectStore != nil {
+		storageHanler = chUnit.ObjectStore
+	} else {
+		storageHanler = &AWSHandler{}
 	}
 
-	chndesc, _ := desc.Get(chn.Name)
+	var accessID, secretAccessKey string
 
-	accessID, secretAccessKey, err := getCredentialFromKube(chn.Spec.SecretRef, chn.GetNamespace(), kubeClient)
-	if err != nil {
-		klog.Error(err)
-		return err
+	var err error
+
+	if chn.Spec.SecretRef != nil {
+		accessID, secretAccessKey, err = getCredentialFromKube(chn.Spec.SecretRef, chn.GetNamespace(), kubeClient)
+		if err != nil {
+			klog.Error(err)
+			return err
+		}
 	}
 	// Add new channel to the map
-	if chndesc == nil {
-		if err := desc.initChannelDescription(chn, accessID, secretAccessKey, storageHanler); err != nil {
-			klog.Error(err, "unable to initialize channel ObjectStore description")
-			return err
-		}
-
-		return nil
-	}
-	// Check whether channel description and its object store connection are still valid
-	err = chndesc.ObjectStore.Exists(chndesc.Bucket)
-	if err != nil || !reflect.DeepEqual(chndesc.Channel, chn) {
-		// remove invalid channel description
-		desc.Delete(chn.Name)
-		klog.Info("updating ObjectStore description for channel ", chn.Name)
-
-		if err := desc.initChannelDescription(chn, accessID, secretAccessKey, chndesc.ObjectStore); err != nil {
-			klog.Error(err, "unable to initialize channel ObjectStore description")
-			return err
-		}
+	if err := desc.updateChannelRegistry(chn, accessID, secretAccessKey, storageHanler); err != nil {
+		klog.Error(err, "unable to initialize channel ObjectStore description")
+		return err
 	}
 
 	return nil
@@ -137,12 +146,9 @@ func getCredentialFromKube(secretRef *corev1.ObjectReference, defaultNs string, 
 	return accessKeyID, secretAccessKey, nil
 }
 
-func (desc *ChannelDescriptor) initChannelDescription(chn *chv1.Channel, accessKeyID, secretAccessKey string, objStoreHandler ObjectStore) error {
-	chndesc := &ChannelDescription{}
-
-	pathName := chn.Spec.Pathname
+func parseBucketAndEndpoint(pathName string) (string, string) {
 	if pathName == "" {
-		return errors.New(fmt.Sprintf("empty pathname in channel %v", chn.Name))
+		return "", ""
 	}
 
 	if strings.HasSuffix(pathName, "/") {
@@ -152,9 +158,19 @@ func (desc *ChannelDescriptor) initChannelDescription(chn *chv1.Channel, accessK
 
 	loc := strings.LastIndex(pathName, "/")
 	endpoint := pathName[:loc]
-	chndesc.Bucket = pathName[loc+1:]
+	bucket := pathName[loc+1:]
 
-	klog.Info("trying to connect to aws ", endpoint, " | ", chndesc.Bucket)
+	return endpoint, bucket
+}
+
+func (desc *ChannelDescriptor) updateChannelRegistry(chn *chv1.Channel, accessKeyID, secretAccessKey string, objStoreHandler ObjectStore) error {
+	chndesc := &ChannelDescription{}
+
+	endpoint, bucket := parseBucketAndEndpoint(chn.Spec.Pathname)
+
+	chndesc.Bucket = bucket
+
+	klog.Info("trying to connect to object bucket ", endpoint, " | ", chndesc.Bucket)
 
 	if err := objStoreHandler.InitObjectStoreConnection(endpoint, accessKeyID, secretAccessKey); err != nil {
 		klog.Error(err, "unable to initialize object store settings")
@@ -180,7 +196,7 @@ func (desc *ChannelDescriptor) initChannelDescription(chn *chv1.Channel, accessK
 // Get channel description for a channel
 func (desc *ChannelDescriptor) Get(chname string) (chdesc *ChannelDescription, ok bool) {
 	desc.RLock()
-	result, ok := desc.channelDescriptorMap[chname]
+	result, ok := desc.channelUnitRegistry[chname]
 	desc.RUnlock()
 
 	return result, ok
@@ -189,13 +205,13 @@ func (desc *ChannelDescriptor) Get(chname string) (chdesc *ChannelDescription, o
 // Delete the channel description
 func (desc *ChannelDescriptor) Delete(chname string) {
 	desc.Lock()
-	delete(desc.channelDescriptorMap, chname)
+	delete(desc.channelUnitRegistry, chname)
 	desc.Unlock()
 }
 
 // Put a new channel description
 func (desc *ChannelDescriptor) Put(chname string, chdesc *ChannelDescription) {
 	desc.Lock()
-	desc.channelDescriptorMap[chname] = chdesc
+	desc.channelUnitRegistry[chname] = chdesc
 	desc.Unlock()
 }

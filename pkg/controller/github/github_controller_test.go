@@ -15,21 +15,148 @@
 package github
 
 import (
-	"testing"
+	"context"
 	"time"
 
+	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/gomega"
+	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
-	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
+
+	chv1 "github.com/open-cluster-management/multicloud-operators-channel/pkg/apis/apps/v1"
+	gitsync "github.com/open-cluster-management/multicloud-operators-channel/pkg/synchronizer/githubsynchronizer"
 )
 
-var c client.Client
+var _ = Describe("reconcile github channel", func() {
 
-var expectedRequest = reconcile.Request{NamespacedName: types.NamespacedName{Name: "foo", Namespace: "default"}}
+	const (
+		k8swait  = time.Second * 5
+		interval = 3
+	)
 
-const timeout = time.Second * 5
+	var (
+		chn   *chv1.Channel
+		chkey types.NamespacedName
+		ctx   = context.TODO()
+		gsync *gitsync.ChannelSynchronizer
+		rec   reconcile.Reconciler
+		err   error
+	)
 
-func TestGitHubReconcile(t *testing.T) {
-	t.Log("this print is used to passing lint while the test cases is not built yet")
-	t.Log(timeout, c, expectedRequest)
-}
+	BeforeEach(func() {
+		// Add any setup steps that needs to be executed before each test
+		chname, chns := "t-ch", "t-ns"
+		chkey = types.NamespacedName{Name: chname, Namespace: chns}
+		chn = &chv1.Channel{
+			ObjectMeta: v1.ObjectMeta{
+				Name:      chname,
+				Namespace: chns,
+			},
+			Spec: chv1.ChannelSpec{
+				Type:     chv1.ChannelType("namespace"),
+				Pathname: "",
+			},
+		}
+	})
+
+	AfterEach(func() {
+		// Add any teardown steps that needs to be executed after each test
+	})
+
+	Context("Wrong Channel tpye", func() {
+		BeforeEach(func() {
+			gsync, err = gitsync.CreateGithubSynchronizer(k8sManager.GetConfig(), k8sManager.GetScheme(), interval)
+			Expect(err).ShouldNot(HaveOccurred())
+			rec = newReconciler(k8sManager, gsync)
+		})
+
+		It("deletion reconcile", func() {
+			req := reconcile.Request{
+				NamespacedName: types.NamespacedName{
+					Name:      chn.Name,
+					Namespace: chn.Namespace,
+				},
+			}
+
+			_, err = rec.Reconcile(req)
+			Expect(err).NotTo(HaveOccurred())
+		})
+
+		It("create or update", func() {
+			req := reconcile.Request{
+				NamespacedName: types.NamespacedName{
+					Name:      chn.Name,
+					Namespace: chn.Namespace,
+				},
+			}
+
+			Expect(k8sClient.Create(ctx, chn)).Should(Succeed())
+			defer func() {
+				Expect(k8sClient.Delete(ctx, chn)).Should(Succeed())
+			}()
+
+			time.Sleep(k8swait)
+
+			_, err = rec.Reconcile(req)
+			Expect(err).NotTo(HaveOccurred())
+		})
+	})
+
+	Context("Github Channel tpye", func() {
+		BeforeEach(func() {
+			gsync, err = gitsync.CreateGithubSynchronizer(k8sManager.GetConfig(), k8sManager.GetScheme(), interval)
+			chn.Spec.Type = chv1.ChannelType("github")
+			Expect(err).ShouldNot(HaveOccurred())
+			rec = newReconciler(k8sManager, gsync)
+		})
+
+		It("deletion reconcile with empty channel registry", func() {
+			req := reconcile.Request{
+				NamespacedName: types.NamespacedName{
+					Name:      chn.Name,
+					Namespace: chn.Namespace,
+				},
+			}
+
+			_, err = rec.Reconcile(req)
+			Expect(err).NotTo(HaveOccurred())
+		})
+
+		It("deletion reconcile with channel registry", func() {
+			req := reconcile.Request{
+				NamespacedName: types.NamespacedName{
+					Name:      chn.Name,
+					Namespace: chn.Namespace,
+				},
+			}
+
+			gsync.ChannelMap[chkey] = chn
+			rec = newReconciler(k8sManager, gsync)
+			_, err = rec.Reconcile(req)
+			Expect(err).NotTo(HaveOccurred())
+
+			Expect(gsync.ChannelMap[chkey]).Should(BeNil())
+		})
+
+		It("create or update", func() {
+			req := reconcile.Request{
+				NamespacedName: types.NamespacedName{
+					Name:      chn.Name,
+					Namespace: chn.Namespace,
+				},
+			}
+
+			Expect(k8sClient.Create(ctx, chn)).Should(Succeed())
+			defer func() {
+				Expect(k8sClient.Delete(ctx, chn)).Should(Succeed())
+			}()
+			time.Sleep(k8swait)
+
+			_, err = rec.Reconcile(req)
+			Expect(err).NotTo(HaveOccurred())
+
+			Expect(gsync.ChannelMap[chkey]).NotTo(BeNil())
+		})
+	})
+})
