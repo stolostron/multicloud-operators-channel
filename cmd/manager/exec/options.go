@@ -24,11 +24,13 @@ type ChannelCMDOptions struct {
 	MetricsAddr  string
 	SyncInterval int
 	LeaderElect  bool
+	LogLevel     int
 }
 
 var options = ChannelCMDOptions{
 	MetricsAddr:  "",
 	SyncInterval: defaultSyncInterval,
+	LogLevel:     0,
 }
 
 // ProcessFlags parses command line parameters into options
@@ -48,5 +50,12 @@ func ProcessFlags() {
 		"sync-interval",
 		options.SyncInterval,
 		"Setting up the cache sync time.",
+	)
+
+	flag.IntVar(
+		&options.LogLevel,
+		"loglevel",
+		options.LogLevel,
+		"Setting up log level",
 	)
 }

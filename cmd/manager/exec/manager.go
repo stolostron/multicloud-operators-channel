@@ -21,12 +21,12 @@ import (
 	"runtime"
 
 	"k8s.io/client-go/kubernetes"
+
 	// Import all Kubernetes client auth plugins (e.g. Azure, GCP, OIDC, etc.)
 	_ "k8s.io/client-go/plugin/pkg/client/auth"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/record"
-
-	"github.com/prometheus/common/log"
+	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 
 	"github.com/operator-framework/operator-sdk/pkg/k8sutil"
 	kubemetrics "github.com/operator-framework/operator-sdk/pkg/kube-metrics"
@@ -37,19 +37,14 @@ import (
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	typedcorev1 "k8s.io/client-go/kubernetes/typed/core/v1"
+	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client/config"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 
-	"k8s.io/klog"
-
 	"github.com/open-cluster-management/multicloud-operators-channel/pkg/apis"
 	"github.com/open-cluster-management/multicloud-operators-channel/pkg/controller"
-	"github.com/open-cluster-management/multicloud-operators-channel/pkg/utils"
 	"github.com/open-cluster-management/multicloud-operators-channel/pkg/webhook"
 
-	gitsync "github.com/open-cluster-management/multicloud-operators-channel/pkg/synchronizer/githubsynchronizer"
-	helmsync "github.com/open-cluster-management/multicloud-operators-channel/pkg/synchronizer/helmreposynchronizer"
-	objsync "github.com/open-cluster-management/multicloud-operators-channel/pkg/synchronizer/objectstoresynchronizer"
 	placementutils "github.com/open-cluster-management/multicloud-operators-placementrule/pkg/utils"
 )
 
@@ -58,24 +53,28 @@ var (
 	metricsHost               = "0.0.0.0"
 	metricsPort         int32 = 8384
 	operatorMetricsPort int32 = 8687
+	setupLog                  = ctrl.Log.WithName("setup")
 )
 
 const exitCode = 1
 
 func printVersion() {
-	klog.Info(fmt.Sprintf("Go Version: %s", runtime.Version()))
-	klog.Info(fmt.Sprintf("Go OS/Arch: %s/%s", runtime.GOOS, runtime.GOARCH))
-	klog.Info(fmt.Sprintf("Version of operator-sdk: %v", sdkVersion.Version))
+	setupLog.Info(fmt.Sprintf("Go Version: %s", runtime.Version()))
+	setupLog.Info(fmt.Sprintf("Go OS/Arch: %s/%s", runtime.GOOS, runtime.GOARCH))
+	setupLog.Info(fmt.Sprintf("Version of operator-sdk: %v", sdkVersion.Version))
 }
 
 //RunManager initial controller, synchronizer and start manager
 func RunManager(sig <-chan struct{}) {
+	logger := zap.Logger(true)
+	ctrl.SetLogger(logger)
+
 	printVersion()
 
 	// Get a config to talk to the apiserver
 	cfg, err := config.GetConfig()
 	if err != nil {
-		klog.Error(err, "")
+		setupLog.Error(err, "")
 		os.Exit(exitCode)
 	}
 
@@ -83,7 +82,7 @@ func RunManager(sig <-chan struct{}) {
 	// Become the leader before proceeding
 	err = leader.Become(ctx, "multicloud-operators-channel-lock")
 	if err != nil {
-		klog.Error(err, "")
+		setupLog.Error(err, "")
 		os.Exit(exitCode)
 	}
 
@@ -93,98 +92,99 @@ func RunManager(sig <-chan struct{}) {
 		MetricsBindAddress: fmt.Sprintf("%s:%d", metricsHost, metricsPort),
 	})
 	if err != nil {
-		klog.Error(err, "")
+		setupLog.Error(err, "")
 		os.Exit(exitCode)
 	}
 
-	// Create channel descriptor
-	chdesc, err := utils.CreateObjectStorageChannelDescriptor()
-	if err != nil {
-		klog.Error("unable to create channel descriptor.", err)
-		os.Exit(exitCode)
-	}
+	//	// Create channel descriptor is user for the object bucket
+	//	chdesc, err := utils.CreateObjectStorageChannelDescriptor()
+	//	if err != nil {
+	//		klog.Error("unable to create channel descriptor.", err)
+	//		os.Exit(exitCode)
+	//	}
+	//
+	//	setupLog Create channel synchronizer
+	//	osync, err := objsync.CreateObjectStoreSynchronizer(cfg, chdesc, options.SyncInterval)
+	//
+	//	if err != nil {
+	//		klog.Error("unable to create object-store syncrhonizer on destination cluster.", err)
+	//		os.Exit(exitCode)
+	//	}
+	//
+	//	err = mgr.Add(osync)
+	//	if err != nil {
+	//		klog.Error("Failed to register synchronizer.", err)
+	//		os.Exit(exitCode)
+	//	}
+	//
+	//	// Create channel synchronizer for helm repo
+	//	hsync, err := helmsync.CreateHelmrepoSynchronizer(cfg, mgr.GetScheme(), options.SyncInterval)
+	//
+	//	if err != nil {
+	//		klog.Error("unable to create helo-repo syncrhonizer on destination cluster.", err)
+	//		os.Exit(exitCode)
+	//	}
+	//
+	//	err = mgr.Add(hsync)
+	//	if err != nil {
+	//		klog.Error("Failed to register synchronizer.", err)
+	//		os.Exit(exitCode)
+	//	}
+	//
+	//	// Create channel synchronizer for github
+	//	gsync, err := gitsync.CreateGithubSynchronizer(cfg, mgr.GetScheme(), options.SyncInterval)
+	//
+	//	if err != nil {
+	//		klog.Error("unable to create github syncrhonizer on destination cluster.", err)
+	//		os.Exit(exitCode)
+	//	}
+	//
+	//	err = mgr.Add(gsync)
+	//	if err != nil {
+	//		klog.Error("Failed to register synchronizer.", err)
+	//		os.Exit(exitCode)
+	//	}
 
-	// Create channel synchronizer
-	osync, err := objsync.CreateObjectStoreSynchronizer(cfg, chdesc, options.SyncInterval)
-
-	if err != nil {
-		klog.Error("unable to create object-store syncrhonizer on destination cluster.", err)
-		os.Exit(exitCode)
-	}
-
-	err = mgr.Add(osync)
-	if err != nil {
-		klog.Error("Failed to register synchronizer.", err)
-		os.Exit(exitCode)
-	}
-
-	// Create channel synchronizer for helm repo
-	hsync, err := helmsync.CreateHelmrepoSynchronizer(cfg, mgr.GetScheme(), options.SyncInterval)
-
-	if err != nil {
-		klog.Error("unable to create helo-repo syncrhonizer on destination cluster.", err)
-		os.Exit(exitCode)
-	}
-
-	err = mgr.Add(hsync)
-	if err != nil {
-		klog.Error("Failed to register synchronizer.", err)
-		os.Exit(exitCode)
-	}
-
-	// Create channel synchronizer for github
-	gsync, err := gitsync.CreateGithubSynchronizer(cfg, mgr.GetScheme(), options.SyncInterval)
-
-	if err != nil {
-		klog.Error("unable to create github syncrhonizer on destination cluster.", err)
-		os.Exit(exitCode)
-	}
-
-	err = mgr.Add(gsync)
-	if err != nil {
-		klog.Error("Failed to register synchronizer.", err)
-		os.Exit(exitCode)
-	}
-
-	klog.Info("Registering Components.")
+	setupLog.Info("Registering Components.")
 
 	// Setup Scheme for all resources
-	klog.Info("setting up scheme")
+	setupLog.Info("setting up scheme")
 
 	if err := apis.AddToScheme(mgr.GetScheme()); err != nil {
-		klog.Error(err, "unable add APIs to scheme")
+		setupLog.Error(err, "unable add APIs to scheme")
 		os.Exit(exitCode)
 	}
 
 	//create channel events handler on hub cluster.
 	hubClientSet, err := kubernetes.NewForConfig(cfg)
 	if err != nil {
-		klog.Error("Failed to get hub cluster clientset. err: ", err)
+		setupLog.Error(err, "Failed to get hub cluster clientset.")
 		os.Exit(exitCode)
 	}
 
 	eventBroadcaster := record.NewBroadcaster()
-	eventBroadcaster.StartLogging(klog.Infof)
+	eventBroadcaster.StartLogging(setupLog.Info)
 	eventBroadcaster.StartRecordingToSink(&typedcorev1.EventSinkImpl{Interface: hubClientSet.CoreV1().Events("")})
 	recorder := eventBroadcaster.NewRecorder(mgr.GetScheme(), v1.EventSource{Component: "channel"})
 
 	// Setup all Controllers
-	klog.Info("Setting up controller")
+	setupLog.Info("Setting up controller")
 
-	if err := controller.AddToManager(mgr, recorder, chdesc, hsync, gsync); err != nil {
-		klog.Error(err, "unable to register controllers to the manager")
+	if err := controller.AddToManager(mgr, recorder, ctrl.Log, nil, nil, nil); err != nil {
+		//if err := controller.AddToManager(mgr, recorder, chdesc, hsync, gsync); err != nil {
+		setupLog.Error(err, "unable to register controllers to the manager")
 		os.Exit(exitCode)
 	}
 
-	klog.Info("setting up webhooks")
+	setupLog.Info("setting up webhooks")
 
 	if err := webhook.AddToManager(mgr); err != nil {
-		klog.Error(err, "unable to register webhooks to the manager")
+		setupLog.Error(err, "unable to register webhooks to the manager")
 		os.Exit(exitCode)
 	}
 
 	if err = serveCRMetrics(cfg); err != nil {
-		klog.Info("Could not generate and serve custom resource metrics", "error", err.Error())
+		setupLog.Info("Could not generate and serve custom resource metrics", "error", err.Error())
 	}
 
 	// Add to the below struct any other metrics ports you want to expose.
@@ -205,7 +205,7 @@ func RunManager(sig <-chan struct{}) {
 	// Create Service object to expose the metrics port(s).
 	service, err := metrics.CreateMetricsService(ctx, cfg, servicePorts)
 	if err != nil {
-		klog.Info("Could not create metrics Service", "error", err.Error())
+		setupLog.Info("Could not create metrics Service", "error", err.Error())
 	}
 
 	// CreateServiceMonitors will automatically create the prometheus-operator ServiceMonitor resources
@@ -214,22 +214,22 @@ func RunManager(sig <-chan struct{}) {
 	_, err = metrics.CreateServiceMonitors(cfg, "", services)
 
 	if err != nil {
-		log.Info("Could not create ServiceMonitor object", "error", err.Error())
+		setupLog.Info("Could not create ServiceMonitor object", "error", err.Error())
 		// If this operator is deployed to a cluster without the prometheus-operator running, it will return
 		// ErrServiceMonitorNotPresent, which can be used to safely skip ServiceMonitor creation.
 		if err == metrics.ErrServiceMonitorNotPresent {
-			klog.Info("Install prometheus-operator in your cluster to create ServiceMonitor objects", "error", err.Error())
+			setupLog.Info("Install prometheus-operator in your cluster to create ServiceMonitor objects", "error", err.Error())
 		}
 	}
 
-	klog.Info("Detecting ACM cluster API service...")
+	setupLog.Info("Detecting ACM cluster API service...")
 	placementutils.DetectClusterRegistry(mgr.GetAPIReader(), sig)
 
-	klog.Info("Starting the Cmd.")
+	setupLog.Info("Starting the Cmd.")
 
 	// Start the Cmd
 	if err := mgr.Start(sig); err != nil {
-		klog.Error(err, "Manager exited non-zero")
+		setupLog.Error(err, "Manager exited non-zero")
 		os.Exit(exitCode)
 	}
 }

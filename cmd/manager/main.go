@@ -22,7 +22,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/manager/signals"
 
 	"github.com/spf13/pflag"
-	"k8s.io/klog"
 
 	"github.com/open-cluster-management/multicloud-operators-channel/cmd/manager/exec"
 )
@@ -30,12 +29,8 @@ import (
 func main() {
 	exec.ProcessFlags()
 
-	klog.InitFlags(nil)
-
 	pflag.CommandLine.AddGoFlagSet(flag.CommandLine)
 	pflag.Parse()
-
-	defer klog.Flush()
 
 	exec.RunManager(signals.SetupSignalHandler())
 }
