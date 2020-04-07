@@ -88,7 +88,7 @@ const (
 func Add(mgr manager.Manager, recorder record.EventRecorder, logger logr.Logger,
 	channelDescriptor *utils.ChannelDescriptor, sync *helmsync.ChannelSynchronizer,
 	gsync *gitsync.ChannelSynchronizer) error {
-	return add(mgr, newReconciler(mgr, logger, recorder), logger)
+	return add(mgr, newReconciler(mgr, logger.WithName("channel-reconcile"), recorder), logger.WithName("reconciler-setup"))
 }
 
 // newReconciler returns a new reconcile.Reconciler
@@ -109,7 +109,7 @@ func add(mgr manager.Manager, r reconcile.Reconciler, logger logr.Logger) error 
 		return err
 	}
 
-	logger.WithValues("add-reconcile", "channel").Info(">>>>>>>>>>>>>>>failed to add CRD scheme to manager")
+	logger.WithValues("add-reconcile", "channel").Info("failed to add CRD scheme to manager")
 	if err := apiextensionsv1beta1.AddToScheme(mgr.GetScheme()); err != nil {
 		logger.Error(err, "failed to add CRD scheme to manager")
 	}
@@ -148,7 +148,7 @@ func (mapper *clusterMapper) Map(obj handler.MapObject) []reconcile.Request {
 	err := mapper.List(context.TODO(), plList, listopts)
 
 	if err != nil {
-		mapper.logger.WithName("clustermapper").Error(err, "failed to list channels")
+		mapper.logger.Error(err, "failed to list channels")
 	}
 
 	var requests []reconcile.Request
@@ -184,11 +184,10 @@ type ReconcileChannel struct {
 // +kubebuilder:rbac:groups=apps.open-cluster-management.io,resources=channels,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups=apps.open-cluster-management.io,resources=channels/status,verbs=get;update;patch
 func (r *ReconcileChannel) Reconcile(request reconcile.Request) (reconcile.Result, error) {
-	_ = r.Log.WithName("channel-reconcile")
 	log := r.Log.WithValues("channel-reconcile", request.NamespacedName)
 
-	log.Info(fmt.Sprintf("Starting reconcile loop for %v", request.NamespacedName))
-	defer log.Info(fmt.Sprintf("Finish reconcile loop for %v", request.NamespacedName))
+	log.Info(fmt.Sprintf("Starting channel reconcile loop for %v", request.NamespacedName))
+	defer log.Info(fmt.Sprintf("Finish chennel reconcile loop for %v", request.NamespacedName))
 
 	instance := &chv1.Channel{}
 
@@ -208,7 +207,7 @@ func (r *ReconcileChannel) Reconcile(request reconcile.Request) (reconcile.Resul
 			}
 
 			if err := utils.CleanupDeployables(r.Client, request.NamespacedName); err != nil {
-				r.Log.Error(err, "failed to reconcile on deletion")
+				log.Error(err, "failed to reconcile on deletion")
 				return reconcile.Result{}, err
 			}
 
@@ -320,7 +319,7 @@ func (r *ReconcileChannel) syncReferredObjAnnotation(rq reconcile.Request, ref *
 
 	clSelector, err := dplutils.ConvertLabels(labelSelector)
 	if err != nil {
-		return gerr.Wrap(err, "failed to set lable selector for referred object")
+		return gerr.Wrap(err, "failed to set label selector for referred object")
 	}
 
 	opts.LabelSelector = clSelector

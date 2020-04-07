@@ -26,6 +26,7 @@ import (
 	helmsync "github.com/open-cluster-management/multicloud-operators-channel/pkg/synchronizer/helmreposynchronizer"
 	"github.com/open-cluster-management/multicloud-operators-channel/pkg/utils"
 	dplv1 "github.com/open-cluster-management/multicloud-operators-deployable/pkg/apis/apps/v1"
+	"github.com/prometheus/common/log"
 
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/klog"
@@ -42,6 +43,10 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/source"
 )
 
+const (
+	reconcileName = "deployable-reconcile"
+)
+
 /**
 * USER ACTION REQUIRED: This is a scaffold file intended for the user to modify with their own Controller
 * business logic.  Delete these comments after modifying this file.*
@@ -52,7 +57,7 @@ import (
 func Add(mgr manager.Manager, recorder record.EventRecorder, logger logr.Logger,
 	channelDescriptor *utils.ChannelDescriptor, sync *helmsync.ChannelSynchronizer,
 	gsync *gitsync.ChannelSynchronizer) error {
-	return add(mgr, newReconciler(mgr, recorder, logger), logger)
+	return add(mgr, newReconciler(mgr, recorder, logger.WithName(reconcileName)), logger.WithName("deployable-setup"))
 }
 
 // newReconciler returns a new reconcile.Reconciler
@@ -140,9 +145,9 @@ func (r *ReconcileDeployable) appendEvent(rootInstance *chv1.Channel, dplkey typ
 // +kubebuilder:rbac:groups=apps.open-cluster-management.io,resources=channels/status,verbs=get;update;patch
 func (r *ReconcileDeployable) Reconcile(request reconcile.Request) (reconcile.Result, error) {
 	// Fetch the Channel instance
-	r.Log = r.Log.WithName("deployable-reconcile-loop").WithValues("reconcile", request.NamespacedName)
+	r.Log = r.Log.WithValues("dpl-reconcile", request.NamespacedName)
 
-	r.Log.Info(fmt.Sprintf("Starting reconcile loop for %v", request.NamespacedName))
+	r.Log.Info(fmt.Sprintf("Starting dpl reconcile loop for %v", request.NamespacedName))
 	defer r.Log.Info(fmt.Sprintf("Finish reconcile loop for %v", request.NamespacedName))
 
 	instance := &dplv1.Deployable{}
@@ -176,7 +181,7 @@ func (r *ReconcileDeployable) Reconcile(request reconcile.Request) (reconcile.Re
 
 	parent, dplmap, err := utils.FindDeployableForChannelsInMap(r.Client, instance, channelNsMap)
 	if err != nil && !errors.IsNotFound(err) {
-		r.Log.Error(err, "failed to get all deployables")
+		log.Error(err, "failed to get all deployables")
 		return reconcile.Result{}, nil
 	}
 

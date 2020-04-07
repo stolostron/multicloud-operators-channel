@@ -28,20 +28,19 @@ import (
 	"k8s.io/client-go/tools/record"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 
-	"github.com/go-logr/logr"
 	"github.com/operator-framework/operator-sdk/pkg/k8sutil"
 	kubemetrics "github.com/operator-framework/operator-sdk/pkg/kube-metrics"
 	"github.com/operator-framework/operator-sdk/pkg/leader"
 	"github.com/operator-framework/operator-sdk/pkg/metrics"
 	"github.com/operator-framework/operator-sdk/pkg/restmapper"
 	sdkVersion "github.com/operator-framework/operator-sdk/version"
-	uzap "go.uber.org/zap"
-	"go.uber.org/zap/zapcore"
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	typedcorev1 "k8s.io/client-go/kubernetes/typed/core/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client/config"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
+
+	ctrl "sigs.k8s.io/controller-runtime"
 
 	"github.com/open-cluster-management/multicloud-operators-channel/pkg/apis"
 	"github.com/open-cluster-management/multicloud-operators-channel/pkg/controller"
@@ -55,30 +54,25 @@ var (
 	metricsHost               = "0.0.0.0"
 	metricsPort         int32 = 8385
 	operatorMetricsPort int32 = 8687
+	setupLog                  = ctrl.Log.WithName("setup")
 )
 
 const exitCode = 1
 
-func printVersion(logger logr.Logger) {
-	logger.Info(fmt.Sprintf("Go Version: %s", runtime.Version()))
-	logger.Info(fmt.Sprintf("Go OS/Arch: %s/%s", runtime.GOOS, runtime.GOARCH))
-	logger.Info(fmt.Sprintf("Version of operator-sdk: %v", sdkVersion.Version))
+func printVersion() {
+	setupLog.Info(fmt.Sprintf("Go Version: %s", runtime.Version()))
+	setupLog.Info(fmt.Sprintf("Go OS/Arch: %s/%s", runtime.GOOS, runtime.GOARCH))
+	setupLog.Info(fmt.Sprintf("Version of operator-sdk: %v", sdkVersion.Version))
 }
 
 //RunManager initial controller, synchronizer and start manager
 func RunManager(sig <-chan struct{}) {
-	lvl := uzap.NewAtomicLevelAt(zapcore.Level(options.LogLevel))
-	slvl := uzap.NewAtomicLevelAt(zapcore.ErrorLevel)
-	logger := zap.New(
-		zap.Level(&lvl),
-		zap.StacktraceLevel(&slvl),
-	)
-	logger = logger.WithName("setup")
 
-	fmt.Printf("log level %v\n", lvl.String())
-	printVersion(logger)
+	ctrl.SetLogger(zap.New(zap.UseDevMode(options.debugLogging)))
 
-	logger.Error(fmt.Errorf("wath %v", 4), "s")
+	printVersion()
+
+	logger := ctrl.Log
 	// Get a config to talk to the apiserver
 	cfg, err := config.GetConfig()
 	if err != nil {
@@ -178,7 +172,7 @@ func RunManager(sig <-chan struct{}) {
 	// Setup all Controllers
 	logger.Info("Setting up controller")
 
-	if err := controller.AddToManager(mgr, recorder, logger, nil, nil, nil); err != nil {
+	if err := controller.AddToManager(mgr, recorder, ctrl.Log.WithName("controller"), nil, nil, nil); err != nil {
 		//if err := controller.AddToManager(mgr, recorder, chdesc, hsync, gsync); err != nil {
 		logger.Error(err, "unable to register controllers to the manager")
 		os.Exit(exitCode)

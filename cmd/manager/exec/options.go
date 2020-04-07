@@ -24,13 +24,13 @@ type ChannelCMDOptions struct {
 	MetricsAddr  string
 	SyncInterval int
 	LeaderElect  bool
-	LogLevel     int
+	debugLogging bool
 }
 
 var options = ChannelCMDOptions{
 	MetricsAddr:  "",
 	SyncInterval: defaultSyncInterval,
-	LogLevel:     0,
+	debugLogging: true,
 }
 
 // ProcessFlags parses command line parameters into options
@@ -52,10 +52,9 @@ func ProcessFlags() {
 		"Setting up the cache sync time.",
 	)
 
-	flag.IntVar(
-		&options.LogLevel,
-		"loglevel",
-		options.LogLevel,
-		"Setting up log level",
+	flag.BoolVar(&options.debugLogging,
+		"debug-logging",
+		options.debugLogging,
+		"Enable debug logging.",
 	)
 }
