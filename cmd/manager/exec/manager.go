@@ -28,16 +28,18 @@ import (
 	"k8s.io/client-go/tools/record"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 
+	"github.com/go-logr/logr"
 	"github.com/operator-framework/operator-sdk/pkg/k8sutil"
 	kubemetrics "github.com/operator-framework/operator-sdk/pkg/kube-metrics"
 	"github.com/operator-framework/operator-sdk/pkg/leader"
 	"github.com/operator-framework/operator-sdk/pkg/metrics"
 	"github.com/operator-framework/operator-sdk/pkg/restmapper"
 	sdkVersion "github.com/operator-framework/operator-sdk/version"
+	uzap "go.uber.org/zap"
+	"go.uber.org/zap/zapcore"
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	typedcorev1 "k8s.io/client-go/kubernetes/typed/core/v1"
-	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client/config"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 
@@ -51,30 +53,36 @@ import (
 // Change below variables to serve metrics on different host or port.
 var (
 	metricsHost               = "0.0.0.0"
-	metricsPort         int32 = 8384
+	metricsPort         int32 = 8385
 	operatorMetricsPort int32 = 8687
-	setupLog                  = ctrl.Log.WithName("setup")
 )
 
 const exitCode = 1
 
-func printVersion() {
-	setupLog.Info(fmt.Sprintf("Go Version: %s", runtime.Version()))
-	setupLog.Info(fmt.Sprintf("Go OS/Arch: %s/%s", runtime.GOOS, runtime.GOARCH))
-	setupLog.Info(fmt.Sprintf("Version of operator-sdk: %v", sdkVersion.Version))
+func printVersion(logger logr.Logger) {
+	logger.Info(fmt.Sprintf("Go Version: %s", runtime.Version()))
+	logger.Info(fmt.Sprintf("Go OS/Arch: %s/%s", runtime.GOOS, runtime.GOARCH))
+	logger.Info(fmt.Sprintf("Version of operator-sdk: %v", sdkVersion.Version))
 }
 
 //RunManager initial controller, synchronizer and start manager
 func RunManager(sig <-chan struct{}) {
-	logger := zap.Logger(true)
-	ctrl.SetLogger(logger)
+	lvl := uzap.NewAtomicLevelAt(zapcore.Level(options.LogLevel))
+	slvl := uzap.NewAtomicLevelAt(zapcore.ErrorLevel)
+	logger := zap.New(
+		zap.Level(&lvl),
+		zap.StacktraceLevel(&slvl),
+	)
+	logger = logger.WithName("setup")
 
-	printVersion()
+	fmt.Printf("log level %v\n", lvl.String())
+	printVersion(logger)
 
+	logger.Error(fmt.Errorf("wath %v", 4), "s")
 	// Get a config to talk to the apiserver
 	cfg, err := config.GetConfig()
 	if err != nil {
-		setupLog.Error(err, "")
+		logger.Error(err, "")
 		os.Exit(exitCode)
 	}
 
@@ -82,7 +90,7 @@ func RunManager(sig <-chan struct{}) {
 	// Become the leader before proceeding
 	err = leader.Become(ctx, "multicloud-operators-channel-lock")
 	if err != nil {
-		setupLog.Error(err, "")
+		logger.Error(err, "")
 		os.Exit(exitCode)
 	}
 
@@ -92,7 +100,7 @@ func RunManager(sig <-chan struct{}) {
 		MetricsBindAddress: fmt.Sprintf("%s:%d", metricsHost, metricsPort),
 	})
 	if err != nil {
-		setupLog.Error(err, "")
+		logger.Error(err, "")
 		os.Exit(exitCode)
 	}
 
@@ -103,7 +111,7 @@ func RunManager(sig <-chan struct{}) {
 	//		os.Exit(exitCode)
 	//	}
 	//
-	//	setupLog Create channel synchronizer
+	//	logger Create channel synchronizer
 	//	osync, err := objsync.CreateObjectStoreSynchronizer(cfg, chdesc, options.SyncInterval)
 	//
 	//	if err != nil {
@@ -145,46 +153,46 @@ func RunManager(sig <-chan struct{}) {
 	//		os.Exit(exitCode)
 	//	}
 
-	setupLog.Info("Registering Components.")
+	logger.Info("Registering Components.")
 
 	// Setup Scheme for all resources
-	setupLog.Info("setting up scheme")
+	logger.Info("setting up scheme")
 
 	if err := apis.AddToScheme(mgr.GetScheme()); err != nil {
-		setupLog.Error(err, "unable add APIs to scheme")
+		logger.Error(err, "unable add APIs to scheme")
 		os.Exit(exitCode)
 	}
 
 	//create channel events handler on hub cluster.
 	hubClientSet, err := kubernetes.NewForConfig(cfg)
 	if err != nil {
-		setupLog.Error(err, "Failed to get hub cluster clientset.")
+		logger.Error(err, "Failed to get hub cluster clientset.")
 		os.Exit(exitCode)
 	}
 
 	eventBroadcaster := record.NewBroadcaster()
-	eventBroadcaster.StartLogging(setupLog.Info)
+	eventBroadcaster.StartLogging(logger.Info)
 	eventBroadcaster.StartRecordingToSink(&typedcorev1.EventSinkImpl{Interface: hubClientSet.CoreV1().Events("")})
 	recorder := eventBroadcaster.NewRecorder(mgr.GetScheme(), v1.EventSource{Component: "channel"})
 
 	// Setup all Controllers
-	setupLog.Info("Setting up controller")
+	logger.Info("Setting up controller")
 
-	if err := controller.AddToManager(mgr, recorder, ctrl.Log, nil, nil, nil); err != nil {
+	if err := controller.AddToManager(mgr, recorder, logger, nil, nil, nil); err != nil {
 		//if err := controller.AddToManager(mgr, recorder, chdesc, hsync, gsync); err != nil {
-		setupLog.Error(err, "unable to register controllers to the manager")
+		logger.Error(err, "unable to register controllers to the manager")
 		os.Exit(exitCode)
 	}
 
-	setupLog.Info("setting up webhooks")
+	logger.Info("setting up webhooks")
 
 	if err := webhook.AddToManager(mgr); err != nil {
-		setupLog.Error(err, "unable to register webhooks to the manager")
+		logger.Error(err, "unable to register webhooks to the manager")
 		os.Exit(exitCode)
 	}
 
 	if err = serveCRMetrics(cfg); err != nil {
-		setupLog.Info("Could not generate and serve custom resource metrics", "error", err.Error())
+		logger.Info("Could not generate and serve custom resource metrics", "error", err.Error())
 	}
 
 	// Add to the below struct any other metrics ports you want to expose.
@@ -205,7 +213,7 @@ func RunManager(sig <-chan struct{}) {
 	// Create Service object to expose the metrics port(s).
 	service, err := metrics.CreateMetricsService(ctx, cfg, servicePorts)
 	if err != nil {
-		setupLog.Info("Could not create metrics Service", "error", err.Error())
+		logger.Info("Could not create metrics Service", "error", err.Error())
 	}
 
 	// CreateServiceMonitors will automatically create the prometheus-operator ServiceMonitor resources
@@ -214,22 +222,22 @@ func RunManager(sig <-chan struct{}) {
 	_, err = metrics.CreateServiceMonitors(cfg, "", services)
 
 	if err != nil {
-		setupLog.Info("Could not create ServiceMonitor object", "error", err.Error())
+		logger.Info("Could not create ServiceMonitor object", "error", err.Error())
 		// If this operator is deployed to a cluster without the prometheus-operator running, it will return
 		// ErrServiceMonitorNotPresent, which can be used to safely skip ServiceMonitor creation.
 		if err == metrics.ErrServiceMonitorNotPresent {
-			setupLog.Info("Install prometheus-operator in your cluster to create ServiceMonitor objects", "error", err.Error())
+			logger.Info("Install prometheus-operator in your cluster to create ServiceMonitor objects", "error", err.Error())
 		}
 	}
 
-	setupLog.Info("Detecting ACM cluster API service...")
+	logger.Info("Detecting ACM cluster API service...")
 	placementutils.DetectClusterRegistry(mgr.GetAPIReader(), sig)
 
-	setupLog.Info("Starting the Cmd.")
+	logger.Info("Starting the Cmd.")
 
 	// Start the Cmd
 	if err := mgr.Start(sig); err != nil {
-		setupLog.Error(err, "Manager exited non-zero")
+		logger.Error(err, "Manager exited non-zero")
 		os.Exit(exitCode)
 	}
 }

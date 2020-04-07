@@ -184,10 +184,11 @@ type ReconcileChannel struct {
 // +kubebuilder:rbac:groups=apps.open-cluster-management.io,resources=channels,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups=apps.open-cluster-management.io,resources=channels/status,verbs=get;update;patch
 func (r *ReconcileChannel) Reconcile(request reconcile.Request) (reconcile.Result, error) {
-	r.Log = r.Log.WithValues("channel-reconcile", request.NamespacedName)
+	_ = r.Log.WithName("channel-reconcile")
+	log := r.Log.WithValues("channel-reconcile", request.NamespacedName)
 
-	r.Log.Info(fmt.Sprintf("Starting reconcile loop for %v", request.NamespacedName))
-	defer r.Log.Info(fmt.Sprintf("Finish reconcile loop for %v", request.NamespacedName))
+	log.Info(fmt.Sprintf("Starting reconcile loop for %v", request.NamespacedName))
+	defer log.Info(fmt.Sprintf("Finish reconcile loop for %v", request.NamespacedName))
 
 	instance := &chv1.Channel{}
 
@@ -223,7 +224,7 @@ func (r *ReconcileChannel) Reconcile(request reconcile.Request) (reconcile.Resul
 
 		err := r.Update(context.TODO(), instance)
 		if err != nil {
-			r.Log.Info(fmt.Sprintf("can't update the pathname field due to %v", err))
+			log.Info(fmt.Sprintf("can't update the pathname field due to %v", err))
 			return reconcile.Result{}, err
 		}
 
@@ -232,7 +233,7 @@ func (r *ReconcileChannel) Reconcile(request reconcile.Request) (reconcile.Resul
 
 	err = r.validateClusterRBAC(instance)
 	if err != nil {
-		r.Log.Error(err, fmt.Sprintf("failed to validate RBAC for clusters for channel %v", instance.Name))
+		log.Error(err, fmt.Sprintf("failed to validate RBAC for clusters for channel %v", instance.Name))
 		return reconcile.Result{}, err
 	}
 
