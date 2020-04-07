@@ -23,6 +23,7 @@ import (
 	"k8s.io/client-go/kubernetes"
 
 	// Import all Kubernetes client auth plugins (e.g. Azure, GCP, OIDC, etc.)
+	uzap "go.uber.org/zap"
 	_ "k8s.io/client-go/plugin/pkg/client/auth"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/record"
@@ -67,8 +68,9 @@ func printVersion() {
 
 //RunManager initial controller, synchronizer and start manager
 func RunManager(sig <-chan struct{}) {
-
-	ctrl.SetLogger(zap.New(zap.UseDevMode(options.debugLogging)))
+	uOpts := zap.RawZapOpts(uzap.AddCaller())
+	zlogger := zap.New(zap.UseDevMode(options.debugLogging), uOpts)
+	ctrl.SetLogger(zlogger)
 
 	printVersion()
 

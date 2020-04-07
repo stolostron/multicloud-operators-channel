@@ -18,7 +18,9 @@ import (
 	"flag"
 
 	// Import all Kubernetes client auth plugins (e.g. Azure, GCP, OIDC, etc.)
+
 	_ "k8s.io/client-go/plugin/pkg/client/auth"
+	"k8s.io/klog"
 	"sigs.k8s.io/controller-runtime/pkg/manager/signals"
 
 	"github.com/spf13/pflag"
@@ -27,9 +29,12 @@ import (
 )
 
 func main() {
+	defer klog.Flush()
 	exec.ProcessFlags()
 
+	klog.InitFlags(nil)
 	pflag.CommandLine.AddGoFlagSet(flag.CommandLine)
+
 	pflag.Parse()
 
 	exec.RunManager(signals.SetupSignalHandler())

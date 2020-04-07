@@ -27,11 +27,12 @@ type ChannelCMDOptions struct {
 	debugLogging bool
 }
 
-var options = ChannelCMDOptions{
-	MetricsAddr:  "",
-	SyncInterval: defaultSyncInterval,
-	debugLogging: true,
-}
+var (
+	options = ChannelCMDOptions{
+		MetricsAddr:  "",
+		SyncInterval: defaultSyncInterval,
+		debugLogging: false}
+)
 
 // ProcessFlags parses command line parameters into options
 func ProcessFlags() {
@@ -53,8 +54,9 @@ func ProcessFlags() {
 	)
 
 	flag.BoolVar(&options.debugLogging,
-		"debug-logging",
+		"debug",
 		options.debugLogging,
 		"Enable debug logging.",
 	)
+
 }
