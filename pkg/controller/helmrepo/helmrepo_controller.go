@@ -16,8 +16,10 @@ package helmrepo
 
 import (
 	"context"
+	"fmt"
 	"strings"
 
+	"github.com/go-logr/logr"
 	chv1 "github.com/open-cluster-management/multicloud-operators-channel/pkg/apis/apps/v1"
 	gitsync "github.com/open-cluster-management/multicloud-operators-channel/pkg/synchronizer/githubsynchronizer"
 	helmsync "github.com/open-cluster-management/multicloud-operators-channel/pkg/synchronizer/helmreposynchronizer"
@@ -25,7 +27,6 @@ import (
 
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/client-go/tools/record"
-	"k8s.io/klog"
 
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
@@ -40,28 +41,32 @@ import (
 * business logic.  Delete these comments after modifying this file.*
  */
 
-const debugLevel = klog.Level(10)
+const (
+	controllerName  = "helmrepo"
+	controllerSetup = "helmrepo-setup"
+)
 
 // Add creates a new Deployable Controller and adds it to the Manager with default RBAC. The Manager will set fields on the Controller
 // and Start it when the Manager is Started.
-func Add(mgr manager.Manager, recorder record.EventRecorder,
+func Add(mgr manager.Manager, recorder record.EventRecorder, logger logr.Logger,
 	channelDescriptor *utils.ChannelDescriptor, sync *helmsync.ChannelSynchronizer,
 	gsync *gitsync.ChannelSynchronizer) error {
-	return add(mgr, newReconciler(mgr, sync))
+	return add(mgr, newReconciler(mgr, sync, logger.WithName(controllerName)), logger.WithName(controllerSetup))
 }
 
 // newReconciler returns a new reconcile.Reconciler
-func newReconciler(mgr manager.Manager, sync *helmsync.ChannelSynchronizer) reconcile.Reconciler {
+func newReconciler(mgr manager.Manager, sync *helmsync.ChannelSynchronizer, logger logr.Logger) reconcile.Reconciler {
 	return &ReconcileChannel{
 		KubeClient:          mgr.GetClient(),
 		ChannelSynchronizer: sync,
+		Log:                 logger,
 	}
 }
 
 // add adds a new Controller to mgr with r as the reconcile.Reconciler
-func add(mgr manager.Manager, r reconcile.Reconciler) error {
+func add(mgr manager.Manager, r reconcile.Reconciler, logger logr.Logger) error {
 	// Create a new controller
-	c, err := controller.New("helmrepo-controller", mgr, controller.Options{Reconciler: r})
+	c, err := controller.New(controllerName, mgr, controller.Options{Reconciler: r})
 	if err != nil {
 		return err
 	}
@@ -81,6 +86,7 @@ var _ reconcile.Reconciler = &ReconcileChannel{}
 type ReconcileChannel struct {
 	KubeClient          client.Client
 	ChannelSynchronizer *helmsync.ChannelSynchronizer
+	Log                 logr.Logger
 }
 
 // Reconcile reads that state of the cluster for a Deployable object and makes changes based on the state read
@@ -92,9 +98,12 @@ type ReconcileChannel struct {
 // +kubebuilder:rbac:groups=apps.open-cluster-management.io,resources=deployables/status,verbs=get;update;patch
 func (r *ReconcileChannel) Reconcile(request reconcile.Request) (reconcile.Result, error) {
 	// Fetch the Deployable instance
+	log := r.Log.WithValues("helm-reconcile", request.NamespacedName)
+	log.Info(fmt.Sprintf("Starting %v reconcile loop for %v", controllerName, request.NamespacedName))
+	defer log.Info(fmt.Sprintf("Finish %v reconcile loop for %v", controllerName, request.NamespacedName))
+
 	instance := &chv1.Channel{}
 	err := r.KubeClient.Get(context.TODO(), request.NamespacedName, instance)
-	klog.Info("Reconciling channel:", request.NamespacedName, " with Get err:", err)
 
 	if err != nil {
 		if errors.IsNotFound(err) {
@@ -104,13 +113,13 @@ func (r *ReconcileChannel) Reconcile(request reconcile.Request) (reconcile.Resul
 			return reconcile.Result{}, nil
 		}
 		// Error reading the object - requeue the request.
-		klog.V(debugLevel).Info("Reconciling - Errored.", request.NamespacedName, " with Get err:", err)
+		log.Error(err, "reconciling - errored.")
 
 		return reconcile.Result{}, err
 	}
 
 	if !strings.EqualFold(string(instance.Spec.Type), chv1.ChannelTypeHelmRepo) {
-		klog.V(debugLevel).Info("Ignoring type ", instance.Spec.Type)
+		log.Info(fmt.Sprintf("Ignoring type %v", instance.Spec.Type))
 		return reconcile.Result{}, nil
 	}
 

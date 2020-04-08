@@ -28,7 +28,6 @@ import (
 	dplv1 "github.com/open-cluster-management/multicloud-operators-deployable/pkg/apis/apps/v1"
 
 	v1 "k8s.io/api/core/v1"
-	"k8s.io/klog"
 
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -43,7 +42,8 @@ import (
 )
 
 const (
-	reconcileName = "deployable-reconcile"
+	controllerName  = "deployable"
+	controllerSetup = "deployable-setup"
 )
 
 /**
@@ -56,7 +56,7 @@ const (
 func Add(mgr manager.Manager, recorder record.EventRecorder, logger logr.Logger,
 	channelDescriptor *utils.ChannelDescriptor, sync *helmsync.ChannelSynchronizer,
 	gsync *gitsync.ChannelSynchronizer) error {
-	return add(mgr, newReconciler(mgr, recorder, logger.WithName(reconcileName)), logger.WithName("deployable-setup"))
+	return add(mgr, newReconciler(mgr, recorder, logger.WithName(controllerName)), logger.WithName(controllerSetup))
 }
 
 // newReconciler returns a new reconcile.Reconciler
@@ -89,7 +89,7 @@ func (mapper *channelMapper) Map(obj handler.MapObject) []reconcile.Request {
 // add adds a new Controller to mgr with r as the reconcile.Reconciler
 func add(mgr manager.Manager, r reconcile.Reconciler, logger logr.Logger) error {
 	// Create a new controller
-	c, err := controller.New("deployable-controller", mgr, controller.Options{Reconciler: r})
+	c, err := controller.New(controllerName, mgr, controller.Options{Reconciler: r})
 	if err != nil {
 		return err
 	}
@@ -146,9 +146,9 @@ func (r *ReconcileDeployable) Reconcile(request reconcile.Request) (reconcile.Re
 	// Fetch the Channel instance
 	//r.Log = r.Log.WithValues("dpl-reconcile", request.NamespacedName)
 
-	recLog := r.Log.WithValues("dpl-reconcile", request.NamespacedName)
-	recLog.Info(fmt.Sprintf("Starting dpl reconcile loop for %v", request.NamespacedName))
-	defer recLog.Info(fmt.Sprintf("Finish reconcile loop for %v", request.NamespacedName))
+	log := r.Log.WithValues("dpl-reconcile", request.NamespacedName)
+	log.Info(fmt.Sprintf("Starting %v reconcile loop for %v", controllerName, request.NamespacedName))
+	defer log.Info(fmt.Sprintf("Finish %v reconcile loop for %v", controllerName, request.NamespacedName))
 
 	instance := &dplv1.Deployable{}
 	err := r.Get(context.TODO(), request.NamespacedName, instance)
@@ -157,17 +157,17 @@ func (r *ReconcileDeployable) Reconcile(request reconcile.Request) (reconcile.Re
 		if errors.IsNotFound(err) {
 			// Object not found, return.  Created objects are automatically garbage collected.
 			// For additional cleanup logic use finalizers.
-			recLog.Info("exit, deployables will be GC'ed by k8s")
+			log.Info("exit, deployables will be GC'ed by k8s")
 			return reconcile.Result{}, nil
 		}
 		// Error reading the object - requeue the request.
 		return reconcile.Result{}, err
 	}
 
-	channelmap, err := utils.GenerateChannelMap(r.Client)
+	channelmap, err := utils.GenerateChannelMap(r.Client, log)
 	if err != nil {
 		if !errors.IsNotFound(err) {
-			recLog.Error(err, "failed to get all deployables")
+			log.Error(err, "failed to get all deployables")
 			return reconcile.Result{}, nil
 		}
 
@@ -179,35 +179,35 @@ func (r *ReconcileDeployable) Reconcile(request reconcile.Request) (reconcile.Re
 		channelNsMap[ch.Namespace] = ch.Name
 	}
 
-	parent, dplmap, err := utils.FindDeployableForChannelsInMap(r.Client, instance, channelNsMap)
+	parent, dplmap, err := utils.FindDeployableForChannelsInMap(r.Client, instance, channelNsMap, log)
 	if err != nil && !errors.IsNotFound(err) {
-		recLog.Error(err, "failed to get all deployables")
+		log.Error(err, "failed to get all deployables")
 		return reconcile.Result{}, nil
 	}
 
-	recLog.Info(fmt.Sprintf("Dpl Map, before deletion: %#v", dplmap))
+	log.Info(fmt.Sprintf("Dpl Map, before deletion: %#v", dplmap))
 
-	dplmap, err = r.updateDeployableRelationWithChannel(instance, dplmap, parent, channelNsMap, channelmap, recLog)
+	dplmap, err = r.updateDeployableRelationWithChannel(instance, dplmap, parent, channelNsMap, channelmap, log)
 	if err != nil {
 		return reconcile.Result{}, err
 	}
 
-	r.handleOrphanDeployable(dplmap)
+	r.handleOrphanDeployable(dplmap, log)
 
 	return reconcile.Result{}, err
 }
 
-func (r *ReconcileDeployable) handleOrphanDeployable(dplmap map[string]*dplv1.Deployable) {
+func (r *ReconcileDeployable) handleOrphanDeployable(dplmap map[string]*dplv1.Deployable, logger logr.Logger) {
 	if dplmap == nil {
 		return
 	}
 	//If the dpl changes its channel, delete all other children of the dpl who were propagated to other channels before.
 	for chstr, dpl := range dplmap {
-		r.Log.Info(fmt.Sprintf("deleting deployable %v/%v from channel %v ", dpl.Namespace, dpl.Name, chstr))
+		logger.Info(fmt.Sprintf("deleting deployable %v/%v from channel %v ", dpl.Namespace, dpl.Name, chstr))
 
 		err := r.Client.Delete(context.TODO(), dpl)
 		if err != nil {
-			klog.Errorf("Failed to delete %v due to %v ", dpl.Name, err)
+			logger.Error(err, fmt.Sprintf("Failed to delete %v due to %v ", dpl.Name))
 		}
 
 		//record events
@@ -218,7 +218,7 @@ func (r *ReconcileDeployable) handleOrphanDeployable(dplmap map[string]*dplv1.De
 
 		parsedstr := strings.Split(chstr, "/")
 		if len(parsedstr) != 2 {
-			klog.Info("invalid channel namespacedName: ", chstr)
+			logger.Info(fmt.Sprintf("invalid channel namespacedName: %v", chstr))
 
 			continue
 		}
@@ -227,11 +227,11 @@ func (r *ReconcileDeployable) handleOrphanDeployable(dplmap map[string]*dplv1.De
 
 		error1 := r.Get(context.TODO(), chkey, dplchannel)
 		if error1 != nil {
-			r.Log.Info(fmt.Sprintf("Channel %#v not found, unable to record events to it. ", chkey))
+			logger.Info(fmt.Sprintf("Channel %#v not found, unable to record events to it. ", chkey))
 		} else {
 			err = r.appendEvent(dplchannel, dplkey, err, "Delete", addtionalMsg)
 			if err != nil {
-				r.Log.Error(err, fmt.Sprintf("Failed to record event %v due to %v ", dplkey, err))
+				logger.Error(err, fmt.Sprintf("Failed to record event %v", dplkey))
 			}
 		}
 	}
@@ -280,7 +280,7 @@ func (r *ReconcileDeployable) propagateDeployableToChannel(deployable *dplv1.Dep
 	exdpl, ok := dplmap[chkey]
 
 	if !ok {
-		logger.Info(fmt.Sprintf("Creating deployable in channel", *chdpl))
+		logger.Info(fmt.Sprintf("Creating deployable in channel %v", *chdpl))
 		err = r.Client.Create(context.TODO(), chdpl)
 
 		//record events
@@ -324,7 +324,7 @@ func (r *ReconcileDeployable) propagateDeployableToChannel(deployable *dplv1.Dep
 func (r *ReconcileDeployable) updateDeployableRelationWithChannel(
 	instance *dplv1.Deployable, dplmap map[string]*dplv1.Deployable,
 	parent *dplv1.Deployable, channelNsMap map[string]string,
-	channelmap map[string]*chv1.Channel, log logr.Logger) (map[string]*dplv1.Deployable, error) {
+	channelmap map[string]*chv1.Channel, logger logr.Logger) (map[string]*dplv1.Deployable, error) {
 	if len(instance.GetFinalizers()) == 0 {
 		annotations := instance.Annotations
 		if channelNsMap[instance.Namespace] != "" && annotations != nil && annotations[chv1.KeyChannelSource] != "" && parent == nil {
@@ -335,20 +335,20 @@ func (r *ReconcileDeployable) updateDeployableRelationWithChannel(
 		for _, chname := range instance.Spec.Channels {
 			ch, ok := channelmap[chname]
 			if !ok {
-				log.Info(fmt.Sprintf("failed to find channel name %v for deployable %v/%v", chname, instance.Namespace, instance.Name))
+				logger.Info(fmt.Sprintf("failed to find channel name %v for deployable %v/%v", chname, instance.Namespace, instance.Name))
 				continue
 			}
 
-			if err := r.propagateDeployableToChannel(instance, dplmap, ch, log); err != nil {
-				log.Info(fmt.Sprintf("failed to validate deplyable for %v ", instance))
+			if err := r.propagateDeployableToChannel(instance, dplmap, ch, logger); err != nil {
+				logger.Info(fmt.Sprintf("failed to validate deplyable for %v ", instance))
 			}
 
 			delete(channelmap, chname)
 		}
 
 		for _, ch := range channelmap {
-			if err := r.propagateDeployableToChannel(instance, dplmap, ch, log); err != nil {
-				log.Error(err, fmt.Sprintf("Failed to propagate %v To Channel", instance))
+			if err := r.propagateDeployableToChannel(instance, dplmap, ch, logger); err != nil {
+				logger.Error(err, fmt.Sprintf("Failed to propagate %v To Channel", instance))
 			}
 		}
 	}

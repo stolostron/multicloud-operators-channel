@@ -24,15 +24,36 @@ type ChannelCMDOptions struct {
 	MetricsAddr  string
 	SyncInterval int
 	LeaderElect  bool
-	debugLogging bool
 }
 
 var (
 	options = ChannelCMDOptions{
 		MetricsAddr:  "",
 		SyncInterval: defaultSyncInterval,
-		debugLogging: false}
+	}
 )
+
+func HidKlogFlag(pf *pflag.FlagSet) {
+	fStr := []string{
+		"log_backtrace_at",
+		"add_dir_header",
+		"log_dir",
+		"log_file_max_size",
+		"log_file",
+		"skip_headers",
+		"skip_log_headers",
+		"stderrthreshold",
+		"vmodule",
+		"alsologtostderr",
+	}
+
+	for _, f := range fStr {
+		t := pf.Lookup(f)
+		if t != nil {
+			t.Hidden = true
+		}
+	}
+}
 
 // ProcessFlags parses command line parameters into options
 func ProcessFlags() {
@@ -52,11 +73,4 @@ func ProcessFlags() {
 		options.SyncInterval,
 		"Setting up the cache sync time.",
 	)
-
-	flag.BoolVar(&options.debugLogging,
-		"debug",
-		options.debugLogging,
-		"Enable debug logging.",
-	)
-
 }

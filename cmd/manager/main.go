@@ -23,6 +23,7 @@ import (
 	"k8s.io/klog"
 	"sigs.k8s.io/controller-runtime/pkg/manager/signals"
 
+	"github.com/open-cluster-management/multicloud-operators-channel/pkg/log/zap"
 	"github.com/spf13/pflag"
 
 	"github.com/open-cluster-management/multicloud-operators-channel/cmd/manager/exec"
@@ -33,8 +34,11 @@ func main() {
 	exec.ProcessFlags()
 
 	klog.InitFlags(nil)
+	pflag.CommandLine.AddFlagSet(zap.FlagSet())
+
 	pflag.CommandLine.AddGoFlagSet(flag.CommandLine)
 
+	exec.HidKlogFlag(pflag.CommandLine)
 	pflag.Parse()
 
 	exec.RunManager(signals.SetupSignalHandler())

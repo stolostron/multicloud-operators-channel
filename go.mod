@@ -6,6 +6,7 @@ require (
 	github.com/aws/aws-sdk-go-v2 v0.18.0
 	github.com/ghodss/yaml v1.0.1-0.20190212211648-25d852aebe32
 	github.com/go-logr/logr v0.1.0
+	github.com/go-logr/zapr v0.1.1
 	github.com/go-openapi/spec v0.19.4
 	github.com/google/go-cmp v0.3.1
 	github.com/onsi/ginkgo v1.12.0
@@ -15,8 +16,8 @@ require (
 	github.com/operator-framework/operator-sdk v0.12.0
 	github.com/otiai10/copy v1.1.1
 	github.com/pkg/errors v0.8.1
-	github.com/prometheus/common v0.7.0
 	github.com/spf13/pflag v1.0.5
+	github.com/stretchr/testify v1.4.0
 	go.uber.org/zap v1.10.0
 	golang.org/x/net v0.0.0-20191028085509-fe3aa8a45271
 	golang.org/x/xerrors v0.0.0-20191011141410-1b5146add898 // indirect

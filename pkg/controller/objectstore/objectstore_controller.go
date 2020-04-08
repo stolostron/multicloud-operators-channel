@@ -16,7 +16,9 @@ package objectstore
 
 import (
 	"context"
+	"fmt"
 
+	"github.com/go-logr/logr"
 	chv1 "github.com/open-cluster-management/multicloud-operators-channel/pkg/apis/apps/v1"
 	gitsync "github.com/open-cluster-management/multicloud-operators-channel/pkg/synchronizer/githubsynchronizer"
 	helmsync "github.com/open-cluster-management/multicloud-operators-channel/pkg/synchronizer/helmreposynchronizer"
@@ -40,26 +42,31 @@ import (
 * business logic.  Delete these comments after modifying this file.*
  */
 
-const debugLevel = klog.Level(10)
+const (
+	debugLevel     = klog.Level(10)
+	controllerName = "objectbucket"
+)
 
 // Add creates a new Deployable Controller and adds it to the Manager with default RBAC. The Manager will set fields on the Controller
 // and Start it when the Manager is Started.
-func Add(mgr manager.Manager, recorder record.EventRecorder,
+func Add(mgr manager.Manager, recorder record.EventRecorder, logger logr.Logger,
 	channelDescriptor *utils.ChannelDescriptor, sync *helmsync.ChannelSynchronizer,
 	gsync *gitsync.ChannelSynchronizer) error {
-	return add(mgr, newReconciler(mgr, channelDescriptor))
+	return add(mgr, newReconciler(mgr, channelDescriptor, logger.WithName(controllerName)), logger.WithName("objectbucket-setup"))
 }
 
 // newReconciler returns a new reconcile.Reconciler
-func newReconciler(mgr manager.Manager, channelDescriptor *utils.ChannelDescriptor) reconcile.Reconciler {
+func newReconciler(mgr manager.Manager, channelDescriptor *utils.ChannelDescriptor, logger logr.Logger) reconcile.Reconciler {
 	return &ReconcileDeployable{
 		KubeClient:        mgr.GetClient(),
 		ChannelDescriptor: channelDescriptor,
+		Log:               logger,
 	}
 }
 
 type channelMapper struct {
 	client.Client
+	logger logr.Logger
 }
 
 func (mapper *channelMapper) Map(obj handler.MapObject) []reconcile.Request {
@@ -67,7 +74,7 @@ func (mapper *channelMapper) Map(obj handler.MapObject) []reconcile.Request {
 
 	err := mapper.List(context.TODO(), dpllist, &client.ListOptions{Namespace: obj.Meta.GetNamespace()})
 	if err != nil {
-		klog.Error("Failed to list all deployable: ", err)
+		mapper.logger.Error(err, "failed to list all deployable")
 		return nil
 	}
 
@@ -80,9 +87,9 @@ func (mapper *channelMapper) Map(obj handler.MapObject) []reconcile.Request {
 }
 
 // add adds a new Controller to mgr with r as the reconcile.Reconciler
-func add(mgr manager.Manager, r reconcile.Reconciler) error {
+func add(mgr manager.Manager, r reconcile.Reconciler, logger logr.Logger) error {
 	// Create a new controller
-	c, err := controller.New("objectstore-controller", mgr, controller.Options{Reconciler: r})
+	c, err := controller.New(controllerName, mgr, controller.Options{Reconciler: r})
 	if err != nil {
 		return err
 	}
@@ -94,7 +101,9 @@ func add(mgr manager.Manager, r reconcile.Reconciler) error {
 	}
 
 	// watch for changes to channel too
-	return c.Watch(&source.Kind{Type: &chv1.Channel{}}, &handler.EnqueueRequestsFromMapFunc{ToRequests: &channelMapper{mgr.GetClient()}})
+	return c.Watch(&source.Kind{
+		Type: &chv1.Channel{}},
+		&handler.EnqueueRequestsFromMapFunc{ToRequests: &channelMapper{Client: mgr.GetClient(), logger: logger}})
 }
 
 var _ reconcile.Reconciler = &ReconcileDeployable{}
@@ -103,6 +112,7 @@ var _ reconcile.Reconciler = &ReconcileDeployable{}
 type ReconcileDeployable struct {
 	KubeClient        client.Client
 	ChannelDescriptor *utils.ChannelDescriptor
+	Log               logr.Logger
 }
 
 // Reconcile reads that state of the cluster for a Deployable object, make sure the deployables at cluster has accurate record on objectstore store
@@ -115,27 +125,30 @@ type ReconcileDeployable struct {
 // +kubebuilder:rbac:groups=apps.open-cluster-management.io,resources=deployables/status,verbs=get;update;patch
 func (r *ReconcileDeployable) Reconcile(request reconcile.Request) (reconcile.Result, error) {
 	// Fetch the Deployable instance
+	log := r.Log.WithValues("obj-reconcile", request.NamespacedName)
+	log.Info(fmt.Sprintf("Starting %v reconcile loop for %v", controllerName, request.NamespacedName))
+	defer log.Info(fmt.Sprintf("Finish %v reconcile loop for %v", controllerName, request.NamespacedName))
+
 	instance := &dplv1.Deployable{}
 	err := r.KubeClient.Get(context.TODO(), request.NamespacedName, instance)
-	klog.Info("Reconciling:", request.NamespacedName)
 
 	if err != nil {
 		if errors.IsNotFound(err) {
-			if err := r.deleteDeployableInObjectBucket(request.NamespacedName); err != nil {
-				klog.Errorf("failed to delete deployable %v,  error %+v", request.NamespacedName, err)
+			if err := r.deleteDeployableInObjectBucket(request.NamespacedName, log); err != nil {
+				log.Error(err, fmt.Sprintf("failed to delete deployable %v", request.NamespacedName))
 				return reconcile.Result{}, err
 			}
 
 			return reconcile.Result{}, nil
 		}
 		// Error reading the object - requeue the request.
-		klog.V(debugLevel).Info("Reconciling - Errored.", request.NamespacedName, " with Get err:", err)
+		log.Error(err, "Reconciling - Errored.")
 
 		return reconcile.Result{}, err
 	}
 
-	if err := r.createOrUpdateDeployableInObjectBucket(instance); err != nil {
-		klog.Errorf("failed to reconcile deployable for channel %v, err %+v", request.String(), err)
+	if err := r.createOrUpdateDeployableInObjectBucket(instance, log); err != nil {
+		log.Error(err, fmt.Sprintf("failed to reconcile deployable for channel %v", request.String()))
 		return reconcile.Result{}, err
 	}
 

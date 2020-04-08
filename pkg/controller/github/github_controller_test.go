@@ -68,7 +68,7 @@ var _ = Describe("reconcile github channel", func() {
 		BeforeEach(func() {
 			gsync, err = gitsync.CreateGithubSynchronizer(k8sManager.GetConfig(), k8sManager.GetScheme(), interval)
 			Expect(err).ShouldNot(HaveOccurred())
-			rec = newReconciler(k8sManager, gsync)
+			rec = newReconciler(k8sManager, gsync, nil)
 		})
 
 		It("deletion reconcile", func() {
@@ -108,7 +108,7 @@ var _ = Describe("reconcile github channel", func() {
 			gsync, err = gitsync.CreateGithubSynchronizer(k8sManager.GetConfig(), k8sManager.GetScheme(), interval)
 			chn.Spec.Type = chv1.ChannelType("github")
 			Expect(err).ShouldNot(HaveOccurred())
-			rec = newReconciler(k8sManager, gsync)
+			rec = newReconciler(k8sManager, nil, nil)
 		})
 
 		It("deletion reconcile with empty channel registry", func() {
@@ -132,7 +132,7 @@ var _ = Describe("reconcile github channel", func() {
 			}
 
 			gsync.ChannelMap[chkey] = chn
-			rec = newReconciler(k8sManager, gsync)
+			rec = newReconciler(k8sManager, gsync, nil)
 			_, err = rec.Reconcile(req)
 			Expect(err).NotTo(HaveOccurred())
 

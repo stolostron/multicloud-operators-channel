@@ -21,17 +21,18 @@ import (
 	"runtime"
 
 	"k8s.io/client-go/kubernetes"
+	"k8s.io/klog"
 
 	// Import all Kubernetes client auth plugins (e.g. Azure, GCP, OIDC, etc.)
-	uzap "go.uber.org/zap"
+
 	_ "k8s.io/client-go/plugin/pkg/client/auth"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/record"
-	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 
 	"github.com/operator-framework/operator-sdk/pkg/k8sutil"
 	kubemetrics "github.com/operator-framework/operator-sdk/pkg/kube-metrics"
 	"github.com/operator-framework/operator-sdk/pkg/leader"
+
 	"github.com/operator-framework/operator-sdk/pkg/metrics"
 	"github.com/operator-framework/operator-sdk/pkg/restmapper"
 	sdkVersion "github.com/operator-framework/operator-sdk/version"
@@ -41,21 +42,26 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client/config"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 
-	ctrl "sigs.k8s.io/controller-runtime"
+	logf "sigs.k8s.io/controller-runtime/pkg/log"
 
 	"github.com/open-cluster-management/multicloud-operators-channel/pkg/apis"
 	"github.com/open-cluster-management/multicloud-operators-channel/pkg/controller"
+	"github.com/open-cluster-management/multicloud-operators-channel/pkg/log/zap"
+	"github.com/open-cluster-management/multicloud-operators-channel/pkg/utils"
 	"github.com/open-cluster-management/multicloud-operators-channel/pkg/webhook"
 
+	gitsync "github.com/open-cluster-management/multicloud-operators-channel/pkg/synchronizer/githubsynchronizer"
+	helmsync "github.com/open-cluster-management/multicloud-operators-channel/pkg/synchronizer/helmreposynchronizer"
+	objsync "github.com/open-cluster-management/multicloud-operators-channel/pkg/synchronizer/objectstoresynchronizer"
 	placementutils "github.com/open-cluster-management/multicloud-operators-placementrule/pkg/utils"
 )
 
 // Change below variables to serve metrics on different host or port.
 var (
 	metricsHost               = "0.0.0.0"
-	metricsPort         int32 = 8385
+	metricsPort         int32 = 8384
 	operatorMetricsPort int32 = 8687
-	setupLog                  = ctrl.Log.WithName("setup")
+	setupLog                  = logf.Log.WithName("setup")
 )
 
 const exitCode = 1
@@ -68,13 +74,13 @@ func printVersion() {
 
 //RunManager initial controller, synchronizer and start manager
 func RunManager(sig <-chan struct{}) {
-	uOpts := zap.RawZapOpts(uzap.AddCaller())
-	zlogger := zap.New(zap.UseDevMode(options.debugLogging), uOpts)
-	ctrl.SetLogger(zlogger)
+	//uOpts := zap.RawZapOpts(uzap.AddCaller(), uzap.AddStacktrace(zapcore.DebugLevel))
+	//zlogger := zap.New(zap.UseDevMode(options.debugLogging), uOpts)
+	logf.SetLogger(zap.Logger())
 
 	printVersion()
 
-	logger := ctrl.Log
+	logger := logf.Log
 	// Get a config to talk to the apiserver
 	cfg, err := config.GetConfig()
 	if err != nil {
@@ -100,54 +106,54 @@ func RunManager(sig <-chan struct{}) {
 		os.Exit(exitCode)
 	}
 
-	//	// Create channel descriptor is user for the object bucket
-	//	chdesc, err := utils.CreateObjectStorageChannelDescriptor()
-	//	if err != nil {
-	//		klog.Error("unable to create channel descriptor.", err)
-	//		os.Exit(exitCode)
-	//	}
-	//
-	//	logger Create channel synchronizer
-	//	osync, err := objsync.CreateObjectStoreSynchronizer(cfg, chdesc, options.SyncInterval)
-	//
-	//	if err != nil {
-	//		klog.Error("unable to create object-store syncrhonizer on destination cluster.", err)
-	//		os.Exit(exitCode)
-	//	}
-	//
-	//	err = mgr.Add(osync)
-	//	if err != nil {
-	//		klog.Error("Failed to register synchronizer.", err)
-	//		os.Exit(exitCode)
-	//	}
-	//
-	//	// Create channel synchronizer for helm repo
-	//	hsync, err := helmsync.CreateHelmrepoSynchronizer(cfg, mgr.GetScheme(), options.SyncInterval)
-	//
-	//	if err != nil {
-	//		klog.Error("unable to create helo-repo syncrhonizer on destination cluster.", err)
-	//		os.Exit(exitCode)
-	//	}
-	//
-	//	err = mgr.Add(hsync)
-	//	if err != nil {
-	//		klog.Error("Failed to register synchronizer.", err)
-	//		os.Exit(exitCode)
-	//	}
-	//
-	//	// Create channel synchronizer for github
-	//	gsync, err := gitsync.CreateGithubSynchronizer(cfg, mgr.GetScheme(), options.SyncInterval)
-	//
-	//	if err != nil {
-	//		klog.Error("unable to create github syncrhonizer on destination cluster.", err)
-	//		os.Exit(exitCode)
-	//	}
-	//
-	//	err = mgr.Add(gsync)
-	//	if err != nil {
-	//		klog.Error("Failed to register synchronizer.", err)
-	//		os.Exit(exitCode)
-	//	}
+	// Create channel descriptor is user for the object bucket
+	chdesc, err := utils.CreateObjectStorageChannelDescriptor()
+	if err != nil {
+		logger.Error(err, "unable to create channel descriptor.")
+		os.Exit(exitCode)
+	}
+
+	//Create channel synchronizer
+	osync, err := objsync.CreateObjectStoreSynchronizer(cfg, chdesc, options.SyncInterval)
+
+	if err != nil {
+		logger.Error(err, "unable to create object-store syncrhonizer on destination cluster.")
+		os.Exit(exitCode)
+	}
+
+	err = mgr.Add(osync)
+	if err != nil {
+		logger.Error(err, "Failed to register synchronizer.")
+		os.Exit(exitCode)
+	}
+
+	// Create channel synchronizer for helm repo
+	hsync, err := helmsync.CreateHelmrepoSynchronizer(cfg, mgr.GetScheme(), options.SyncInterval)
+
+	if err != nil {
+		logger.Error(err, "unable to create helo-repo syncrhonizer on destination cluster.")
+		os.Exit(exitCode)
+	}
+
+	err = mgr.Add(hsync)
+	if err != nil {
+		logger.Error(err, "Failed to register synchronizer.")
+		os.Exit(exitCode)
+	}
+
+	// Create channel synchronizer for github
+	gsync, err := gitsync.CreateGithubSynchronizer(cfg, mgr.GetScheme(), options.SyncInterval)
+
+	if err != nil {
+		logger.Error(err, "unable to create github syncrhonizer on destination cluster.")
+		os.Exit(exitCode)
+	}
+
+	err = mgr.Add(gsync)
+	if err != nil {
+		logger.Error(err, "failed to register synchronizer.")
+		os.Exit(exitCode)
+	}
 
 	logger.Info("Registering Components.")
 
@@ -167,15 +173,14 @@ func RunManager(sig <-chan struct{}) {
 	}
 
 	eventBroadcaster := record.NewBroadcaster()
-	eventBroadcaster.StartLogging(logger.Info)
+	eventBroadcaster.StartLogging(klog.Infof)
 	eventBroadcaster.StartRecordingToSink(&typedcorev1.EventSinkImpl{Interface: hubClientSet.CoreV1().Events("")})
 	recorder := eventBroadcaster.NewRecorder(mgr.GetScheme(), v1.EventSource{Component: "channel"})
 
 	// Setup all Controllers
 	logger.Info("Setting up controller")
 
-	if err := controller.AddToManager(mgr, recorder, ctrl.Log.WithName("controller"), nil, nil, nil); err != nil {
-		//if err := controller.AddToManager(mgr, recorder, chdesc, hsync, gsync); err != nil {
+	if err := controller.AddToManager(mgr, recorder, logger.WithName("controllers"), chdesc, hsync, gsync); err != nil {
 		logger.Error(err, "unable to register controllers to the manager")
 		os.Exit(exitCode)
 	}

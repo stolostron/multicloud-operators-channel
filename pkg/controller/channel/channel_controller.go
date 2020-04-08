@@ -74,8 +74,9 @@ var (
 )
 
 const (
-	clusterCRDName = "clusters.clusterregistry.k8s.io"
-	controllerName = "channel"
+	clusterCRDName  = "clusters.clusterregistry.k8s.io"
+	controllerName  = "channel"
+	controllerSetup = "channel-setup"
 )
 
 /**
@@ -88,11 +89,11 @@ const (
 func Add(mgr manager.Manager, recorder record.EventRecorder, logger logr.Logger,
 	channelDescriptor *utils.ChannelDescriptor, sync *helmsync.ChannelSynchronizer,
 	gsync *gitsync.ChannelSynchronizer) error {
-	return add(mgr, newReconciler(mgr, logger.WithName("channel-reconcile"), recorder), logger.WithName("reconciler-setup"))
+	return add(mgr, newReconciler(mgr, recorder, logger.WithName(controllerName)), logger.WithName(controllerSetup))
 }
 
 // newReconciler returns a new reconcile.Reconciler
-func newReconciler(mgr manager.Manager, logger logr.Logger, recorder record.EventRecorder) reconcile.Reconciler {
+func newReconciler(mgr manager.Manager, recorder record.EventRecorder, logger logr.Logger) reconcile.Reconciler {
 	return &ReconcileChannel{
 		Client:   mgr.GetClient(),
 		scheme:   mgr.GetScheme(),
@@ -104,12 +105,12 @@ func newReconciler(mgr manager.Manager, logger logr.Logger, recorder record.Even
 // add adds a new Controller to mgr with r as the reconcile.Reconciler
 func add(mgr manager.Manager, r reconcile.Reconciler, logger logr.Logger) error {
 	// Create a new controller
-	c, err := controller.New("channel-controller", mgr, controller.Options{Reconciler: r})
+	c, err := controller.New(controllerName, mgr, controller.Options{Reconciler: r})
 	if err != nil {
 		return err
 	}
 
-	logger.WithValues("add-reconcile", "channel").Info("failed to add CRD scheme to manager")
+	logger.Info("failed to add CRD scheme to manager")
 	if err := apiextensionsv1beta1.AddToScheme(mgr.GetScheme()); err != nil {
 		logger.Error(err, "failed to add CRD scheme to manager")
 	}
@@ -140,7 +141,7 @@ func (mapper *clusterMapper) Map(obj handler.MapObject) []reconcile.Request {
 
 	cname := obj.Meta.GetName()
 
-	mapper.logger.Info("In cluster Mapper for ", cname)
+	mapper.logger.Info(fmt.Sprintf("In cluster Mapper for %v", cname))
 
 	plList := &chv1.ChannelList{}
 
@@ -186,8 +187,8 @@ type ReconcileChannel struct {
 func (r *ReconcileChannel) Reconcile(request reconcile.Request) (reconcile.Result, error) {
 	log := r.Log.WithValues("channel-reconcile", request.NamespacedName)
 
-	log.Info(fmt.Sprintf("Starting channel reconcile loop for %v", request.NamespacedName))
-	defer log.Info(fmt.Sprintf("Finish chennel reconcile loop for %v", request.NamespacedName))
+	log.Info(fmt.Sprintf("Starting %v reconcile loop for %v", controllerName, request.NamespacedName))
+	defer log.Info(fmt.Sprintf("Finish %v reconcile loop for %v", controllerName, request.NamespacedName))
 
 	instance := &chv1.Channel{}
 
@@ -197,12 +198,12 @@ func (r *ReconcileChannel) Reconcile(request reconcile.Request) (reconcile.Resul
 			// Object not found, return.  Created objects are automatically garbage collected.
 			// For additional cleanup logic use finalizers.
 			//sync the channel to the serving-channel annotation in all involved secrets - remove channel
-			if err := r.syncReferredObjAnnotation(request, nil, srtGvk); err != nil {
+			if err := r.syncReferredObjAnnotation(request, nil, srtGvk, log); err != nil {
 				return reconcile.Result{}, err
 			}
 
 			//remove the channel from the serving-channel annotation in all involved ConfigMaps - remove channel
-			if err := r.syncReferredObjAnnotation(request, nil, cmGvk); err != nil {
+			if err := r.syncReferredObjAnnotation(request, nil, cmGvk, log); err != nil {
 				return reconcile.Result{}, err
 			}
 
@@ -230,7 +231,7 @@ func (r *ReconcileChannel) Reconcile(request reconcile.Request) (reconcile.Resul
 		return reconcile.Result{}, nil
 	}
 
-	err = r.validateClusterRBAC(instance)
+	err = r.validateClusterRBAC(instance, log)
 	if err != nil {
 		log.Error(err, fmt.Sprintf("failed to validate RBAC for clusters for channel %v", instance.Name))
 		return reconcile.Result{}, err
@@ -239,35 +240,34 @@ func (r *ReconcileChannel) Reconcile(request reconcile.Request) (reconcile.Resul
 	// If the channel has relative secret and configMap, annotate the channel info in the secret and configMap
 
 	//sync the channel to the serving-channel annotation in all involved secrets.
-	//	srtRef := instance.Spec.SecretRef
-	//
-	//	if srtRef != nil {
-	//		if err := r.updatedReferencedObjectLabels(srtRef, srtGvk); err != nil {
-	//			r.Log.Error(err, "failed to update referred secret label")
-	//		}
-	//
-	//		if err := r.syncReferredObjAnnotation(request, srtRef, srtGvk); err != nil {
-	//			r.Log.Error(err, "failed to annotate")
-	//		}
-	//	}
-	//
+	srtRef := instance.Spec.SecretRef
+
+	if srtRef != nil {
+		if err := r.updatedReferencedObjectLabels(srtRef, srtGvk, log); err != nil {
+			r.Log.Error(err, "failed to update referred secret label")
+		}
+
+		if err := r.syncReferredObjAnnotation(request, srtRef, srtGvk, log); err != nil {
+			r.Log.Error(err, "failed to annotate")
+		}
+	}
+
 	//	//sync the channel to the serving-channel annotation in all involved ConfigMaps.
-	//	//r.syncConfigAnnotation(instance, request.NamespacedName)
-	//	cmRef := instance.Spec.ConfigMapRef
-	//	if cmRef != nil {
-	//		if err := r.updatedReferencedObjectLabels(cmRef, cmGvk); err != nil {
-	//			logrus.Errorf("failed to update referred configMap label %v", err)
-	//		}
-	//
-	//		if err := r.syncReferredObjAnnotation(request, cmRef, cmGvk); err != nil {
-	//			logrus.Errorf("failed to annotate %v", err)
-	//		}
-	//	}
+	cmRef := instance.Spec.ConfigMapRef
+	if cmRef != nil {
+		if err := r.updatedReferencedObjectLabels(cmRef, cmGvk, log); err != nil {
+			r.Log.Error(err, "failed to update referred configMap label")
+		}
+
+		if err := r.syncReferredObjAnnotation(request, cmRef, cmGvk, log); err != nil {
+			r.Log.Error(err, "failed to annotate")
+		}
+	}
 
 	return reconcile.Result{}, nil
 }
 
-func (r *ReconcileChannel) updatedReferencedObjectLabels(ref *corev1.ObjectReference, objGvk schema.GroupVersionKind) error {
+func (r *ReconcileChannel) updatedReferencedObjectLabels(ref *corev1.ObjectReference, objGvk schema.GroupVersionKind, logger logr.Logger) error {
 	if ref == nil {
 		return gerr.New(fmt.Sprintf("empty referred object %v", objGvk.Kind))
 	}
@@ -296,12 +296,12 @@ func (r *ReconcileChannel) updatedReferencedObjectLabels(ref *corev1.ObjectRefer
 		return gerr.Wrapf(err, "failed to update the referred object %v", objGvk.Kind)
 	}
 
-	r.Log.Info(fmt.Sprintf("Set label serving-channel to object: %v", objKey.String()))
+	logger.Info(fmt.Sprintf("Set label serving-channel to object: %v", objKey.String()))
 
 	return nil
 }
 
-func (r *ReconcileChannel) syncReferredObjAnnotation(rq reconcile.Request, ref *corev1.ObjectReference, objGvk schema.GroupVersionKind) error {
+func (r *ReconcileChannel) syncReferredObjAnnotation(rq reconcile.Request, ref *corev1.ObjectReference, objGvk schema.GroupVersionKind, logger logr.Logger) error {
 
 	chnKey := types.NamespacedName{Name: rq.Name, Namespace: rq.Namespace}
 
@@ -354,14 +354,14 @@ func (r *ReconcileChannel) syncReferredObjAnnotation(rq reconcile.Request, ref *
 		obj.SetAnnotations(annotations)
 
 		if err := r.Update(context.TODO(), &obj); err != nil {
-			r.Log.Error(err, fmt.Sprintf("failed to annotate object: %v/%v", obj.GetNamespace(), obj.GetName()))
+			logger.Error(err, fmt.Sprintf("failed to annotate object: %v/%v", obj.GetNamespace(), obj.GetName()))
 		}
 	}
 
 	return nil
 }
 
-func (r *ReconcileChannel) validateClusterRBAC(instance *chv1.Channel) error {
+func (r *ReconcileChannel) validateClusterRBAC(instance *chv1.Channel, logger logr.Logger) error {
 	role := &rbac.Role{}
 
 	if err := r.setupRole(instance, role); err != nil {
@@ -436,7 +436,7 @@ func (r *ReconcileChannel) validateClusterRBAC(instance *chv1.Channel) error {
 		}
 	}
 
-	r.Log.V(4).Info(fmt.Sprintf("created role %v and rolebinding %v with subjects %v", role.Name, rolebinding.Name, rolebinding.Subjects))
+	logger.Info(fmt.Sprintf("created role %v and rolebinding %v with subjects %v", role.Name, rolebinding.Name, rolebinding.Subjects))
 
 	return nil
 }
