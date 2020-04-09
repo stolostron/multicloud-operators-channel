@@ -14,13 +14,7 @@
 
 package utils
 
-import (
-	"k8s.io/klog"
-)
-
 const (
-	infoLevel  = klog.Level(3)
-	debugLevel = klog.Level(5)
 	// HelmCRKind is kind of the Helm CR
 	HelmCRKind = "HelmRelease"
 	// SubscriptionCRKind is kind of the Subscription CR

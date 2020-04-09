@@ -29,13 +29,20 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/client-go/rest"
-	"k8s.io/klog"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	logf "sigs.k8s.io/controller-runtime/pkg/log"
 
 	chv1 "github.com/open-cluster-management/multicloud-operators-channel/pkg/apis/apps/v1"
 	"github.com/open-cluster-management/multicloud-operators-channel/pkg/utils"
 	dplv1 "github.com/open-cluster-management/multicloud-operators-deployable/pkg/apis/apps/v1"
-	dplutils "github.com/open-cluster-management/multicloud-operators-deployable/pkg/utils"
+)
+
+const (
+	syncrhonizerName = "objectbucket"
+)
+
+var (
+	syncLog = logf.Log.WithName("sync" + syncrhonizerName)
 )
 
 // ChannelSynchronizer syncs objectbucket channels with ObjectStore
@@ -56,7 +63,7 @@ type ChannelSynchronizer struct {
 func CreateObjectStoreSynchronizer(config *rest.Config, chdesc *utils.ChannelDescriptor, syncInterval int) (*ChannelSynchronizer, error) {
 	client, err := client.New(config, client.Options{})
 	if err != nil {
-		klog.Error("Failed to initialize client for synchronizer. err: ", err)
+		syncLog.Error(err, "Failed to initialize client for synchronizer.")
 		return nil, err
 	}
 
@@ -71,20 +78,14 @@ func CreateObjectStoreSynchronizer(config *rest.Config, chdesc *utils.ChannelDes
 
 // Start - starts the sync process
 func (sync *ChannelSynchronizer) Start(s <-chan struct{}) error {
-	if klog.V(dplutils.QuiteLogLel) {
-		fnName := dplutils.GetFnName()
-		klog.Infof("Entering: %v()", fnName)
-
-		defer klog.Infof("Exiting: %v()", fnName)
-	}
-
 	sync.Signal = s
 
 	go wait.Until(func() {
 		if err := sync.syncChannelsWithObjStore(); err != nil {
-			klog.Errorf("failed to run object store synchronizer err: %+v ", err)
+			syncLog.Error(err, "failed to run object store synchronizer")
 			return
 		}
+		syncLog.Info("housekeeping object store synchronizer")
 	}, time.Duration(sync.SyncInterval)*time.Second, sync.Signal)
 
 	<-sync.Signal
@@ -109,7 +110,7 @@ func (sync *ChannelSynchronizer) syncChannelsWithObjStore() error {
 		}
 
 		if err := sync.alginClusterResourceWithHost(&ch); err != nil {
-			klog.Errorf("failed to sync channel %v, err: %+v", ch.GetName(), err)
+			syncLog.Error(err, fmt.Sprintf("failed to sync channel %v", ch.GetName()))
 		}
 	}
 
@@ -118,7 +119,7 @@ func (sync *ChannelSynchronizer) syncChannelsWithObjStore() error {
 
 func (sync *ChannelSynchronizer) alginClusterResourceWithHost(chn *chv1.Channel) error {
 	// injecting objectstore to ease up tests
-	if err := sync.ChannelDescriptor.ConnectWithResourceHost(chn, sync.kubeClient, sync.ObjectStore); err != nil {
+	if err := sync.ChannelDescriptor.ConnectWithResourceHost(chn, sync.kubeClient, syncLog, sync.ObjectStore); err != nil {
 		return errors.Wrap(err,
 			fmt.Sprintf("failed to connect channel %v to it's resources host %v",
 				chn.Name, sync.ChannelDescriptor.GetBucketNameByChannel(chn.GetName())))
@@ -156,14 +157,14 @@ func getResourceMapFromHost(host utils.ObjectStore, bucketName string) (map[stri
 	for _, name := range objnames {
 		objb, err := host.Get(bucketName, name)
 		if err != nil {
-			klog.Errorf("failed to get object %v/%v err: %v", bucketName, name, err)
+			syncLog.Error(err, fmt.Sprintf("failed to get object %v/%v", bucketName, name))
 			continue
 		}
 
 		objtpl := &unstructured.Unstructured{}
 
 		if err := yaml.Unmarshal(objb.Content, objtpl); err != nil {
-			klog.Errorf("failed to unmashall %v/%v err: %v", bucketName, name, err)
+			syncLog.Error(err, fmt.Sprintf("failed to unmashall %v/%v", bucketName, name))
 			continue
 		}
 
@@ -185,7 +186,7 @@ func (sync *ChannelSynchronizer) deleteOrUpdateDeployableBasedOnHostResMap(chn *
 
 	for _, dpl := range dpllist.Items {
 		if err := sync.deleteOrUpdateDeployable(hostResMap, dpl, chn); err != nil {
-			klog.Errorf("failed to update deployable due to %+v", err)
+			syncLog.Error(err, "failed to update deployable")
 		}
 	}
 
@@ -224,14 +225,14 @@ func (sync *ChannelSynchronizer) addNewResourceFromHostResMap(chn *chv1.Channel,
 		dpl.Spec.Template.Raw, err = json.Marshal(tpl)
 
 		if err != nil {
-			klog.Error("failed to mashall template ", tpl)
+			syncLog.Error(err, "failed to marshal template ")
 			continue
 		}
 
-		klog.Infof("creating deployable %v in channel %v", tplname, chn.GetName())
+		syncLog.Info(fmt.Sprintf("creating deployable %v in channel %v", tplname, chn.GetName()))
 
 		if err := sync.kubeClient.Create(context.TODO(), dpl); err != nil {
-			klog.Errorf("failed to create deployable %v from hostResMap with error: %v ", err, dpl)
+			syncLog.Error(err, fmt.Sprintf("failed to create deployable %v from hostResMap", dpl))
 		}
 	}
 }
@@ -241,7 +242,7 @@ func (sync *ChannelSynchronizer) deleteOrUpdateDeployable(
 	chn *chv1.Channel) error {
 	dpltpl, err := getUnstructuredTemplateFromDeployable(&dpl)
 	if err != nil {
-		klog.Errorf("failed to get valid deployable template err %+v", err)
+		syncLog.Error(err, "failed to get valid deployable template")
 		delete(hostResMap, dpl.Name)
 
 		return nil
@@ -250,7 +251,7 @@ func (sync *ChannelSynchronizer) deleteOrUpdateDeployable(
 	// Only sync (delete/update) deployables created by this synchronizer
 	// meaning AnnotationExternalSource must be set in their template
 	if !isDeployableCreatedBySynchronizer(dpltpl) {
-		klog.Infof("skip deployable %v/%v, not created by object sychronizer", dpltpl.GetName(), dpltpl.GetNamespace())
+		syncLog.Info(fmt.Sprintf("skip deployable %v/%v, not created by object sychronizer", dpltpl.GetName(), dpltpl.GetNamespace()))
 		delete(hostResMap, dpltpl.GetName())
 
 		return nil
@@ -258,7 +259,7 @@ func (sync *ChannelSynchronizer) deleteOrUpdateDeployable(
 
 	// Delete deployables that don't exist in the bucket anymore
 	if _, ok := hostResMap[dpl.Name]; !ok {
-		klog.Info("Sync - Deleting deployable ", dpl.Namespace, "/", dpl.Name, " from channel ", chn.Name)
+		syncLog.Info(fmt.Sprintf("Sync - Deleting deployable %v/%v for channel %v", dpl.Namespace, dpl.Name, chn.Name))
 
 		if err := sync.kubeClient.Delete(context.TODO(), &dpl); err != nil {
 			return errors.Wrap(err, fmt.Sprintf("sync failed to delete deployable %v", dpl.Name))
@@ -286,7 +287,7 @@ func (sync *ChannelSynchronizer) deleteOrUpdateDeployable(
 			return errors.Wrap(err, fmt.Sprintf("failed to mashall template %v", tpl))
 		}
 
-		klog.Info("Sync - Updating existing deployable ", dpl.Name, " in channel ", chn.Name)
+		syncLog.Info(fmt.Sprintf("Sync - Updating existing deployable %v in channel %v", dpl.Name, chn.Name))
 
 		if err := sync.kubeClient.Update(context.TODO(), &dpl); err != nil {
 			return errors.Wrap(err, fmt.Sprintf("failed to update deployable %v", dpl.Name))

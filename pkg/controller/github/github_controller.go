@@ -16,9 +16,10 @@ package github
 
 import (
 	"context"
+	"fmt"
 	"strings"
 
-	"k8s.io/klog"
+	"github.com/go-logr/logr"
 
 	chv1 "github.com/open-cluster-management/multicloud-operators-channel/pkg/apis/apps/v1"
 	gitsync "github.com/open-cluster-management/multicloud-operators-channel/pkg/synchronizer/githubsynchronizer"
@@ -41,29 +42,34 @@ import (
 * business logic.  Delete these comments after modifying this file.*
  */
 
-const debugLevel = klog.Level(10)
+const (
+	controllerName  = "github"
+	controllerSetup = "github-setup"
+)
 
 // Add creates a new Deployable Controller and adds it to the Manager with default RBAC. The Manager will set fields on the Controller
 // and Start it when the Manager is Started.
-func Add(mgr manager.Manager, recorder record.EventRecorder,
+func Add(mgr manager.Manager, recorder record.EventRecorder, logger logr.Logger,
 	channelDescriptor *utils.ChannelDescriptor, sync *helmsync.ChannelSynchronizer,
 	gsync *gitsync.ChannelSynchronizer) error {
-	return add(mgr, newReconciler(mgr, gsync))
+	return add(mgr, newReconciler(mgr, gsync, logger.WithName(controllerName)), logger.WithName(controllerSetup))
 }
 
 // newReconciler returns a new reconcile.Reconciler
-func newReconciler(mgr manager.Manager, gsync *gitsync.ChannelSynchronizer) reconcile.Reconciler {
+func newReconciler(mgr manager.Manager, gsync *gitsync.ChannelSynchronizer, logger logr.Logger) reconcile.Reconciler {
 	return &ReconcileChannel{
 		KubeClient:          mgr.GetClient(),
 		ChannelSynchronizer: gsync,
+		Log:                 logger,
 	}
 }
 
 // add adds a new Controller to mgr with r as the reconcile.Reconciler
-func add(mgr manager.Manager, r reconcile.Reconciler) error {
+func add(mgr manager.Manager, r reconcile.Reconciler, logger logr.Logger) error {
 	// Create a new controller
-	c, err := controller.New("github-controller", mgr, controller.Options{Reconciler: r})
+	c, err := controller.New(controllerName, mgr, controller.Options{Reconciler: r})
 	if err != nil {
+		logger.Error(err, "failed to create a new controller")
 		return err
 	}
 
@@ -82,6 +88,7 @@ var _ reconcile.Reconciler = &ReconcileChannel{}
 type ReconcileChannel struct {
 	KubeClient          client.Client
 	ChannelSynchronizer *gitsync.ChannelSynchronizer
+	Log                 logr.Logger
 }
 
 // Reconcile reads that state of the cluster for a Deployable object and makes changes based on the state read
@@ -92,9 +99,13 @@ type ReconcileChannel struct {
 // +kubebuilder:rbac:groups=apps.open-cluster-management.io,resources=deployables/status,verbs=get;update;patch
 func (r *ReconcileChannel) Reconcile(request reconcile.Request) (reconcile.Result, error) {
 	// Fetch the Deployable instance
+	log := r.Log.WithValues("github-reconcile", request.NamespacedName)
+	log.Info(fmt.Sprintf("Starting %v reconcile loop for %v", controllerName, request.NamespacedName))
+
+	defer log.Info(fmt.Sprintf("Finish %v reconcile loop for %v", controllerName, request.NamespacedName))
+
 	instance := &chv1.Channel{}
 	err := r.KubeClient.Get(context.TODO(), request.NamespacedName, instance)
-	klog.Info("Reconciling channel:", request.NamespacedName, " with Get err:", err)
 
 	if err != nil {
 		if errors.IsNotFound(err) {
@@ -103,22 +114,26 @@ func (r *ReconcileChannel) Reconcile(request reconcile.Request) (reconcile.Resul
 			delete(r.ChannelSynchronizer.ChannelMap, request.NamespacedName)
 			return reconcile.Result{}, nil
 		}
-		// Error reading the object - requeue the request.
-		klog.V(debugLevel).Info("Reconciling - Errored.", request.NamespacedName, " with Get err:", err)
+		// Error reading the object - requeue th request.
+		log.Error(err, "reconciling - Errored.")
 
 		return reconcile.Result{}, err
 	}
 
 	if !strings.EqualFold(string(instance.Spec.Type), chv1.ChannelTypeGitHub) {
-		klog.V(debugLevel).Info("Ignoring type ", instance.Spec.Type)
+		log.V(1).Info(fmt.Sprintf("Ignoring type %v ", instance.Spec.Type))
 		return reconcile.Result{}, nil
 	}
 
 	if len(instance.GetFinalizers()) > 0 {
-		delete(r.ChannelSynchronizer.ChannelMap, request.NamespacedName)
+		if r.ChannelSynchronizer != nil {
+			delete(r.ChannelSynchronizer.ChannelMap, request.NamespacedName)
+		}
+
 		return reconcile.Result{}, nil
 	}
 
+	log.Info("what's the handler,", "github", r)
 	r.ChannelSynchronizer.ChannelMap[request.NamespacedName] = instance
 
 	return reconcile.Result{}, nil

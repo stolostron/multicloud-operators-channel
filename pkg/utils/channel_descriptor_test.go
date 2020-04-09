@@ -18,6 +18,7 @@ import (
 	"context"
 	"testing"
 
+	tlog "github.com/go-logr/logr/testing"
 	"github.com/google/go-cmp/cmp"
 	"github.com/onsi/gomega"
 	v1 "k8s.io/api/core/v1"
@@ -130,9 +131,9 @@ func TestValidateChannel(t *testing.T) {
 			myChDescriptor, _ := utils.CreateObjectStorageChannelDescriptor()
 
 			if tC.myStorage == nil {
-				_ = myChDescriptor.ConnectWithResourceHost(tC.chn, tC.kubeClient)
+				_ = myChDescriptor.ConnectWithResourceHost(tC.chn, tC.kubeClient, tlog.NullLogger{})
 			} else {
-				_ = myChDescriptor.ConnectWithResourceHost(tC.chn, tC.kubeClient, tC.myStorage)
+				_ = myChDescriptor.ConnectWithResourceHost(tC.chn, tC.kubeClient, tlog.NullLogger{}, tC.myStorage)
 			}
 
 			if diff := cmp.Diff(tC.myStorage, tC.wanted); diff != "" {

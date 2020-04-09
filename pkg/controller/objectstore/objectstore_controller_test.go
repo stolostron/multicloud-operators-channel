@@ -20,6 +20,7 @@ import (
 	"fmt"
 	"time"
 
+	tlog "github.com/go-logr/logr/testing"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	v1 "k8s.io/api/core/v1"
@@ -83,10 +84,10 @@ var _ = Describe("object bucket controller", func() {
 			chRegistry, err := utils.CreateObjectStorageChannelDescriptor()
 			Expect(err).NotTo(HaveOccurred())
 
-			rec := newReconciler(k8sManager, chRegistry)
+			rec := newReconciler(k8sManager, chRegistry, tlog.NullLogger{})
 			recFn, result := SetupTestReconcile(rec)
 
-			Expect(add(k8sManager, recFn)).NotTo(HaveOccurred())
+			Expect(add(k8sManager, recFn, tlog.NullLogger{})).NotTo(HaveOccurred())
 
 			Expect(k8sClient.Create(ctx, dpl)).NotTo(HaveOccurred())
 
@@ -124,7 +125,7 @@ var _ = Describe("object bucket controller", func() {
 				tName:  testNamespace,
 				wantCh: nil,
 			}
-			gotCh := tC.tRec.getChannelForNamespace(testNamespace)
+			gotCh := tC.tRec.getChannelForNamespace(testNamespace, tlog.NullLogger{})
 			Expect(assertChannelObject(tC.wantCh, gotCh)).To(BeNil())
 		})
 
@@ -153,7 +154,7 @@ var _ = Describe("object bucket controller", func() {
 				Expect(tC.tRec.KubeClient.Delete(ctx, tC.dfChan)).Should(Succeed())
 			}()
 			time.Sleep(k8swait)
-			gotCh := tC.tRec.getChannelForNamespace(testNamespace)
+			gotCh := tC.tRec.getChannelForNamespace(testNamespace, tlog.NullLogger{})
 			fmt.Fprintf(GinkgoWriter, "%v", gotCh)
 			Expect(assertChannelObject(tC.wantCh, gotCh)).To(BeNil())
 		})
@@ -192,7 +193,7 @@ var _ = Describe("object bucket controller", func() {
 				Expect(tC.tRec.KubeClient.Delete(ctx, tC.dfChan)).Should(Succeed())
 			}()
 			time.Sleep(k8swait)
-			gotCh := tC.tRec.getChannelForNamespace(testNamespace)
+			gotCh := tC.tRec.getChannelForNamespace(testNamespace, tlog.NullLogger{})
 			Expect(assertChannelObject(tC.wantCh, gotCh)).To(BeNil())
 		})
 
@@ -222,7 +223,7 @@ var _ = Describe("object bucket controller", func() {
 				Expect(tC.tRec.KubeClient.Delete(ctx, tC.dfChan)).Should(Succeed())
 			}()
 			time.Sleep(k8swait)
-			gotCh := tC.tRec.getChannelForNamespace(testNamespace)
+			gotCh := tC.tRec.getChannelForNamespace(testNamespace, tlog.NullLogger{})
 			Expect(assertChannelObject(tC.wantCh, gotCh)).To(BeNil())
 		})
 	})
@@ -301,7 +302,7 @@ var _ = Describe("object bucket controller", func() {
 				},
 			}
 
-			rec := newReconciler(k8sManager, chReg)
+			rec := newReconciler(k8sManager, chReg, tlog.NullLogger{})
 
 			_, err = rec.Reconcile(req)
 			Expect(err).Should(BeNil())

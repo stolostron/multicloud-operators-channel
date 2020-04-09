@@ -23,7 +23,6 @@ import (
 	"github.com/aws/aws-sdk-go-v2/aws/endpoints"
 	"github.com/aws/aws-sdk-go-v2/aws/external"
 	"github.com/aws/aws-sdk-go-v2/service/s3"
-	"k8s.io/klog"
 )
 
 // ObjectStore interface
@@ -92,12 +91,9 @@ func (p *credentialProvider) Retrieve() (aws.Credentials, error) {
 
 // InitObjectStoreConnection connect to object store
 func (h *AWSHandler) InitObjectStoreConnection(endpoint, accessKeyID, secretAccessKey string) error {
-	klog.Info("Preparing S3 settings")
-
 	cfg, err := external.LoadDefaultAWSConfig()
 
 	if err != nil {
-		klog.Error("Failed to load aws config. error: ", err)
 		return err
 	}
 	// aws client report error without minio
@@ -122,13 +118,10 @@ func (h *AWSHandler) InitObjectStoreConnection(endpoint, accessKeyID, secretAcce
 
 	h.Client = s3.New(cfg)
 	if h.Client == nil {
-		klog.Error("Failed to connect to s3 service")
 		return err
 	}
 
 	h.Client.ForcePathStyle = true
-
-	klog.Info("S3 configured ")
 
 	return nil
 }
@@ -141,7 +134,6 @@ func (h *AWSHandler) Create(bucket string) error {
 
 	_, err := req.Send(context.TODO())
 	if err != nil {
-		klog.Error("Failed to create bucket ", bucket, ". error: ", err)
 		return err
 	}
 
@@ -156,7 +148,6 @@ func (h *AWSHandler) Exists(bucket string) error {
 
 	_, err := req.Send(context.TODO())
 	if err != nil {
-		klog.Error("Failed to access bucket ", bucket, ". error: ", err)
 		return err
 	}
 
@@ -165,8 +156,6 @@ func (h *AWSHandler) Exists(bucket string) error {
 
 // List all objects in bucket
 func (h *AWSHandler) List(bucket string) ([]string, error) {
-	klog.V(debugLevel).Info("List S3 Objects ", bucket)
-
 	req := h.Client.ListObjectsRequest(&s3.ListObjectsInput{Bucket: &bucket})
 	p := s3.NewListObjectsPaginator(req)
 
@@ -181,11 +170,8 @@ func (h *AWSHandler) List(bucket string) ([]string, error) {
 	}
 
 	if err := p.Err(); err != nil {
-		klog.Error("failed to list objects. error: ", err)
 		return nil, err
 	}
-
-	klog.V(debugLevel).Info("List S3 Objects result ", keys)
 
 	return keys, nil
 }
@@ -202,7 +188,6 @@ func (h *AWSHandler) Get(bucket, name string) (DeployableObject, error) {
 	resp, err := req.Send(context.Background())
 
 	if err != nil {
-		klog.Error("Failed to send Get request. error: ", err)
 		return dplObj, err
 	}
 
@@ -211,7 +196,6 @@ func (h *AWSHandler) Get(bucket, name string) (DeployableObject, error) {
 	body, err := ioutil.ReadAll(resp.Body)
 
 	if err != nil {
-		klog.Error("Failed to parse Get request. error: ", err)
 		return dplObj, err
 	}
 
@@ -220,15 +204,12 @@ func (h *AWSHandler) Get(bucket, name string) (DeployableObject, error) {
 	dplObj.Content = body
 	dplObj.Version = version
 
-	klog.V(debugLevel).Info("Get Success: \n", string(body))
-
 	return dplObj, nil
 }
 
 // Put create new object
 func (h *AWSHandler) Put(bucket string, dplObj DeployableObject) error {
 	if dplObj.isEmpty() {
-		klog.V(debugLevel).Infof("got an empty deployableObject to put to object store")
 		return nil
 	}
 
@@ -241,13 +222,10 @@ func (h *AWSHandler) Put(bucket string, dplObj DeployableObject) error {
 	req.HTTPRequest.Header.Set(DeployableGenerateNameMeta, dplObj.GenerateName)
 	req.HTTPRequest.Header.Set(DeployableVersionMeta, dplObj.Version)
 
-	resp, err := req.Send(context.Background())
+	_, err := req.Send(context.Background())
 	if err != nil {
-		klog.Error("Failed to send Put request. error: ", err)
 		return err
 	}
-
-	klog.V(debugLevel).Info("Put Success", resp)
 
 	return nil
 }
@@ -259,13 +237,10 @@ func (h *AWSHandler) Delete(bucket, name string) error {
 		Key:    &name,
 	})
 
-	resp, err := req.Send(context.Background())
+	_, err := req.Send(context.Background())
 	if err != nil {
-		klog.Error("Failed to send Delete request. error: ", err)
 		return err
 	}
-
-	klog.V(debugLevel).Info("Delete Success", resp)
 
 	return nil
 }

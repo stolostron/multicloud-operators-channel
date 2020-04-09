@@ -17,6 +17,7 @@ package helmreposynchronizer
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"time"
 
 	corev1 "k8s.io/api/core/v1"
@@ -27,16 +28,20 @@ import (
 	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/client-go/rest"
 
-	"k8s.io/klog"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
-
-	"github.com/pkg/errors"
+	"sigs.k8s.io/controller-runtime/pkg/log"
 
 	chv1 "github.com/open-cluster-management/multicloud-operators-channel/pkg/apis/apps/v1"
 	"github.com/open-cluster-management/multicloud-operators-channel/pkg/utils"
 	dplv1 "github.com/open-cluster-management/multicloud-operators-deployable/pkg/apis/apps/v1"
 	deputils "github.com/open-cluster-management/multicloud-operators-deployable/pkg/utils"
+)
+
+const syncrhonizerName = "helmrepo"
+
+var (
+	logf = log.Log.WithName(syncrhonizerName)
 )
 
 // ChannelSynchronizer syncs objectbucket channels with helmrepo
@@ -52,7 +57,7 @@ type ChannelSynchronizer struct {
 func CreateHelmrepoSynchronizer(config *rest.Config, scheme *runtime.Scheme, syncInterval int) (*ChannelSynchronizer, error) {
 	client, err := client.New(config, client.Options{})
 	if err != nil {
-		klog.Error("Failed to initialize client for synchronizer. err: ", err)
+		logf.Error(err, "Failed to initialize client for synchronizer.")
 		return nil, err
 	}
 
@@ -68,17 +73,13 @@ func CreateHelmrepoSynchronizer(config *rest.Config, scheme *runtime.Scheme, syn
 
 // Start - starts the sync process
 func (sync *ChannelSynchronizer) Start(s <-chan struct{}) error {
-	if klog.V(deputils.QuiteLogLel) {
-		fnName := deputils.GetFnName()
-		klog.Infof("Entering: %v()", fnName)
-
-		defer klog.Infof("Exiting: %v()", fnName)
-	}
+	logf.Info(fmt.Sprintf("start %v sync loop", syncrhonizerName))
+	defer logf.Info(fmt.Sprintf("exit %v sync loop", syncrhonizerName))
 
 	sync.Signal = s
 
 	go wait.Until(func() {
-		klog.Info("Housekeeping loop ...")
+		logf.Info("helmrepo housekeeping loop ...")
 		sync.syncChannelsWithHelmRepo()
 	}, time.Duration(sync.SyncInterval)*time.Second, sync.Signal)
 
@@ -90,15 +91,8 @@ func (sync *ChannelSynchronizer) Start(s <-chan struct{}) error {
 // Sync cluster namespace / objectbucket channels with object store
 
 func (sync *ChannelSynchronizer) syncChannelsWithHelmRepo() {
-	if klog.V(deputils.QuiteLogLel) {
-		fnName := deputils.GetFnName()
-		klog.Infof("Entering: %v()", fnName)
-
-		defer klog.Infof("Exiting: %v()", fnName)
-	}
-
 	for _, ch := range sync.ChannelMap {
-		klog.V(5).Info("synching channel ", ch.Name)
+		logf.V(5).Info(fmt.Sprintf("synching channel %v", ch.Name))
 		sync.syncChannel(ch, utils.GetChartIndex)
 	}
 }
@@ -113,13 +107,13 @@ func (sync *ChannelSynchronizer) syncChannel(chn *chv1.Channel, localIdxFunc uti
 	if chn.Spec.ConfigMapRef != nil {
 		chnRefCfgMapKey := types.NamespacedName{Name: chn.Spec.ConfigMapRef.Name, Namespace: chn.Spec.ConfigMapRef.Namespace}
 		if err := sync.kubeClient.Get(context.TODO(), chnRefCfgMapKey, chnRefCfgMap); err != nil {
-			klog.Errorf("failed to Get channel's referred configmap, err: %v ", err)
+			logf.Error(err, "failed to Get channel's referred configmap")
 		}
 	}
 	// retrieve helm chart list from helm repo
-	idx, err := utils.GetHelmRepoIndex(chn.Spec.Pathname, chnRefCfgMap, localIdxFunc)
+	idx, err := utils.GetHelmRepoIndex(chn.Spec.Pathname, chnRefCfgMap, localIdxFunc, logf)
 	if err != nil {
-		klog.Errorf("Error getting index for channel %v/%v err: %v ", chn.Namespace, chn.Name, errors.Cause(err).Error())
+		logf.Error(err, fmt.Sprintf("error getting index for channel %v/%v", chn.Namespace, chn.Name))
 		return
 	}
 
@@ -130,12 +124,12 @@ func (sync *ChannelSynchronizer) syncChannel(chn *chv1.Channel, localIdxFunc uti
 	majorversion := make(map[string]string)
 
 	for k, cv := range idx.Entries {
-		klog.V(10).Info("Key: ", k)
+		logf.V(5).Info(fmt.Sprintf("Key: %v", k))
 
 		chartmap := make(map[string]bool)
 
 		for _, chart := range cv {
-			klog.V(10).Info("Chart:", chart.Name, " Version:", chart.Version)
+			logf.V(5).Info(fmt.Sprintf("Chart: %v Version: %v", chart.Name, chart.Version))
 
 			chartmap[chart.Version] = false
 		}
@@ -157,7 +151,7 @@ func (sync *ChannelSynchronizer) syncChannel(chn *chv1.Channel, localIdxFunc uti
 
 	clSelector, err := deputils.ConvertLabels(labelSelector)
 	if err != nil {
-		klog.Error("Failed to set label selector. err: ", err)
+		logf.Error(err, "failed to set label selector.")
 		return
 	}
 
@@ -167,7 +161,7 @@ func (sync *ChannelSynchronizer) syncChannel(chn *chv1.Channel, localIdxFunc uti
 
 	err = sync.kubeClient.List(context.TODO(), dpllist, listopt)
 	if err != nil {
-		klog.Info("Error in listing deployables in channel namespace: ", chn.Namespace)
+		logf.Error(err, fmt.Sprintf("error in listing deployables in channel namespace: %v ", chn.Namespace))
 		return
 	}
 
@@ -188,7 +182,7 @@ func (sync *ChannelSynchronizer) syncChannel(chn *chv1.Channel, localIdxFunc uti
 		specMap[utils.HelmCRRepoURL] = chn.Spec.Pathname
 
 		obj.Object["spec"] = specMap
-		klog.V(10).Info("Object: ", obj.Object)
+		logf.V(10).Info(fmt.Sprintf("Object: %v", obj.Object))
 
 		if synced := charts[mv]; !synced {
 			dpl := &dplv1.Deployable{}
@@ -197,7 +191,7 @@ func (sync *ChannelSynchronizer) syncChannel(chn *chv1.Channel, localIdxFunc uti
 
 			err = controllerutil.SetControllerReference(chn, dpl, sync.Scheme)
 			if err != nil {
-				klog.Info("Failed to set controller reference err:", err)
+				logf.Error(err, "failed to set controller reference ")
 				break
 			}
 
@@ -217,42 +211,42 @@ func (sync *ChannelSynchronizer) syncChannel(chn *chv1.Channel, localIdxFunc uti
 			dpl.Spec.Template.Raw, err = json.Marshal(obj)
 
 			if err != nil {
-				klog.Info("Failed to marshal helm cr to template, err:", err)
+				logf.Error(err, "Failed to marshal helm cr to template")
 				break
 			}
 
 			err = sync.kubeClient.Create(context.TODO(), dpl)
 
 			if err != nil {
-				klog.Info("Failed to create helmcr deployable, err:", err)
+				logf.Error(err, "failed to create helmcr deployable")
 			}
 
-			klog.Info("creating dpl ", k)
+			logf.Info(fmt.Sprintf("creating dpl %v", k))
 		}
 	}
 }
 
 func (sync *ChannelSynchronizer) processDeployable(chn *chv1.Channel,
 	dpl dplv1.Deployable, generalmap map[string]map[string]bool) {
-	klog.V(10).Info("synching dpl ", dpl.Name)
+	logf.V(5).Info(fmt.Sprintf("synching dpl %v", dpl.Name))
 
 	obj := &unstructured.Unstructured{}
 	err := json.Unmarshal(dpl.Spec.Template.Raw, obj)
 
 	if err != nil {
-		klog.Warning("Processing local deployable with error template:", dpl, err)
+		logf.Error(err, fmt.Sprintf("Processing local deployable with error template: %v", dpl))
 		return
 	}
 
 	if obj.GetKind() != utils.HelmCRKind || obj.GetAPIVersion() != utils.HelmCRAPIVersion {
-		klog.Info("Skipping non helm chart deployable:", obj.GetKind(), ".", obj.GetAPIVersion())
+		logf.Info(fmt.Sprintf("Skipping non helm chart deployable: %v.%v", obj.GetKind(), obj.GetAPIVersion()))
 		return
 	}
 
 	// Do not delete deployables with Subscription template kind. This causes problems if subscription
 	// and channel are in the same namespace.
 	if obj.GetKind() == utils.SubscriptionCRKind {
-		klog.Info("Skipping subscription deployable:", dpl.Name, ".", obj.GetKind())
+		logf.Info(fmt.Sprintf("Skipping subscription deployable: %v.%v", dpl.Name, obj.GetKind()))
 		return
 	}
 
@@ -274,7 +268,7 @@ func (sync *ChannelSynchronizer) processDeployable(chn *chv1.Channel,
 	if !keep {
 		err = sync.kubeClient.Delete(context.TODO(), &dpl)
 		if err != nil {
-			klog.Error("Failed to delete deployable in helm repo channel:", dpl.Name, " to ", chn.Spec.Pathname)
+			logf.Error(err, fmt.Sprintf("Failed to delete deployable in helm repo channel: %v to %v", dpl.Name, chn.Spec.Pathname))
 		}
 	} else {
 		chmap[cver] = true
@@ -283,7 +277,7 @@ func (sync *ChannelSynchronizer) processDeployable(chn *chv1.Channel,
 			specMap[utils.HelmCRRepoURL] = chn.Spec.Pathname
 			err = sync.kubeClient.Update(context.TODO(), &dpl)
 			if err != nil {
-				klog.Error("Failed to update deployable in helm repo channel:", dpl.Name, " to ", chn.Spec.Pathname)
+				logf.Error(err, fmt.Sprintf("Failed to update deployable in helm repo channel: %v to %v", dpl.Name, chn.Spec.Pathname))
 			}
 		}
 	}

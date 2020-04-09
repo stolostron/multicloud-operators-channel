@@ -14,9 +14,7 @@
 
 package controller
 
-import (
-	"github.com/open-cluster-management/multicloud-operators-channel/pkg/controller/deployable"
-)
+import "github.com/open-cluster-management/multicloud-operators-channel/pkg/controller/deployable"
 
 func init() {
 	// AddToManagerFuncs is a list of functions to create controllers and add them to a manager.

@@ -42,7 +42,8 @@ const (
 	// UserID is key of GitHub user ID in secret
 	UserID = "user"
 	// Password is key of GitHub user password or personal token in secret
-	Password = "accessToken"
+	Password   = "accessToken"
+	debugLevel = klog.Level(5)
 )
 
 type cred struct {

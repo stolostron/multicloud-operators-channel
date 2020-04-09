@@ -28,7 +28,9 @@ import (
 	dplutils "github.com/open-cluster-management/multicloud-operators-deployable/pkg/utils"
 	placementutils "github.com/open-cluster-management/multicloud-operators-placementrule/pkg/utils"
 
+	"github.com/go-logr/logr"
 	gerr "github.com/pkg/errors"
+
 	corev1 "k8s.io/api/core/v1"
 	rbac "k8s.io/api/rbac/v1"
 	apiextensionsv1beta1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1beta1"
@@ -42,7 +44,6 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/tools/record"
 	clusterv1alpha1 "k8s.io/cluster-registry/pkg/apis/clusterregistry/v1alpha1"
-	"k8s.io/klog"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
@@ -73,8 +74,9 @@ var (
 )
 
 const (
-	clusterCRDName = "clusters.clusterregistry.k8s.io"
-	debugLevel     = klog.Level(5)
+	clusterCRDName  = "clusters.clusterregistry.k8s.io"
+	controllerName  = "channel"
+	controllerSetup = "channel-setup"
 )
 
 /**
@@ -84,33 +86,34 @@ const (
 
 // Add creates a new Channel Controller and adds it to the Manager with default RBAC. The Manager will set fields on the Controller
 // and Start it when the Manager is Started.
-func Add(mgr manager.Manager, recorder record.EventRecorder,
+func Add(mgr manager.Manager, recorder record.EventRecorder, logger logr.Logger,
 	channelDescriptor *utils.ChannelDescriptor, sync *helmsync.ChannelSynchronizer,
 	gsync *gitsync.ChannelSynchronizer) error {
-	return add(mgr, newReconciler(mgr, recorder))
+	return add(mgr, newReconciler(mgr, recorder, logger.WithName(controllerName)), logger.WithName(controllerSetup))
 }
 
 // newReconciler returns a new reconcile.Reconciler
-func newReconciler(mgr manager.Manager, recorder record.EventRecorder) reconcile.Reconciler {
-	return &ReconcileChannel{Client: mgr.GetClient(), scheme: mgr.GetScheme(), Recorder: recorder}
+func newReconciler(mgr manager.Manager, recorder record.EventRecorder, logger logr.Logger) reconcile.Reconciler {
+	return &ReconcileChannel{
+		Client:   mgr.GetClient(),
+		scheme:   mgr.GetScheme(),
+		Recorder: recorder,
+		Log:      logger,
+	}
 }
 
 // add adds a new Controller to mgr with r as the reconcile.Reconciler
-func add(mgr manager.Manager, r reconcile.Reconciler) error {
-	if klog.V(debugLevel) {
-		fnName := dplutils.GetFnName()
-		klog.Infof("Entering: %v()", fnName)
-
-		defer klog.Infof("Exiting: %v()", fnName)
-	}
+func add(mgr manager.Manager, r reconcile.Reconciler, logger logr.Logger) error {
 	// Create a new controller
-	c, err := controller.New("channel-controller", mgr, controller.Options{Reconciler: r})
+	c, err := controller.New(controllerName, mgr, controller.Options{Reconciler: r})
 	if err != nil {
 		return err
 	}
 
+	logger.Info("failed to add CRD scheme to manager")
+
 	if err := apiextensionsv1beta1.AddToScheme(mgr.GetScheme()); err != nil {
-		klog.Errorf("failed to add CRD scheme to manager, err: %v", err)
+		logger.Error(err, "failed to add CRD scheme to manager")
 	}
 	// Watch for changes to Channel
 	err = c.Watch(&source.Kind{Type: &chv1.Channel{}}, &handler.EnqueueRequestForObject{})
@@ -121,7 +124,7 @@ func add(mgr manager.Manager, r reconcile.Reconciler) error {
 	if placementutils.IsReadyACMClusterRegistry(mgr.GetAPIReader()) {
 		err = c.Watch(
 			&source.Kind{Type: &clusterv1alpha1.Cluster{}},
-			&handler.EnqueueRequestsFromMapFunc{ToRequests: &clusterMapper{mgr.GetClient()}},
+			&handler.EnqueueRequestsFromMapFunc{ToRequests: &clusterMapper{Client: mgr.GetClient(), logger: logger}},
 			placementutils.ClusterPredicateFunc,
 		)
 	}
@@ -131,20 +134,14 @@ func add(mgr manager.Manager, r reconcile.Reconciler) error {
 
 type clusterMapper struct {
 	client.Client
+	logger logr.Logger
 }
 
 // Map triggers all placements
 func (mapper *clusterMapper) Map(obj handler.MapObject) []reconcile.Request {
-	if klog.V(debugLevel) {
-		fnName := dplutils.GetFnName()
-		klog.Infof("Entering: %v()", fnName)
-
-		defer klog.Infof("Exiting: %v()", fnName)
-	}
-
 	cname := obj.Meta.GetName()
 
-	klog.Info("In cluster Mapper for ", cname)
+	mapper.logger.Info(fmt.Sprintf("In cluster Mapper for %v", cname))
 
 	plList := &chv1.ChannelList{}
 
@@ -152,7 +149,7 @@ func (mapper *clusterMapper) Map(obj handler.MapObject) []reconcile.Request {
 	err := mapper.List(context.TODO(), plList, listopts)
 
 	if err != nil {
-		klog.Error(err)
+		mapper.logger.Error(err, "failed to list channels")
 	}
 
 	var requests []reconcile.Request
@@ -176,6 +173,7 @@ type ReconcileChannel struct {
 	client.Client
 	scheme   *runtime.Scheme
 	Recorder record.EventRecorder
+	Log      logr.Logger
 }
 
 // Reconcile reads that state of the cluster for a Channel object and makes changes based on the state read
@@ -187,15 +185,10 @@ type ReconcileChannel struct {
 // +kubebuilder:rbac:groups=apps.open-cluster-management.io,resources=channels,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups=apps.open-cluster-management.io,resources=channels/status,verbs=get;update;patch
 func (r *ReconcileChannel) Reconcile(request reconcile.Request) (reconcile.Result, error) {
-	if klog.V(debugLevel) {
-		fnName := dplutils.GetFnName()
-		klog.Infof("Entering: %v()", fnName)
+	log := r.Log.WithValues("channel-reconcile", request.NamespacedName)
 
-		defer klog.Infof("Exiting: %v()", fnName)
-	}
-	// Fetch the Channel instance
-
-	klog.Info("Reconciling:", request.NamespacedName)
+	log.Info(fmt.Sprintf("Starting %v reconcile loop for %v", controllerName, request.NamespacedName))
+	defer log.Info(fmt.Sprintf("Finish %v reconcile loop for %v", controllerName, request.NamespacedName))
 
 	instance := &chv1.Channel{}
 
@@ -205,17 +198,17 @@ func (r *ReconcileChannel) Reconcile(request reconcile.Request) (reconcile.Resul
 			// Object not found, return.  Created objects are automatically garbage collected.
 			// For additional cleanup logic use finalizers.
 			//sync the channel to the serving-channel annotation in all involved secrets - remove channel
-			if err := r.syncReferredObjAnnotation(request, nil, srtGvk); err != nil {
+			if err := r.syncReferredObjAnnotation(request, nil, srtGvk, log); err != nil {
 				return reconcile.Result{}, err
 			}
 
 			//remove the channel from the serving-channel annotation in all involved ConfigMaps - remove channel
-			if err := r.syncReferredObjAnnotation(request, nil, cmGvk); err != nil {
+			if err := r.syncReferredObjAnnotation(request, nil, cmGvk, log); err != nil {
 				return reconcile.Result{}, err
 			}
 
 			if err := utils.CleanupDeployables(r.Client, request.NamespacedName); err != nil {
-				klog.Errorf("failed to reconcile on deletion, err %v", err)
+				log.Error(err, "failed to reconcile on deletion")
 				return reconcile.Result{}, err
 			}
 
@@ -231,16 +224,16 @@ func (r *ReconcileChannel) Reconcile(request reconcile.Request) (reconcile.Resul
 
 		err := r.Update(context.TODO(), instance)
 		if err != nil {
-			klog.Infof("Can't update the pathname field due to %v", err)
+			log.Info(fmt.Sprintf("can't update the pathname field due to %v", err))
 			return reconcile.Result{}, err
 		}
 
 		return reconcile.Result{}, nil
 	}
 
-	err = r.validateClusterRBAC(instance)
+	err = r.validateClusterRBAC(instance, log)
 	if err != nil {
-		klog.Info("failed to validate RBAC for clusters for channel ", instance.Name, " with error: ", err)
+		log.Error(err, fmt.Sprintf("failed to validate RBAC for clusters for channel %v", instance.Name))
 		return reconcile.Result{}, err
 	}
 
@@ -250,32 +243,31 @@ func (r *ReconcileChannel) Reconcile(request reconcile.Request) (reconcile.Resul
 	srtRef := instance.Spec.SecretRef
 
 	if srtRef != nil {
-		if err := r.updatedReferencedObjectLabels(srtRef, srtGvk); err != nil {
-			klog.Errorf("failed to update referred secret label %v", err)
+		if err := r.updatedReferencedObjectLabels(srtRef, srtGvk, log); err != nil {
+			r.Log.Error(err, "failed to update referred secret label")
 		}
 
-		if err := r.syncReferredObjAnnotation(request, srtRef, srtGvk); err != nil {
-			klog.Errorf("failed to annotate %v", err)
+		if err := r.syncReferredObjAnnotation(request, srtRef, srtGvk, log); err != nil {
+			r.Log.Error(err, "failed to annotate")
 		}
 	}
 
-	//sync the channel to the serving-channel annotation in all involved ConfigMaps.
-	//r.syncConfigAnnotation(instance, request.NamespacedName)
+	//	//sync the channel to the serving-channel annotation in all involved ConfigMaps.
 	cmRef := instance.Spec.ConfigMapRef
 	if cmRef != nil {
-		if err := r.updatedReferencedObjectLabels(cmRef, cmGvk); err != nil {
-			klog.Errorf("failed to update referred configMap label %v", err)
+		if err := r.updatedReferencedObjectLabels(cmRef, cmGvk, log); err != nil {
+			r.Log.Error(err, "failed to update referred configMap label")
 		}
 
-		if err := r.syncReferredObjAnnotation(request, cmRef, cmGvk); err != nil {
-			klog.Errorf("failed to annotate %v", err)
+		if err := r.syncReferredObjAnnotation(request, cmRef, cmGvk, log); err != nil {
+			r.Log.Error(err, "failed to annotate")
 		}
 	}
 
 	return reconcile.Result{}, nil
 }
 
-func (r *ReconcileChannel) updatedReferencedObjectLabels(ref *corev1.ObjectReference, objGvk schema.GroupVersionKind) error {
+func (r *ReconcileChannel) updatedReferencedObjectLabels(ref *corev1.ObjectReference, objGvk schema.GroupVersionKind, logger logr.Logger) error {
 	if ref == nil {
 		return gerr.New(fmt.Sprintf("empty referred object %v", objGvk.Kind))
 	}
@@ -304,19 +296,14 @@ func (r *ReconcileChannel) updatedReferencedObjectLabels(ref *corev1.ObjectRefer
 		return gerr.Wrapf(err, "failed to update the referred object %v", objGvk.Kind)
 	}
 
-	klog.Infof("Set label serving-channel to object: %v", objKey.String())
+	logger.Info(fmt.Sprintf("Set label serving-channel to object: %v", objKey.String()))
 
 	return nil
 }
 
-func (r *ReconcileChannel) syncReferredObjAnnotation(rq reconcile.Request, ref *corev1.ObjectReference, objGvk schema.GroupVersionKind) error {
-	if klog.V(debugLevel) {
-		fnName := dplutils.GetFnName()
-		klog.Infof("Entering: %v()", fnName)
-
-		defer klog.Infof("Exiting: %v()", fnName)
-	}
-
+func (r *ReconcileChannel) syncReferredObjAnnotation(
+	rq reconcile.Request,
+	ref *corev1.ObjectReference, objGvk schema.GroupVersionKind, logger logr.Logger) error {
 	chnKey := types.NamespacedName{Name: rq.Name, Namespace: rq.Namespace}
 
 	uObjList := &unstructured.UnstructuredList{}
@@ -333,7 +320,7 @@ func (r *ReconcileChannel) syncReferredObjAnnotation(rq reconcile.Request, ref *
 
 	clSelector, err := dplutils.ConvertLabels(labelSelector)
 	if err != nil {
-		return gerr.Wrap(err, "failed to set lable selector for referred object")
+		return gerr.Wrap(err, "failed to set label selector for referred object")
 	}
 
 	opts.LabelSelector = clSelector
@@ -368,21 +355,14 @@ func (r *ReconcileChannel) syncReferredObjAnnotation(rq reconcile.Request, ref *
 		obj.SetAnnotations(annotations)
 
 		if err := r.Update(context.TODO(), &obj); err != nil {
-			klog.Errorf("failed to annotate object: %v/%v, err: %#v", obj.GetNamespace(), obj.GetName(), err)
+			logger.Error(err, fmt.Sprintf("failed to annotate object: %v/%v", obj.GetNamespace(), obj.GetName()))
 		}
 	}
 
 	return nil
 }
 
-func (r *ReconcileChannel) validateClusterRBAC(instance *chv1.Channel) error {
-	if klog.V(debugLevel) {
-		fnName := dplutils.GetFnName()
-		klog.Infof("Entering: %v()", fnName)
-
-		defer klog.Infof("Exiting: %v()", fnName)
-	}
-
+func (r *ReconcileChannel) validateClusterRBAC(instance *chv1.Channel, logger logr.Logger) error {
 	role := &rbac.Role{}
 
 	if err := r.setupRole(instance, role); err != nil {
@@ -397,7 +377,7 @@ func (r *ReconcileChannel) validateClusterRBAC(instance *chv1.Channel) error {
 
 	if err := r.List(context.TODO(), cllist, &client.ListOptions{}); err != nil {
 		if metaerr.IsNoMatchError(err) {
-			klog.Errorf("skipping the RBAC validation for %v/%v, err: %v", instance.GetNamespace(), instance.GetName(), err)
+			r.Log.Error(err, fmt.Sprintf("skipping the RBAC validation for %v/%v", instance.GetNamespace(), instance.GetName()))
 			return nil
 		}
 
@@ -457,7 +437,7 @@ func (r *ReconcileChannel) validateClusterRBAC(instance *chv1.Channel) error {
 		}
 	}
 
-	klog.V(debugLevel).Infof("created role %v and rolebinding %v with subjects %v", role.Name, rolebinding.Name, rolebinding.Subjects)
+	logger.Info(fmt.Sprintf("created role %v and rolebinding %v with subjects %v", role.Name, rolebinding.Name, rolebinding.Subjects))
 
 	return nil
 }

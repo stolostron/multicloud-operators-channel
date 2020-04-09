@@ -16,14 +16,15 @@ package utils
 
 import (
 	"context"
+	"fmt"
 	"strings"
 	"sync"
 
+	"github.com/go-logr/logr"
 	"github.com/pkg/errors"
 	"gopkg.in/yaml.v2"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/types"
-	"k8s.io/klog"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	chv1 "github.com/open-cluster-management/multicloud-operators-channel/pkg/apis/apps/v1"
@@ -75,7 +76,7 @@ func (desc *ChannelDescriptor) SetObjectStorageForChannel(chn *chv1.Channel, obj
 }
 
 // ConnectWithResourceHost validates and makes channel object store connection
-func (desc *ChannelDescriptor) ConnectWithResourceHost(chn *chv1.Channel, kubeClient client.Client, objStoreHandler ...ObjectStore) error {
+func (desc *ChannelDescriptor) ConnectWithResourceHost(chn *chv1.Channel, kubeClient client.Client, log logr.Logger, objStoreHandler ...ObjectStore) error {
 	var storageHanler ObjectStore
 
 	chUnit, _ := desc.Get(chn.Name)
@@ -99,13 +100,13 @@ func (desc *ChannelDescriptor) ConnectWithResourceHost(chn *chv1.Channel, kubeCl
 	if chn.Spec.SecretRef != nil {
 		accessID, secretAccessKey, err = getCredentialFromKube(chn.Spec.SecretRef, chn.GetNamespace(), kubeClient)
 		if err != nil {
-			klog.Error(err)
+			log.Error(err, "failed to fetch the reference secret")
 			return err
 		}
 	}
 	// Add new channel to the map
-	if err := desc.updateChannelRegistry(chn, accessID, secretAccessKey, storageHanler); err != nil {
-		klog.Error(err, "unable to initialize channel ObjectStore description")
+	if err := desc.updateChannelRegistry(chn, accessID, secretAccessKey, storageHanler, log); err != nil {
+		log.Error(err, "unable to initialize channel ObjectStore description")
 		return err
 	}
 
@@ -163,22 +164,23 @@ func parseBucketAndEndpoint(pathName string) (string, string) {
 	return endpoint, bucket
 }
 
-func (desc *ChannelDescriptor) updateChannelRegistry(chn *chv1.Channel, accessKeyID, secretAccessKey string, objStoreHandler ObjectStore) error {
+func (desc *ChannelDescriptor) updateChannelRegistry(chn *chv1.Channel, accessKeyID, secretAccessKey string,
+	objStoreHandler ObjectStore, log logr.Logger) error {
 	chndesc := &ChannelDescription{}
 
 	endpoint, bucket := parseBucketAndEndpoint(chn.Spec.Pathname)
 
 	chndesc.Bucket = bucket
 
-	klog.Info("trying to connect to object bucket ", endpoint, " | ", chndesc.Bucket)
+	log.Info(fmt.Sprintf("trying to connect to object bucket %v|%v", endpoint, chndesc.Bucket))
 
 	if err := objStoreHandler.InitObjectStoreConnection(endpoint, accessKeyID, secretAccessKey); err != nil {
-		klog.Error(err, "unable to initialize object store settings")
+		log.Error(err, "unable to initialize object store settings")
 		return err
 	}
 	// Check whether the connection is setup successfully
 	if err := objStoreHandler.Exists(chndesc.Bucket); err != nil {
-		klog.Error(err, "unable to access object store bucket ", chndesc.Bucket, " for channel ", chn.Name)
+		log.Error(err, fmt.Sprint("unable to access object store bucket ", chndesc.Bucket, " for channel ", chn.Name))
 		return err
 	}
 
@@ -188,7 +190,7 @@ func (desc *ChannelDescriptor) updateChannelRegistry(chn *chv1.Channel, accessKe
 
 	desc.Put(chn.Name, chndesc)
 
-	klog.Info("Channel ObjectStore descriptor for ", chn.Name, " is initialized: ", chndesc)
+	log.Info(fmt.Sprint("Channel ObjectStore descriptor for ", chn.Name, " is initialized: ", chndesc))
 
 	return nil
 }

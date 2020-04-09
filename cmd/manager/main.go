@@ -18,24 +18,29 @@ import (
 	"flag"
 
 	// Import all Kubernetes client auth plugins (e.g. Azure, GCP, OIDC, etc.)
+
 	_ "k8s.io/client-go/plugin/pkg/client/auth"
+	"k8s.io/klog"
 	"sigs.k8s.io/controller-runtime/pkg/manager/signals"
 
 	"github.com/spf13/pflag"
-	"k8s.io/klog"
+
+	"github.com/open-cluster-management/multicloud-operators-channel/pkg/log/zap"
 
 	"github.com/open-cluster-management/multicloud-operators-channel/cmd/manager/exec"
 )
 
 func main() {
+	defer klog.Flush()
 	exec.ProcessFlags()
 
 	klog.InitFlags(nil)
+	pflag.CommandLine.AddFlagSet(zap.FlagSet())
 
 	pflag.CommandLine.AddGoFlagSet(flag.CommandLine)
-	pflag.Parse()
 
-	defer klog.Flush()
+	exec.HidKlogFlag(pflag.CommandLine)
+	pflag.Parse()
 
 	exec.RunManager(signals.SetupSignalHandler())
 }

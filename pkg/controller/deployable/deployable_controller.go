@@ -16,17 +16,17 @@ package deployable
 
 import (
 	"context"
+	"fmt"
 	"reflect"
 	"strings"
 
-	"k8s.io/klog"
+	"github.com/go-logr/logr"
 
 	chv1 "github.com/open-cluster-management/multicloud-operators-channel/pkg/apis/apps/v1"
 	gitsync "github.com/open-cluster-management/multicloud-operators-channel/pkg/synchronizer/githubsynchronizer"
 	helmsync "github.com/open-cluster-management/multicloud-operators-channel/pkg/synchronizer/helmreposynchronizer"
 	"github.com/open-cluster-management/multicloud-operators-channel/pkg/utils"
 	dplv1 "github.com/open-cluster-management/multicloud-operators-deployable/pkg/apis/apps/v1"
-	dplutils "github.com/open-cluster-management/multicloud-operators-deployable/pkg/utils"
 
 	v1 "k8s.io/api/core/v1"
 
@@ -42,7 +42,10 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/source"
 )
 
-var debugLevel = klog.Level(5)
+const (
+	controllerName  = "deployable"
+	controllerSetup = "deployable-setup"
+)
 
 /**
 * USER ACTION REQUIRED: This is a scaffold file intended for the user to modify with their own Controller
@@ -51,34 +54,28 @@ var debugLevel = klog.Level(5)
 
 // Add creates a new Channel Controller and adds it to the Manager with default RBAC. The Manager will set fields on the Controller
 // and Start it when the Manager is Started.
-func Add(mgr manager.Manager, recorder record.EventRecorder,
+func Add(mgr manager.Manager, recorder record.EventRecorder, logger logr.Logger,
 	channelDescriptor *utils.ChannelDescriptor, sync *helmsync.ChannelSynchronizer,
 	gsync *gitsync.ChannelSynchronizer) error {
-	return add(mgr, newReconciler(mgr, recorder))
+	return add(mgr, newReconciler(mgr, recorder, logger.WithName(controllerName)), logger.WithName(controllerSetup))
 }
 
 // newReconciler returns a new reconcile.Reconciler
-func newReconciler(mgr manager.Manager, recorder record.EventRecorder) reconcile.Reconciler {
-	return &ReconcileDeployable{Client: mgr.GetClient(), scheme: mgr.GetScheme(), Recorder: recorder}
+func newReconciler(mgr manager.Manager, recorder record.EventRecorder, logger logr.Logger) reconcile.Reconciler {
+	return &ReconcileDeployable{Client: mgr.GetClient(), scheme: mgr.GetScheme(), Recorder: recorder, Log: logger}
 }
 
 type channelMapper struct {
 	client.Client
+	log logr.Logger
 }
 
 func (mapper *channelMapper) Map(obj handler.MapObject) []reconcile.Request {
-	if klog.V(debugLevel) {
-		fnName := dplutils.GetFnName()
-		klog.Infof("Entering: %v()", fnName)
-
-		defer klog.Infof("Exiting: %v()", fnName)
-	}
-
 	dpllist := &dplv1.DeployableList{}
 
 	err := mapper.List(context.TODO(), dpllist, &client.ListOptions{})
 	if err != nil {
-		klog.Error("Failed to list all deployable ")
+		mapper.log.Error(err, "failed to list all deployable ")
 		return nil
 	}
 
@@ -91,9 +88,9 @@ func (mapper *channelMapper) Map(obj handler.MapObject) []reconcile.Request {
 }
 
 // add adds a new Controller to mgr with r as the reconcile.Reconciler
-func add(mgr manager.Manager, r reconcile.Reconciler) error {
+func add(mgr manager.Manager, r reconcile.Reconciler, logger logr.Logger) error {
 	// Create a new controller
-	c, err := controller.New("deployable-controller", mgr, controller.Options{Reconciler: r})
+	c, err := controller.New(controllerName, mgr, controller.Options{Reconciler: r})
 	if err != nil {
 		return err
 	}
@@ -105,7 +102,7 @@ func add(mgr manager.Manager, r reconcile.Reconciler) error {
 	}
 
 	// watch for changes to channel too
-	return c.Watch(&source.Kind{Type: &chv1.Channel{}}, &handler.EnqueueRequestsFromMapFunc{ToRequests: &channelMapper{mgr.GetClient()}})
+	return c.Watch(&source.Kind{Type: &chv1.Channel{}}, &handler.EnqueueRequestsFromMapFunc{ToRequests: &channelMapper{Client: mgr.GetClient(), log: logger}})
 }
 
 var _ reconcile.Reconciler = &ReconcileDeployable{}
@@ -115,11 +112,12 @@ type ReconcileDeployable struct {
 	client.Client
 	scheme   *runtime.Scheme
 	Recorder record.EventRecorder
+	Log      logr.Logger
 }
 
 func (r *ReconcileDeployable) appendEvent(rootInstance *chv1.Channel, dplkey types.NamespacedName, derror error, reason, addtionalMsg string) error {
 	phost := types.NamespacedName{Namespace: rootInstance.GetNamespace(), Name: rootInstance.GetName()}
-	klog.V(debugLevel).Info("Promoted deployable: ", dplkey, ", channel: ", phost, ", message: ", addtionalMsg)
+	r.Log.Info(fmt.Sprintf("Promoted deployable: %v channel: %v message: %v ", dplkey, phost, addtionalMsg))
 
 	eventType := ""
 	evnetMsg := ""
@@ -146,15 +144,10 @@ func (r *ReconcileDeployable) appendEvent(rootInstance *chv1.Channel, dplkey typ
 // +kubebuilder:rbac:groups=apps.open-cluster-management.io,resources=channels,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups=apps.open-cluster-management.io,resources=channels/status,verbs=get;update;patch
 func (r *ReconcileDeployable) Reconcile(request reconcile.Request) (reconcile.Result, error) {
-	// Fetch the Channel instance
-	if klog.V(debugLevel) {
-		fnName := dplutils.GetFnName()
-		klog.Infof("Entering: %v()", fnName)
+	log := r.Log.WithValues("dpl-reconcile", request.NamespacedName)
+	log.Info(fmt.Sprintf("Starting %v reconcile loop for %v", controllerName, request.NamespacedName))
 
-		defer klog.Infof("Exiting: %v()", fnName)
-	}
-
-	klog.Info("Reconciling:", request.NamespacedName)
+	defer log.Info(fmt.Sprintf("Finish %v reconcile loop for %v", controllerName, request.NamespacedName))
 
 	instance := &dplv1.Deployable{}
 	err := r.Get(context.TODO(), request.NamespacedName, instance)
@@ -163,17 +156,17 @@ func (r *ReconcileDeployable) Reconcile(request reconcile.Request) (reconcile.Re
 		if errors.IsNotFound(err) {
 			// Object not found, return.  Created objects are automatically garbage collected.
 			// For additional cleanup logic use finalizers.
-			klog.V(debugLevel).Info(err)
+			log.Info("exit, deployables will be GC'ed by k8s")
 			return reconcile.Result{}, nil
 		}
 		// Error reading the object - requeue the request.
 		return reconcile.Result{}, err
 	}
 
-	channelmap, err := utils.GenerateChannelMap(r.Client)
+	channelmap, err := utils.GenerateChannelMap(r.Client, log)
 	if err != nil {
 		if !errors.IsNotFound(err) {
-			klog.Error("failed to get all deployables")
+			log.Error(err, "failed to get all deployables")
 			return reconcile.Result{}, nil
 		}
 
@@ -185,35 +178,35 @@ func (r *ReconcileDeployable) Reconcile(request reconcile.Request) (reconcile.Re
 		channelNsMap[ch.Namespace] = ch.Name
 	}
 
-	parent, dplmap, err := utils.FindDeployableForChannelsInMap(r.Client, instance, channelNsMap)
+	parent, dplmap, err := utils.FindDeployableForChannelsInMap(r.Client, instance, channelNsMap, log)
 	if err != nil && !errors.IsNotFound(err) {
-		klog.Error("Failed to get all deployables")
+		log.Error(err, "failed to get all deployables")
 		return reconcile.Result{}, nil
 	}
 
-	klog.V(debugLevel).Infof("Dpl Map, before deletion: %#v", dplmap)
+	log.Info(fmt.Sprintf("Dpl Map, before deletion: %#v", dplmap))
 
-	dplmap, err = r.updateDeployableRelationWithChannel(instance, dplmap, parent, channelNsMap, channelmap)
+	dplmap, err = r.updateDeployableRelationWithChannel(instance, dplmap, parent, channelNsMap, channelmap, log)
 	if err != nil {
 		return reconcile.Result{}, err
 	}
 
-	r.handleOrphanDeployable(dplmap)
+	r.handleOrphanDeployable(dplmap, log)
 
 	return reconcile.Result{}, err
 }
 
-func (r *ReconcileDeployable) handleOrphanDeployable(dplmap map[string]*dplv1.Deployable) {
+func (r *ReconcileDeployable) handleOrphanDeployable(dplmap map[string]*dplv1.Deployable, logger logr.Logger) {
 	if dplmap == nil {
 		return
 	}
 	//If the dpl changes its channel, delete all other children of the dpl who were propagated to other channels before.
 	for chstr, dpl := range dplmap {
-		klog.Info("deleting deployable ", dpl.Namespace, "/", dpl.Name, " from channel ", chstr)
+		logger.Info(fmt.Sprintf("deleting deployable %v/%v from channel %v ", dpl.Namespace, dpl.Name, chstr))
 
 		err := r.Client.Delete(context.TODO(), dpl)
 		if err != nil {
-			klog.Errorf("Failed to delete %v due to %v ", dpl.Name, err)
+			logger.Error(err, fmt.Sprintf("Failed to delete %v ", dpl.Name))
 		}
 
 		//record events
@@ -224,8 +217,7 @@ func (r *ReconcileDeployable) handleOrphanDeployable(dplmap map[string]*dplv1.De
 
 		parsedstr := strings.Split(chstr, "/")
 		if len(parsedstr) != 2 {
-			klog.Info("invalid channel namespacedName: ", chstr)
-
+			logger.Info(fmt.Sprintf("invalid channel namespacedName: %v", chstr))
 			continue
 		}
 
@@ -233,29 +225,27 @@ func (r *ReconcileDeployable) handleOrphanDeployable(dplmap map[string]*dplv1.De
 
 		error1 := r.Get(context.TODO(), chkey, dplchannel)
 		if error1 != nil {
-			klog.V(5).Infof("Channel %#v not found, unable to record events to it. ", chkey)
+			logger.Info(fmt.Sprintf("Channel %#v not found, unable to record events to it. ", chkey))
 		} else {
 			err = r.appendEvent(dplchannel, dplkey, err, "Delete", addtionalMsg)
 			if err != nil {
-				klog.Errorf("Failed to record event %v due to %v ", dplkey, err)
+				logger.Error(err, fmt.Sprintf("Failed to record event %v", dplkey))
 			}
 		}
 	}
 }
 
-func (r *ReconcileDeployable) propagateDeployableToChannel(deployable *dplv1.Deployable,
-	dplmap map[string]*dplv1.Deployable, channel *chv1.Channel) error {
-	if klog.V(debugLevel) {
-		fnName := dplutils.GetFnName()
-		klog.Infof("Entering: %v()", fnName)
+func (r *ReconcileDeployable) propagateDeployableToChannel(
+	deployable *dplv1.Deployable, dplmap map[string]*dplv1.Deployable,
+	channel *chv1.Channel, logger logr.Logger) error {
+	logger.Info("enter propagateDeployableToChannel")
 
-		defer klog.Infof("Exiting: %v()", fnName)
-	}
+	defer logger.Info("exit propagateDeployableToChannel")
 
 	chkey := types.NamespacedName{Name: channel.Name, Namespace: channel.Namespace}.String()
 
 	if deployable.Namespace == channel.Namespace {
-		klog.V(debugLevel).Infof("The deployable: %#v exists in channel: %#v.", deployable.GetName(), channel.GetName())
+		logger.Info(fmt.Sprintf("The deployable: %#v exists in channel: %#v.", deployable.GetName(), channel.GetName()))
 
 		delete(dplmap, chkey)
 
@@ -278,7 +268,7 @@ func (r *ReconcileDeployable) propagateDeployableToChannel(deployable *dplv1.Dep
 	// // b.1.1 if gate and dpl annotation has a match then promote
 	// // b.1.1 dpl doesn't have annotation, then fail
 	if !utils.ValidateDeployableToChannel(deployable, channel) {
-		klog.V(debugLevel).Infof("The deployable %#v can't be promoted to channel %#v.", deployable.GetName(), channel.GetName())
+		logger.Info(fmt.Sprintf("The deployable %#v can't be promoted to channel %#v.", deployable.GetName(), channel.GetName()))
 		return nil
 	}
 
@@ -290,7 +280,7 @@ func (r *ReconcileDeployable) propagateDeployableToChannel(deployable *dplv1.Dep
 	exdpl, ok := dplmap[chkey]
 
 	if !ok {
-		klog.Info("Creating deployable in channel", *chdpl)
+		logger.Info(fmt.Sprintf("Creating deployable in channel %v", *chdpl))
 		err = r.Client.Create(context.TODO(), chdpl)
 
 		//record events
@@ -299,7 +289,7 @@ func (r *ReconcileDeployable) propagateDeployableToChannel(deployable *dplv1.Dep
 
 		err = r.appendEvent(channel, dplkey, err, "Deploy", addtionalMsg)
 		if err != nil {
-			klog.Errorf("Failed to record event %v due to %v ", dplkey, err)
+			logger.Error(err, fmt.Sprintf("failed to record event %v", dplkey))
 		}
 
 		return err
@@ -308,13 +298,13 @@ func (r *ReconcileDeployable) propagateDeployableToChannel(deployable *dplv1.Dep
 	if reflect.DeepEqual(exdpl.GetAnnotations(), chdpl.GetAnnotations()) &&
 		reflect.DeepEqual(exdpl.GetLabels(), chdpl.GetLabels()) &&
 		reflect.DeepEqual(exdpl.Spec, chdpl.Spec) {
-		klog.Info("No changes to existing deployable in channel ", *exdpl)
+		logger.Info(fmt.Sprintf("No changes to existing deployable in channel %v ", *exdpl))
 	} else {
 		exdpl.SetLabels(chdpl.GetLabels())
 		exdpl.SetAnnotations(chdpl.GetAnnotations())
 		chdpl.Spec.DeepCopyInto(&(exdpl.Spec))
 		err = r.Client.Update(context.TODO(), exdpl)
-		klog.Info("Updating existing deployable in channel to ", *exdpl)
+		logger.Info(fmt.Sprintf("Updating existing deployable in channel to %v", *exdpl))
 
 		//record events
 		dplkey := types.NamespacedName{Name: exdpl.GetName(), Namespace: exdpl.GetNamespace()}
@@ -322,7 +312,7 @@ func (r *ReconcileDeployable) propagateDeployableToChannel(deployable *dplv1.Dep
 
 		err = r.appendEvent(channel, dplkey, err, "Deploy", addtionalMsg)
 		if err != nil {
-			klog.Errorf("Failed to record event %v due to %v ", dplkey, err)
+			logger.Error(err, fmt.Sprintf("failed to record event %v", dplkey))
 		}
 	}
 
@@ -334,31 +324,31 @@ func (r *ReconcileDeployable) propagateDeployableToChannel(deployable *dplv1.Dep
 func (r *ReconcileDeployable) updateDeployableRelationWithChannel(
 	instance *dplv1.Deployable, dplmap map[string]*dplv1.Deployable,
 	parent *dplv1.Deployable, channelNsMap map[string]string,
-	channelmap map[string]*chv1.Channel) (map[string]*dplv1.Deployable, error) {
+	channelmap map[string]*chv1.Channel, logger logr.Logger) (map[string]*dplv1.Deployable, error) {
 	if len(instance.GetFinalizers()) == 0 {
 		annotations := instance.Annotations
 		if channelNsMap[instance.Namespace] != "" && annotations != nil && annotations[chv1.KeyChannelSource] != "" && parent == nil {
-			klog.V(debugLevel).Infof("Delete instance: The parent of the instance not found: %#v, %#v", annotations[chv1.KeyChannelSource], instance)
+			r.Log.Info(fmt.Sprintf("Delete instance: The parent of the instance not found: %#v, %#v", annotations[chv1.KeyChannelSource], instance))
 			return nil, r.Client.Delete(context.TODO(), instance)
 		}
 
 		for _, chname := range instance.Spec.Channels {
 			ch, ok := channelmap[chname]
 			if !ok {
-				klog.Errorf("failed to find channel name %v for deployable %v/%v", chname, instance.Namespace, instance.Name)
+				logger.Info(fmt.Sprintf("failed to find channel name %v for deployable %v/%v", chname, instance.Namespace, instance.Name))
 				continue
 			}
 
-			if err := r.propagateDeployableToChannel(instance, dplmap, ch); err != nil {
-				klog.Error("Failed to validate deplyable for ", instance)
+			if err := r.propagateDeployableToChannel(instance, dplmap, ch, logger); err != nil {
+				logger.Info(fmt.Sprintf("failed to validate deplyable for %v ", instance))
 			}
 
 			delete(channelmap, chname)
 		}
 
 		for _, ch := range channelmap {
-			if err := r.propagateDeployableToChannel(instance, dplmap, ch); err != nil {
-				klog.Errorf("Failed to propagate %v To Channel due to %v ", instance, err)
+			if err := r.propagateDeployableToChannel(instance, dplmap, ch, logger); err != nil {
+				logger.Error(err, fmt.Sprintf("Failed to propagate %v To Channel", instance))
 			}
 		}
 	}
