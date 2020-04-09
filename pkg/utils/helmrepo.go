@@ -22,16 +22,16 @@ import (
 	"strconv"
 
 	"github.com/ghodss/yaml"
+	"github.com/go-logr/logr"
 	"github.com/pkg/errors"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/helm/pkg/repo"
-	"k8s.io/klog"
 )
 
 const InsecureSkipVerifyFlag = "insecureSkipVerify"
 
-func decideHTTPClient(repoURL string, chnRefCfgMap *corev1.ConfigMap) *http.Client {
-	klog.V(infoLevel).Info(repoURL)
+func decideHTTPClient(repoURL string, chnRefCfgMap *corev1.ConfigMap, logger logr.Logger) *http.Client {
+	logger.Info(repoURL)
 
 	// rootsCA is loading from host if not configed, https://golang.org/src/crypto/x509/root_linux.go
 	tlsConfig := &tls.Config{}
@@ -39,7 +39,7 @@ func decideHTTPClient(repoURL string, chnRefCfgMap *corev1.ConfigMap) *http.Clie
 	if chnRefCfgMap != nil && chnRefCfgMap.Data[InsecureSkipVerifyFlag] != "" {
 		b, err := strconv.ParseBool(chnRefCfgMap.Data[InsecureSkipVerifyFlag])
 		if err != nil {
-			klog.Warning("unable to parse insecureSkipVerify false, using default value: false")
+			logger.Error(err, "unable to parse insecureSkipVerify false, using default value: false")
 		}
 
 		tlsConfig.InsecureSkipVerify = b
@@ -64,10 +64,10 @@ func buildRepoURL(repoURL string) string {
 	return validURL + "index.yaml"
 }
 
-func GetChartIndex(chnPathname string, chnRefCfgMap *corev1.ConfigMap) (*http.Response, error) {
+func GetChartIndex(chnPathname string, chnRefCfgMap *corev1.ConfigMap, logger logr.Logger) (*http.Response, error) {
 	repoURL := buildRepoURL(chnPathname)
 
-	client := decideHTTPClient(repoURL, chnRefCfgMap)
+	client := decideHTTPClient(repoURL, chnRefCfgMap, logger)
 
 	resp, err := client.Get(repoURL)
 	if err != nil {
@@ -77,9 +77,9 @@ func GetChartIndex(chnPathname string, chnRefCfgMap *corev1.ConfigMap) (*http.Re
 	return resp, nil
 }
 
-type LoadIndexPageFunc func(string, *corev1.ConfigMap) (*http.Response, error)
+type LoadIndexPageFunc func(string, *corev1.ConfigMap, logr.Logger) (*http.Response, error)
 
-func LoadLocalIdx(idxPath string, cfg *corev1.ConfigMap) (*http.Response, error) {
+func LoadLocalIdx(idxPath string, cfg *corev1.ConfigMap, lgger logr.Logger) (*http.Response, error) {
 	localDir := http.Dir(idxPath)
 	content, err := localDir.Open("index.yaml")
 
@@ -95,22 +95,22 @@ func LoadLocalIdx(idxPath string, cfg *corev1.ConfigMap) (*http.Response, error)
 }
 
 // GetHelmRepoIndex get the index file from helm repository
-func GetHelmRepoIndex(channelPathName string, chnRefCfgMap *corev1.ConfigMap, loadIdx LoadIndexPageFunc) (*repo.IndexFile, error) {
-	resp, err := loadIdx(channelPathName, chnRefCfgMap)
+func GetHelmRepoIndex(channelPathName string, chnRefCfgMap *corev1.ConfigMap, loadIdx LoadIndexPageFunc, logger logr.Logger) (*repo.IndexFile, error) {
+	resp, err := loadIdx(channelPathName, chnRefCfgMap, logger)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to get chart index")
 	}
 
 	defer resp.Body.Close()
 
-	klog.V(debugLevel).Info("Done retrieving URL: ", buildRepoURL(channelPathName))
+	logger.Info(fmt.Sprint("Done retrieving URL: ", buildRepoURL(channelPathName)))
 
 	body, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
 		return nil, errors.Wrap(err, fmt.Sprintf("unable to read body of %v", buildRepoURL(channelPathName)))
 	}
 
-	klog.V(debugLevel).Info("Index file: \n", string(body))
+	logger.V(3).Info(fmt.Sprintf("Index file: %v", string(body)))
 
 	i := &repo.IndexFile{}
 	if err := yaml.Unmarshal(body, i); err != nil {
