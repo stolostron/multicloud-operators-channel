@@ -287,7 +287,7 @@ func prepareDeployalbeTemplate(dpl *dplv1.Deployable, log logr.Logger) (*unstruc
 	dpltpl := &unstructured.Unstructured{}
 
 	if dpl.Spec.Template == nil {
-		log.Info(fmt.Sprintf("skiped, processing deployable without template: %v", dpl))
+		log.Info(fmt.Sprintf("skipped, processing deployable without template: %v", dpl))
 		return dpltpl, errors.New(fmt.Sprintf("processing deployable %v without template", dpl))
 	}
 

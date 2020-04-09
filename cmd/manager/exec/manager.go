@@ -24,7 +24,6 @@ import (
 	"k8s.io/klog"
 
 	// Import all Kubernetes client auth plugins (e.g. Azure, GCP, OIDC, etc.)
-
 	_ "k8s.io/client-go/plugin/pkg/client/auth"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/record"
@@ -34,7 +33,6 @@ import (
 	"github.com/operator-framework/operator-sdk/pkg/leader"
 
 	"github.com/operator-framework/operator-sdk/pkg/metrics"
-	"github.com/operator-framework/operator-sdk/pkg/restmapper"
 	sdkVersion "github.com/operator-framework/operator-sdk/version"
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
@@ -74,8 +72,6 @@ func printVersion() {
 
 //RunManager initial controller, synchronizer and start manager
 func RunManager(sig <-chan struct{}) {
-	//uOpts := zap.RawZapOpts(uzap.AddCaller(), uzap.AddStacktrace(zapcore.DebugLevel))
-	//zlogger := zap.New(zap.UseDevMode(options.debugLogging), uOpts)
 	logf.SetLogger(zap.Logger())
 
 	printVersion()
@@ -97,10 +93,7 @@ func RunManager(sig <-chan struct{}) {
 	}
 
 	// Create a new Cmd to provide shared dependencies and start components
-	mgr, err := manager.New(cfg, manager.Options{
-		MapperProvider:     restmapper.NewDynamicRESTMapper,
-		MetricsBindAddress: fmt.Sprintf("%s:%d", metricsHost, metricsPort),
-	})
+	mgr, err := manager.New(cfg, manager.Options{MetricsBindAddress: fmt.Sprintf("%s:%d", metricsHost, metricsPort)})
 	if err != nil {
 		logger.Error(err, "")
 		os.Exit(exitCode)

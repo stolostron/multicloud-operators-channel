@@ -27,6 +27,7 @@ import (
 
 func TestGetConfig(t *testing.T) {
 	var opts []zap.Option
+
 	type fields struct {
 		name              string
 		inEncoder         *encoderValue
@@ -37,6 +38,7 @@ func TestGetConfig(t *testing.T) {
 		inDevel           bool
 		inStackTraceLevel *stackLevelValue
 	}
+
 	tests := []struct {
 		name    string
 		fields  fields
@@ -269,7 +271,7 @@ func TestGetConfig(t *testing.T) {
 				},
 				inStackTraceLevel: &stackLevelValue{
 					set:   true,
-					level: zapcore.Level(zapcore.PanicLevel),
+					level: zapcore.PanicLevel,
 				},
 				expected: &config{
 					encoder: newJSONEncoder(),

@@ -21,6 +21,7 @@ import (
 	"strings"
 
 	"github.com/go-logr/logr"
+
 	chv1 "github.com/open-cluster-management/multicloud-operators-channel/pkg/apis/apps/v1"
 	gitsync "github.com/open-cluster-management/multicloud-operators-channel/pkg/synchronizer/githubsynchronizer"
 	helmsync "github.com/open-cluster-management/multicloud-operators-channel/pkg/synchronizer/helmreposynchronizer"
@@ -143,11 +144,9 @@ func (r *ReconcileDeployable) appendEvent(rootInstance *chv1.Channel, dplkey typ
 // +kubebuilder:rbac:groups=apps.open-cluster-management.io,resources=channels,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups=apps.open-cluster-management.io,resources=channels/status,verbs=get;update;patch
 func (r *ReconcileDeployable) Reconcile(request reconcile.Request) (reconcile.Result, error) {
-	// Fetch the Channel instance
-	//r.Log = r.Log.WithValues("dpl-reconcile", request.NamespacedName)
-
 	log := r.Log.WithValues("dpl-reconcile", request.NamespacedName)
 	log.Info(fmt.Sprintf("Starting %v reconcile loop for %v", controllerName, request.NamespacedName))
+
 	defer log.Info(fmt.Sprintf("Finish %v reconcile loop for %v", controllerName, request.NamespacedName))
 
 	instance := &dplv1.Deployable{}
@@ -219,7 +218,6 @@ func (r *ReconcileDeployable) handleOrphanDeployable(dplmap map[string]*dplv1.De
 		parsedstr := strings.Split(chstr, "/")
 		if len(parsedstr) != 2 {
 			logger.Info(fmt.Sprintf("invalid channel namespacedName: %v", chstr))
-
 			continue
 		}
 
@@ -237,11 +235,13 @@ func (r *ReconcileDeployable) handleOrphanDeployable(dplmap map[string]*dplv1.De
 	}
 }
 
-func (r *ReconcileDeployable) propagateDeployableToChannel(deployable *dplv1.Deployable,
-	dplmap map[string]*dplv1.Deployable, channel *chv1.Channel, logger logr.Logger) error {
-
+func (r *ReconcileDeployable) propagateDeployableToChannel(
+	deployable *dplv1.Deployable, dplmap map[string]*dplv1.Deployable,
+	channel *chv1.Channel, logger logr.Logger) error {
 	logger.Info("enter propagateDeployableToChannel")
+
 	defer logger.Info("exit propagateDeployableToChannel")
+
 	chkey := types.NamespacedName{Name: channel.Name, Namespace: channel.Namespace}.String()
 
 	if deployable.Namespace == channel.Namespace {

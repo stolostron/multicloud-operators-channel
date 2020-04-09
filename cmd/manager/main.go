@@ -23,8 +23,9 @@ import (
 	"k8s.io/klog"
 	"sigs.k8s.io/controller-runtime/pkg/manager/signals"
 
-	"github.com/open-cluster-management/multicloud-operators-channel/pkg/log/zap"
 	"github.com/spf13/pflag"
+
+	"github.com/open-cluster-management/multicloud-operators-channel/pkg/log/zap"
 
 	"github.com/open-cluster-management/multicloud-operators-channel/cmd/manager/exec"
 )

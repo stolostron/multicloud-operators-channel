@@ -129,7 +129,6 @@ func ValidateDeployableToChannel(deployable *dplv1.Deployable, channel *chv1.Cha
 func FindDeployableForChannelsInMap(cl client.Client, deployable *dplv1.Deployable,
 	channelnsMap map[string]string, log logr.Logger) (*dplv1.Deployable,
 	map[string]*dplv1.Deployable, error) {
-
 	if len(channelnsMap) == 0 {
 		return nil, nil, nil
 	}

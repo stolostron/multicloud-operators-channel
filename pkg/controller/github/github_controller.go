@@ -19,9 +19,8 @@ import (
 	"fmt"
 	"strings"
 
-	"k8s.io/klog"
-
 	"github.com/go-logr/logr"
+
 	chv1 "github.com/open-cluster-management/multicloud-operators-channel/pkg/apis/apps/v1"
 	gitsync "github.com/open-cluster-management/multicloud-operators-channel/pkg/synchronizer/githubsynchronizer"
 	helmsync "github.com/open-cluster-management/multicloud-operators-channel/pkg/synchronizer/helmreposynchronizer"
@@ -44,7 +43,6 @@ import (
  */
 
 const (
-	debugLevel      = klog.Level(10)
 	controllerName  = "github"
 	controllerSetup = "github-setup"
 )
@@ -71,6 +69,7 @@ func add(mgr manager.Manager, r reconcile.Reconciler, logger logr.Logger) error 
 	// Create a new controller
 	c, err := controller.New(controllerName, mgr, controller.Options{Reconciler: r})
 	if err != nil {
+		logger.Error(err, "failed to create a new controller")
 		return err
 	}
 
@@ -102,6 +101,7 @@ func (r *ReconcileChannel) Reconcile(request reconcile.Request) (reconcile.Resul
 	// Fetch the Deployable instance
 	log := r.Log.WithValues("github-reconcile", request.NamespacedName)
 	log.Info(fmt.Sprintf("Starting %v reconcile loop for %v", controllerName, request.NamespacedName))
+
 	defer log.Info(fmt.Sprintf("Finish %v reconcile loop for %v", controllerName, request.NamespacedName))
 
 	instance := &chv1.Channel{}
@@ -114,8 +114,8 @@ func (r *ReconcileChannel) Reconcile(request reconcile.Request) (reconcile.Resul
 			delete(r.ChannelSynchronizer.ChannelMap, request.NamespacedName)
 			return reconcile.Result{}, nil
 		}
-		// Error reading the object - requeue the request.
-		log.Error(err, fmt.Sprintf("reconciling - Errored."))
+		// Error reading the object - requeue th request.
+		log.Error(err, "reconciling - Errored.")
 
 		return reconcile.Result{}, err
 	}
@@ -129,6 +129,7 @@ func (r *ReconcileChannel) Reconcile(request reconcile.Request) (reconcile.Resul
 		if r.ChannelSynchronizer != nil {
 			delete(r.ChannelSynchronizer.ChannelMap, request.NamespacedName)
 		}
+
 		return reconcile.Result{}, nil
 	}
 

@@ -111,6 +111,7 @@ func add(mgr manager.Manager, r reconcile.Reconciler, logger logr.Logger) error 
 	}
 
 	logger.Info("failed to add CRD scheme to manager")
+
 	if err := apiextensionsv1beta1.AddToScheme(mgr.GetScheme()); err != nil {
 		logger.Error(err, "failed to add CRD scheme to manager")
 	}
@@ -138,7 +139,6 @@ type clusterMapper struct {
 
 // Map triggers all placements
 func (mapper *clusterMapper) Map(obj handler.MapObject) []reconcile.Request {
-
 	cname := obj.Meta.GetName()
 
 	mapper.logger.Info(fmt.Sprintf("In cluster Mapper for %v", cname))
@@ -301,8 +301,9 @@ func (r *ReconcileChannel) updatedReferencedObjectLabels(ref *corev1.ObjectRefer
 	return nil
 }
 
-func (r *ReconcileChannel) syncReferredObjAnnotation(rq reconcile.Request, ref *corev1.ObjectReference, objGvk schema.GroupVersionKind, logger logr.Logger) error {
-
+func (r *ReconcileChannel) syncReferredObjAnnotation(
+	rq reconcile.Request,
+	ref *corev1.ObjectReference, objGvk schema.GroupVersionKind, logger logr.Logger) error {
 	chnKey := types.NamespacedName{Name: rq.Name, Namespace: rq.Namespace}
 
 	uObjList := &unstructured.UnstructuredList{}

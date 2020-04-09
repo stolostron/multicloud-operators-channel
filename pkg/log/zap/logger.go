@@ -44,9 +44,12 @@ func createLogger(conf config, destWriter io.Writer) logr.Logger {
 			return zapcore.NewSampler(core, time.Second, 100, 100)
 		}))
 	}
+
 	conf.opts = append(conf.opts, zap.AddCallerSkip(1), zap.ErrorOutput(syncer))
+
 	log := zap.New(zapcore.NewCore(conf.encoder, syncer, conf.level))
 	log = log.WithOptions(conf.opts...)
+
 	return zapr.NewLogger(log)
 }
 
@@ -81,12 +84,15 @@ func getConfig() config {
 	if stacktraceLevel.set {
 		c.stackTraceLevel = stacktraceLevel.level
 	}
+
 	c.opts = append(c.opts, zap.AddStacktrace(c.stackTraceLevel))
 
 	var ecfs []encoderConfigFunc
+
 	if encoderVal.set {
 		newEncoder = encoderVal.newEncoder
 	}
+
 	if timeEncodingVal.set {
 		ecfs = append(ecfs, withTimeEncoding(timeEncodingVal.timeEncoder))
 	}
@@ -96,6 +102,7 @@ func getConfig() config {
 	if levelVal.set {
 		c.level = zap.NewAtomicLevelAt(levelVal.level)
 	}
+
 	if sampleVal.set {
 		c.sample = sampleVal.sample
 	}
@@ -107,5 +114,6 @@ func getConfig() config {
 	}
 
 	c.opts = append(c.opts, zap.AddCaller())
+
 	return c
 }

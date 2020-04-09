@@ -164,7 +164,8 @@ func parseBucketAndEndpoint(pathName string) (string, string) {
 	return endpoint, bucket
 }
 
-func (desc *ChannelDescriptor) updateChannelRegistry(chn *chv1.Channel, accessKeyID, secretAccessKey string, objStoreHandler ObjectStore, log logr.Logger) error {
+func (desc *ChannelDescriptor) updateChannelRegistry(chn *chv1.Channel, accessKeyID, secretAccessKey string,
+	objStoreHandler ObjectStore, log logr.Logger) error {
 	chndesc := &ChannelDescription{}
 
 	endpoint, bucket := parseBucketAndEndpoint(chn.Spec.Pathname)

@@ -141,7 +141,7 @@ func TestFindDeployableForChannelsInMap(t *testing.T) {
 	for _, tC := range testCases {
 		t.Run(tC.desc, func(t *testing.T) {
 			p, dpls, err := utils.FindDeployableForChannelsInMap(c, tC.dpl, tC.ch, tlog.NullLogger{})
-			if assertDpls(tC.expect, chName, p, dpls[chName], err) {
+			if assertDpls(tC.expect, p, dpls[chName], err) {
 				t.Errorf("wanted %#v, got %v %v %v", tC.expect, dpls, p, err)
 			}
 		})
@@ -156,6 +156,7 @@ func listDplObj(cl client.Client) {
 		log.Printf("Failed to list deployables for")
 		return
 	}
+
 	for _, dpl := range dpllist.Items {
 		log.Printf("have dpl %v/%v", dpl.GetName(), dpl.GetNamespace())
 	}
@@ -163,7 +164,7 @@ func listDplObj(cl client.Client) {
 	log.Printf("In total %v dpl is found", len(dpllist.Items))
 }
 
-func assertDpls(expect Expected, cname string, pdpls *dplv1.Deployable, dpls *dplv1.Deployable, err error) bool {
+func assertDpls(expect Expected, pdpls *dplv1.Deployable, dpls *dplv1.Deployable, err error) bool {
 	if expect.err != err {
 		return false
 	}

@@ -66,6 +66,7 @@ type encoderValue struct {
 
 func (v *encoderValue) Set(e string) error {
 	v.set = true
+
 	switch e {
 	case "json":
 		v.newEncoder = newJSONEncoder
@@ -74,7 +75,9 @@ func (v *encoderValue) Set(e string) error {
 	default:
 		return fmt.Errorf("unknown encoder \"%s\"", e)
 	}
+
 	v.str = e
+
 	return nil
 }
 
@@ -88,17 +91,21 @@ func (v encoderValue) Type() string {
 
 func newJSONEncoder(ecfs ...encoderConfigFunc) zapcore.Encoder {
 	encoderConfig := zap.NewProductionEncoderConfig()
+
 	for _, f := range ecfs {
 		f(&encoderConfig)
 	}
+
 	return zapcore.NewJSONEncoder(encoderConfig)
 }
 
 func newConsoleEncoder(ecfs ...encoderConfigFunc) zapcore.Encoder {
 	encoderConfig := zap.NewDevelopmentEncoderConfig()
+
 	for _, f := range ecfs {
 		f(&encoderConfig)
 	}
+
 	return zapcore.NewConsoleEncoder(encoderConfig)
 }
 
@@ -110,6 +117,7 @@ type levelValue struct {
 func (v *levelValue) Set(l string) error {
 	v.set = true
 	lvl, err := intLogLevel(l)
+
 	if err != nil {
 		return err
 	}
@@ -119,11 +127,13 @@ func (v *levelValue) Set(l string) error {
 	if lvl < -3 {
 		fs := flag.NewFlagSet("", flag.ContinueOnError)
 		klog.InitFlags(fs)
+
 		err := fs.Set("v", fmt.Sprintf("%v", -1*lvl))
 		if err != nil {
 			return err
 		}
 	}
+
 	return nil
 }
 
@@ -142,12 +152,14 @@ type stackLevelValue struct {
 
 func (v *stackLevelValue) Set(l string) error {
 	v.set = true
+
 	lvl, err := intLogLevel(l)
 	if err != nil {
 		return err
 	}
 
 	v.level = zapcore.Level(int8(lvl))
+
 	return nil
 }
 
@@ -165,7 +177,9 @@ func (v stackLevelValue) Type() string {
 
 func intLogLevel(l string) (int, error) {
 	lower := strings.ToLower(l)
+
 	var lvl int
+
 	switch lower {
 	case "debug":
 		lvl = -1
@@ -185,6 +199,7 @@ func intLogLevel(l string) (int, error) {
 			return lvl, fmt.Errorf("invalid log level \"%s\"", l)
 		}
 	}
+
 	return lvl, nil
 }
 
@@ -195,8 +210,10 @@ type sampleValue struct {
 
 func (v *sampleValue) Set(s string) error {
 	var err error
+
 	v.set = true
 	v.sample, err = strconv.ParseBool(s)
+
 	return err
 }
 
@@ -226,9 +243,6 @@ func (v *timeEncodingValue) Set(s string) error {
 	//
 	// Set s to "epoch" if it doesn't match one of the known formats, so that
 	// it aligns with the default time encoder function.
-	//
-	// TODO: remove this entire switch statement if UnmarshalText is ever
-	// refactored to return an error.
 	switch s {
 	case "iso8601", "ISO8601", "millis", "nanos":
 	default:
@@ -236,6 +250,7 @@ func (v *timeEncodingValue) Set(s string) error {
 	}
 
 	v.str = s
+
 	return v.timeEncoder.UnmarshalText([]byte(s))
 }
 
