@@ -207,7 +207,7 @@ func (r *ReconcileDeployable) handleOrphanDeployable(dplmap map[string]*dplv1.De
 
 		err := r.Client.Delete(context.TODO(), dpl)
 		if err != nil {
-			logger.Error(err, fmt.Sprintf("Failed to delete %v due to %v ", dpl.Name))
+			logger.Error(err, fmt.Sprintf("Failed to delete %v ", dpl.Name))
 		}
 
 		//record events

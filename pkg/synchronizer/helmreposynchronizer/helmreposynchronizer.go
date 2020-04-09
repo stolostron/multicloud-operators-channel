@@ -129,7 +129,7 @@ func (sync *ChannelSynchronizer) syncChannel(chn *chv1.Channel, localIdxFunc uti
 		chartmap := make(map[string]bool)
 
 		for _, chart := range cv {
-			logf.V(5).Info(fmt.Sprintf("Chart: %v Version: ", chart.Name, chart.Version))
+			logf.V(5).Info(fmt.Sprintf("Chart: %v Version: %v", chart.Name, chart.Version))
 
 			chartmap[chart.Version] = false
 		}

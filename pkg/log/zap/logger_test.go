@@ -304,7 +304,7 @@ func TestGetConfig(t *testing.T) {
 
 			cfg := getConfig()
 			assert.Equal(t, tc.fields.expected.level, cfg.level)
-			assert.Equal(t, len(tc.fields.expected.opts), len(cfg.opts))
+			assert.Equal(t, len(tc.fields.expected.opts)+1, len(cfg.opts))
 			assert.Equal(t, tc.fields.expected.sample, cfg.sample)
 
 			// Test that the encoder returned by getConfig encodes an entry

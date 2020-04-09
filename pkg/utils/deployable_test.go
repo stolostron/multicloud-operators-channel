@@ -23,9 +23,9 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
-	"k8s.io/klog"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
+	tlog "github.com/go-logr/logr/testing"
 	"github.com/google/go-cmp/cmp"
 	"github.com/onsi/gomega"
 
@@ -140,7 +140,7 @@ func TestFindDeployableForChannelsInMap(t *testing.T) {
 
 	for _, tC := range testCases {
 		t.Run(tC.desc, func(t *testing.T) {
-			p, dpls, err := utils.FindDeployableForChannelsInMap(c, tC.dpl, tC.ch)
+			p, dpls, err := utils.FindDeployableForChannelsInMap(c, tC.dpl, tC.ch, tlog.NullLogger{})
 			if assertDpls(tC.expect, chName, p, dpls[chName], err) {
 				t.Errorf("wanted %#v, got %v %v %v", tC.expect, dpls, p, err)
 			}
@@ -156,7 +156,6 @@ func listDplObj(cl client.Client) {
 		log.Printf("Failed to list deployables for")
 		return
 	}
-
 	for _, dpl := range dpllist.Items {
 		log.Printf("have dpl %v/%v", dpl.GetName(), dpl.GetNamespace())
 	}
@@ -165,8 +164,6 @@ func listDplObj(cl client.Client) {
 }
 
 func assertDpls(expect Expected, cname string, pdpls *dplv1.Deployable, dpls *dplv1.Deployable, err error) bool {
-	klog.Infof("expected %v, cname %v", expect, cname)
-
 	if expect.err != err {
 		return false
 	}

@@ -18,6 +18,7 @@ import (
 	"context"
 	"time"
 
+	tlog "github.com/go-logr/logr/testing"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -68,7 +69,7 @@ var _ = Describe("reconcile github channel", func() {
 		BeforeEach(func() {
 			gsync, err = gitsync.CreateGithubSynchronizer(k8sManager.GetConfig(), k8sManager.GetScheme(), interval)
 			Expect(err).ShouldNot(HaveOccurred())
-			rec = newReconciler(k8sManager, gsync, nil)
+			rec = newReconciler(k8sManager, gsync, tlog.NullLogger{})
 		})
 
 		It("deletion reconcile", func() {
@@ -108,7 +109,7 @@ var _ = Describe("reconcile github channel", func() {
 			gsync, err = gitsync.CreateGithubSynchronizer(k8sManager.GetConfig(), k8sManager.GetScheme(), interval)
 			chn.Spec.Type = chv1.ChannelType("github")
 			Expect(err).ShouldNot(HaveOccurred())
-			rec = newReconciler(k8sManager, nil, nil)
+			rec = newReconciler(k8sManager, nil, tlog.NullLogger{})
 		})
 
 		It("deletion reconcile with empty channel registry", func() {
@@ -118,6 +119,7 @@ var _ = Describe("reconcile github channel", func() {
 					Namespace: chn.Namespace,
 				},
 			}
+			rec = newReconciler(k8sManager, gsync, tlog.NullLogger{})
 
 			_, err = rec.Reconcile(req)
 			Expect(err).NotTo(HaveOccurred())
@@ -132,7 +134,7 @@ var _ = Describe("reconcile github channel", func() {
 			}
 
 			gsync.ChannelMap[chkey] = chn
-			rec = newReconciler(k8sManager, gsync, nil)
+			rec = newReconciler(k8sManager, gsync, tlog.NullLogger{})
 			_, err = rec.Reconcile(req)
 			Expect(err).NotTo(HaveOccurred())
 
@@ -152,6 +154,8 @@ var _ = Describe("reconcile github channel", func() {
 				Expect(k8sClient.Delete(ctx, chn)).Should(Succeed())
 			}()
 			time.Sleep(k8swait)
+
+			rec = newReconciler(k8sManager, gsync, tlog.NullLogger{})
 
 			_, err = rec.Reconcile(req)
 			Expect(err).NotTo(HaveOccurred())

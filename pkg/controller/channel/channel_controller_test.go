@@ -19,6 +19,7 @@ import (
 	"testing"
 	"time"
 
+	tlog "github.com/go-logr/logr/testing"
 	"github.com/onsi/gomega"
 	"golang.org/x/net/context"
 	corev1 "k8s.io/api/core/v1"
@@ -76,8 +77,8 @@ func TestChannelControllerReconcile(t *testing.T) {
 	eventBroadcaster.StartRecordingToSink(&typedcorev1.EventSinkImpl{Interface: hubClientSet.CoreV1().Events("")})
 	recorder := eventBroadcaster.NewRecorder(scheme.Scheme, corev1.EventSource{Component: "channel"})
 
-	recFn, requests := SetupTestReconcile(newReconciler(mgr, recorder))
-	g.Expect(add(mgr, recFn)).NotTo(gomega.HaveOccurred())
+	recFn, requests := SetupTestReconcile(newReconciler(mgr, recorder, tlog.NullLogger{}))
+	g.Expect(add(mgr, recFn, tlog.NullLogger{})).NotTo(gomega.HaveOccurred())
 
 	stopMgr, mgrStopped := StartTestManager(mgr, g)
 
@@ -143,7 +144,7 @@ func TestChannelAnnotateReferredSecertAndConfigMap(t *testing.T) {
 		mgrStopped.Wait()
 	}()
 
-	rec := newReconciler(mgr, tRecorder)
+	rec := newReconciler(mgr, tRecorder, tlog.NullLogger{})
 
 	defer c.Delete(context.TODO(), refSrt)
 	g.Expect(c.Create(context.TODO(), refSrt)).NotTo(gomega.HaveOccurred())
@@ -295,7 +296,7 @@ func TestChannelReconcileWithoutClusterCRD(t *testing.T) {
 		mgrStopped.Wait()
 	}()
 
-	rec := newReconciler(mgr, tRecorder)
+	rec := newReconciler(mgr, tRecorder, tlog.NullLogger{})
 
 	defer c.Delete(context.TODO(), refSrt)
 	g.Expect(c.Create(context.TODO(), refSrt)).NotTo(gomega.HaveOccurred())
