@@ -178,9 +178,11 @@ func (sync *ChannelSynchronizer) processYamlFile(chn *chv1.Channel, files []os.F
 							continue
 						}
 
-						err = sync.handleSingleDeployable(chn, dir, resource, t, newDplList)
-						if err != nil {
-							klog.Error(err.Error())
+						if !strings.EqualFold(t.Kind, "Kustomization") {
+							err = sync.handleSingleDeployable(chn, dir, resource, t, newDplList)
+							if err != nil {
+								klog.Error(err.Error())
+							}
 						}
 					}
 				}
