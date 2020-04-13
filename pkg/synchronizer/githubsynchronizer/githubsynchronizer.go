@@ -97,7 +97,9 @@ type kubeResourceMetadata struct {
 }
 
 // CreateGithubSynchronizer - creates an instance of ChannelSynchronizer
-func CreateGithubSynchronizer(config *rest.Config, scheme *runtime.Scheme, syncInterval int) (*ChannelSynchronizer, error) {
+func CreateGithubSynchronizer(config *rest.Config,
+	scheme *runtime.Scheme,
+	syncInterval int) (*ChannelSynchronizer, error) {
 	client, err := client.New(config, client.Options{})
 	if err != nil {
 		klog.Error("Failed to initialize client for synchronizer. err: ", err)
@@ -151,7 +153,11 @@ func (sync *ChannelSynchronizer) syncChannelsWithGitRepo() {
 	}
 }
 
-func (sync *ChannelSynchronizer) processYamlFile(chn *chv1.Channel, files []os.FileInfo, cloneDir, dir string, newDplList map[string]*dplv1.Deployable) {
+func (sync *ChannelSynchronizer) processYamlFile(
+	chn *chv1.Channel,
+	files []os.FileInfo,
+	cloneDir, dir string,
+	newDplList map[string]*dplv1.Deployable) {
 	for _, f := range files {
 		// If YAML or YML,
 		if f.Mode().IsRegular() {
@@ -161,7 +167,11 @@ func (sync *ChannelSynchronizer) processYamlFile(chn *chv1.Channel, files []os.F
 				file, err := ioutil.ReadFile(filepath.Join(filepath.Clean(cloneDir), filepath.Clean(dir), filepath.Clean(f.Name())))
 
 				if err != nil {
-					klog.Error(err, "Failed to read YAML file "+filepath.Join(filepath.Clean(cloneDir), filepath.Clean(dir), filepath.Clean(f.Name())))
+					klog.Error(err,
+						"Failed to read YAML file "+filepath.Join(filepath.Clean(cloneDir),
+							filepath.Clean(dir),
+							filepath.Clean(f.Name())))
+
 					continue
 				}
 
@@ -178,9 +188,11 @@ func (sync *ChannelSynchronizer) processYamlFile(chn *chv1.Channel, files []os.F
 							continue
 						}
 
-						err = sync.handleSingleDeployable(chn, dir, resource, t, newDplList)
-						if err != nil {
-							klog.Error(err.Error())
+						if !strings.EqualFold(t.Kind, "Kustomization") {
+							err = sync.handleSingleDeployable(chn, dir, resource, t, newDplList)
+							if err != nil {
+								klog.Error(err.Error())
+							}
 						}
 					}
 				}
@@ -396,7 +408,10 @@ func (sync *ChannelSynchronizer) handleResourceDeployable(
 	return nil
 }
 
-func (sync *ChannelSynchronizer) handleHelmDeployable(dpl dplv1.Deployable, chn *chv1.Channel, generalmap map[string]map[string]bool) error {
+func (sync *ChannelSynchronizer) handleHelmDeployable(
+	dpl dplv1.Deployable,
+	chn *chv1.Channel,
+	generalmap map[string]map[string]bool) error {
 	klog.V(debugLevel).Infof("Synchronizing helm release deployable %v", dpl.Name)
 
 	obj := &helmTemplate{}
@@ -444,7 +459,11 @@ func (sync *ChannelSynchronizer) handleHelmDeployable(dpl dplv1.Deployable, chn 
 			klog.Infof("channel %v path changed to %v", chn.GetName(), chn.Spec.Pathname)
 			//here might need to do a better code review to see if `crepo = chn.Spec.Pathname` is needed
 			if err := sync.kubeClient.Update(context.TODO(), &dpl); err != nil {
-				return errors.Wrap(err, fmt.Sprintf("failed to update deployable %v in helm repo channel %v", dpl.Name, chn.Spec.Pathname))
+				return errors.Wrap(
+					err,
+					fmt.Sprintf("failed to update deployable %v in helm repo channel %v",
+						dpl.Name,
+						chn.Spec.Pathname))
 			}
 		}
 	}
