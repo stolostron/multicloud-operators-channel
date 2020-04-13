@@ -171,6 +171,7 @@ func (sync *ChannelSynchronizer) processYamlFile(
 						"Failed to read YAML file "+filepath.Join(filepath.Clean(cloneDir),
 							filepath.Clean(dir),
 							filepath.Clean(f.Name())))
+
 					continue
 				}
 
