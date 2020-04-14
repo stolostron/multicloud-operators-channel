@@ -22,7 +22,6 @@ import (
 	"github.com/go-logr/logr"
 
 	chv1 "github.com/open-cluster-management/multicloud-operators-channel/pkg/apis/apps/v1"
-	gitsync "github.com/open-cluster-management/multicloud-operators-channel/pkg/synchronizer/githubsynchronizer"
 	helmsync "github.com/open-cluster-management/multicloud-operators-channel/pkg/synchronizer/helmreposynchronizer"
 	"github.com/open-cluster-management/multicloud-operators-channel/pkg/utils"
 
@@ -50,8 +49,7 @@ const (
 // Add creates a new Deployable Controller and adds it to the Manager with default RBAC. The Manager will set fields on the Controller
 // and Start it when the Manager is Started.
 func Add(mgr manager.Manager, recorder record.EventRecorder, logger logr.Logger,
-	channelDescriptor *utils.ChannelDescriptor, sync *helmsync.ChannelSynchronizer,
-	gsync *gitsync.ChannelSynchronizer) error {
+	channelDescriptor *utils.ChannelDescriptor, sync *helmsync.ChannelSynchronizer) error {
 	return add(mgr, newReconciler(mgr, sync, logger.WithName(controllerName)), logger.WithName(controllerSetup))
 }
 
