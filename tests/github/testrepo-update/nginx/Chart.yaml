@@ -1,7 +1,0 @@
-apiVersion: v1
-name: nginx
-version: 1.1.1
-appVersion: 0.1.0
-keywords:
-  - nginx
-kubeVersion: ">=1.10.0-0"
