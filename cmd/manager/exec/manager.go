@@ -48,7 +48,6 @@ import (
 	"github.com/open-cluster-management/multicloud-operators-channel/pkg/utils"
 	"github.com/open-cluster-management/multicloud-operators-channel/pkg/webhook"
 
-	gitsync "github.com/open-cluster-management/multicloud-operators-channel/pkg/synchronizer/githubsynchronizer"
 	helmsync "github.com/open-cluster-management/multicloud-operators-channel/pkg/synchronizer/helmreposynchronizer"
 	objsync "github.com/open-cluster-management/multicloud-operators-channel/pkg/synchronizer/objectstoresynchronizer"
 	placementutils "github.com/open-cluster-management/multicloud-operators-placementrule/pkg/utils"
@@ -134,20 +133,6 @@ func RunManager(sig <-chan struct{}) {
 		os.Exit(exitCode)
 	}
 
-	// Create channel synchronizer for github
-	gsync, err := gitsync.CreateGithubSynchronizer(cfg, mgr.GetScheme(), options.SyncInterval)
-
-	if err != nil {
-		logger.Error(err, "unable to create github syncrhonizer on destination cluster.")
-		os.Exit(exitCode)
-	}
-
-	err = mgr.Add(gsync)
-	if err != nil {
-		logger.Error(err, "failed to register synchronizer.")
-		os.Exit(exitCode)
-	}
-
 	logger.Info("Registering Components.")
 
 	// Setup Scheme for all resources
@@ -173,7 +158,7 @@ func RunManager(sig <-chan struct{}) {
 	// Setup all Controllers
 	logger.Info("Setting up controller")
 
-	if err := controller.AddToManager(mgr, recorder, logger.WithName("controllers"), chdesc, hsync, gsync); err != nil {
+	if err := controller.AddToManager(mgr, recorder, logger.WithName("controllers"), chdesc, hsync); err != nil {
 		logger.Error(err, "unable to register controllers to the manager")
 		os.Exit(exitCode)
 	}
