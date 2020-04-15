@@ -15,107 +15,91 @@
 package deployable
 
 import (
-	"testing"
 	"time"
 
 	tlog "github.com/go-logr/logr/testing"
-	"github.com/onsi/gomega"
 	"golang.org/x/net/context"
 	corev1 "k8s.io/api/core/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/kubernetes/scheme"
 	typedcorev1 "k8s.io/client-go/kubernetes/typed/core/v1"
 	"k8s.io/client-go/tools/record"
-	"k8s.io/klog"
-	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/controller-runtime/pkg/manager"
+
+	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/gomega"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	chv1 "github.com/open-cluster-management/multicloud-operators-channel/pkg/apis/apps/v1"
 	dplv1 "github.com/open-cluster-management/multicloud-operators-deployable/pkg/apis/apps/v1"
 )
 
-var c client.Client
+const (
+	targetNamespace      = "default"
+	targetChannelName    = "channl-deployable-reconcile"
+	targetChannelType    = chv1.ChannelType("namespace")
+	targetDeployableName = "t-deployable"
+	k8swait              = time.Second * 5
+)
 
-var targetNamespace = "default"
-
-var targetChannelName = "channl-deployable-reconcile"
-
-var targetChannelType = chv1.ChannelType("namespace")
-
-var targetDeployableName = "t-deployable"
 var expectedRequest = reconcile.Request{NamespacedName: types.NamespacedName{Name: targetDeployableName, Namespace: targetNamespace}}
 
-const timeout = time.Second * 5
-
-func TestDeployableReconcile(t *testing.T) {
-	g := gomega.NewGomegaWithT(t)
-
-	channelInstance := &chv1.Channel{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      targetChannelName,
-			Namespace: targetNamespace},
-		Spec: chv1.ChannelSpec{
-			Type:     targetChannelType,
-			Pathname: targetNamespace,
-		},
-	}
-
-	deployableInstance := &dplv1.Deployable{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      targetDeployableName,
-			Namespace: targetNamespace,
-		},
-		Spec: dplv1.DeployableSpec{
-			Template: &runtime.RawExtension{
-				Object: &corev1.ConfigMap{},
+var _ = Describe("origin test case", func() {
+	It("should pass", func() {
+		channelInstance := &chv1.Channel{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      targetChannelName,
+				Namespace: targetNamespace},
+			Spec: chv1.ChannelSpec{
+				Type:     targetChannelType,
+				Pathname: targetNamespace,
 			},
-		},
-	}
+		}
 
-	// Setup the Manager and Controller.  Wrap the Controller Reconcile function so it writes each request to a
-	// channel when it is finished.
-	mgr, err := manager.New(cfg, manager.Options{MetricsBindAddress: "0"})
-	g.Expect(err).NotTo(gomega.HaveOccurred())
+		deployableInstance := &dplv1.Deployable{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      targetDeployableName,
+				Namespace: targetNamespace,
+			},
+			Spec: dplv1.DeployableSpec{
+				Template: &runtime.RawExtension{
+					Object: &corev1.ConfigMap{},
+				},
+			},
+		}
 
-	c = mgr.GetClient()
+		//create events handler on hub cluster. All the deployable events will be written to the root deploable on hub cluster.
+		hubClientSet, err := kubernetes.NewForConfig(k8sManager.GetConfig())
+		Expect(err).NotTo(HaveOccurred())
 
-	//create events handler on hub cluster. All the deployable events will be written to the root deploable on hub cluster.
-	hubClientSet, err := kubernetes.NewForConfig(cfg)
-	g.Expect(err).NotTo(gomega.HaveOccurred())
+		eventBroadcaster := record.NewBroadcaster()
+		eventBroadcaster.StartRecordingToSink(&typedcorev1.EventSinkImpl{Interface: hubClientSet.CoreV1().Events("")})
+		recorder := eventBroadcaster.NewRecorder(scheme.Scheme, corev1.EventSource{Component: "channel"})
 
-	eventBroadcaster := record.NewBroadcaster()
-	eventBroadcaster.StartLogging(klog.Infof)
-	eventBroadcaster.StartRecordingToSink(&typedcorev1.EventSinkImpl{Interface: hubClientSet.CoreV1().Events("")})
-	recorder := eventBroadcaster.NewRecorder(scheme.Scheme, corev1.EventSource{Component: "channel"})
+		recFn, requests := SetupTestReconcile(newReconciler(k8sManager, recorder, tlog.NullLogger{}))
+		Expect(add(k8sManager, recFn, tlog.NullLogger{})).NotTo(HaveOccurred())
 
-	recFn, requests := SetupTestReconcile(newReconciler(mgr, recorder, tlog.NullLogger{}))
-	g.Expect(add(mgr, recFn, tlog.NullLogger{})).NotTo(gomega.HaveOccurred())
+		// Create the Channel object and expect the Reconcile
+		Expect(k8sClient.Create(context.TODO(), channelInstance)).NotTo(HaveOccurred())
 
-	stopMgr, mgrStopped := StartTestManager(mgr, g)
+		defer func() {
+			Expect(k8sClient.Delete(context.TODO(), channelInstance)).Should(Succeed())
+		}()
 
-	defer func() {
-		close(stopMgr)
-		mgrStopped.Wait()
-	}()
+		time.Sleep(k8swait)
+		// if there's no deployables, then we won't have any reconcile requests
+		Eventually(requests, k8swait).ShouldNot(Receive(Equal(expectedRequest)))
 
-	// Create the Channel object and expect the Reconcile
-	g.Expect(c.Create(context.TODO(), channelInstance)).NotTo(gomega.HaveOccurred())
+		Expect(k8sClient.Create(context.TODO(), deployableInstance)).NotTo(HaveOccurred())
 
-	defer c.Delete(context.TODO(), channelInstance)
+		defer func() {
+			Expect(k8sClient.Delete(context.TODO(), deployableInstance)).Should(Succeed())
+		}()
+		time.Sleep(k8swait)
 
-	time.Sleep(time.Second * 1)
-	// if there's no deployables, then we won't have any reconcile requests
-	g.Eventually(requests, timeout).ShouldNot(gomega.Receive(gomega.Equal(expectedRequest)))
-
-	g.Expect(c.Create(context.TODO(), deployableInstance)).NotTo(gomega.HaveOccurred())
-
-	defer c.Delete(context.TODO(), deployableInstance)
-	time.Sleep(time.Second * 1)
-
-	//if there's deployables, then the channel update will generate requests on all the existing deployables
-	g.Eventually(requests, timeout).Should(gomega.Receive(gomega.Equal(expectedRequest)))
-}
+		//if there's deployables, then the channel update will generate requests on all the existing deployables
+		Eventually(requests, k8swait).Should(Receive(Equal(expectedRequest)))
+	})
+})
