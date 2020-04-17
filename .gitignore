@@ -75,5 +75,6 @@ tags
 ### VisualStudioCode ###
 .vscode/*
 .history
+.vscode
 # End of https://www.gitignore.io/api/go,vim,emacs,visualstudiocode
 .DS_Store

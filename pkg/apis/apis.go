@@ -18,7 +18,8 @@ package apis
 import (
 	"k8s.io/apimachinery/pkg/runtime"
 	clusterv1alpha1 "k8s.io/cluster-registry/pkg/apis/clusterregistry/v1alpha1"
-	"k8s.io/klog"
+
+	logf "sigs.k8s.io/controller-runtime/pkg/log"
 
 	dplapis "github.com/open-cluster-management/multicloud-operators-deployable/pkg/apis"
 )
@@ -31,12 +32,12 @@ func AddToScheme(s *runtime.Scheme) error {
 	var err error
 	// add mcm scheme, mcm scheme only on hub cluster
 	if err = dplapis.AddToSchemes.AddToScheme(s); err != nil {
-		klog.Error("unable add deployable APIs to scheme", err)
+		logf.Log.Error(err, "unable add deployable APIs to scheme")
 		return err
 	}
 
 	if err = clusterv1alpha1.AddToScheme(s); err != nil {
-		klog.Error("unable add deployable APIs to scheme", err)
+		logf.Log.Error(err, "unable add deployable APIs to scheme")
 		return err
 	}
 

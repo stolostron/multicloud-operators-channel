@@ -135,7 +135,11 @@ func (r *ReconcileDeployable) appendEvent(rootInstance *chv1.Channel, dplkey typ
 
 // Reconcile reads that state of the cluster for a Channel object and makes changes based on the state read
 // and what is in the Channel.Spec
-// a Deployment as an example
+// this reconcile will be triggered when deployable or channel resources is changed on kube-apiserver.
+// this reconcile will do the following things,
+// 1. promote deployable from a channel's target namespace to channel's namespace(also, do the delete as well)
+// 1.1 channel type should be namespace or object store
+
 // Automatically generate RBAC rules to allow the Controller to read and write Deployments
 // +kubebuilder:rbac:groups=apps,resources=deployments,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups=apps,resources=deployments/status,verbs=get;update;patch
@@ -172,6 +176,7 @@ func (r *ReconcileDeployable) Reconcile(request reconcile.Request) (reconcile.Re
 	}
 
 	channelNsMap := make(map[string]string)
+
 	for _, ch := range channelmap {
 		channelNsMap[ch.Namespace] = ch.Name
 	}
