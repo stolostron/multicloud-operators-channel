@@ -176,6 +176,7 @@ func (r *ReconcileDeployable) Reconcile(request reconcile.Request) (reconcile.Re
 	}
 
 	channelNsMap := make(map[string]string)
+
 	for _, ch := range channelmap {
 		channelNsMap[ch.Namespace] = ch.Name
 	}

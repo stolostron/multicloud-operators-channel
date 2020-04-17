@@ -237,7 +237,6 @@ var _ = Describe("promote deployables to channel namespace without considering c
 					Namespace: chKey.Namespace,
 				})).Should(Succeed())
 
-			// TODO, should having len 1...
 			Expect(expectDpls.Items).Should(HaveLen(0))
 
 			for _, item := range expectDpls.Items {
@@ -310,7 +309,6 @@ var _ = Describe("promote deployables to channel namespace without considering c
 				&ctrl.ListOptions{
 					Namespace: chKey.Namespace,
 				})).Should(Succeed())
-			// TODO
 			Expect(expectDpls.DeepCopy().Items).ShouldNot(HaveLen(0))
 			for _, item := range expectDpls.Items {
 				Expect(k8sClient.Delete(context.TODO(), &item)).Should(Succeed())

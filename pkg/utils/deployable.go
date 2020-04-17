@@ -173,6 +173,7 @@ func FindDeployableForChannelsInMap(cl client.Client, deployable *dplv1.Deployab
 			dplanno := dpl.GetAnnotations()
 			if dplanno != nil && dplanno[chv1.KeyChannelSource] == dplkey.String() {
 				log.Info(fmt.Sprintf("adding dpl: %v to children dpl map", dplkey.String()))
+
 				dplmap[dplanno[chv1.KeyChannel]] = dpl.DeepCopy()
 			}
 		}
