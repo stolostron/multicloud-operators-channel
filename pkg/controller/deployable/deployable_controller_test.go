@@ -140,7 +140,7 @@ var _ = Describe("promote deployables to channel namespace without considering c
 	AfterEach(func() {
 	})
 
-	PContext("given a channel with sourceNamespaces without gate", func() {
+	Context("given a channel with sourceNamespaces without gate", func() {
 		It("channel without sourceNamespaces, deployable have target channel", func() {
 			chn := channelInstance.DeepCopy()
 			Expect(k8sClient.Create(context.TODO(), chn)).Should(Succeed())
@@ -168,7 +168,7 @@ var _ = Describe("promote deployables to channel namespace without considering c
 				&ctrl.ListOptions{
 					Namespace: chKey.Namespace,
 				})).Should(Succeed())
-			Expect(expectDpls.Items).Should(HaveLen(1))
+			Expect(expectDpls.Items).ShouldNot(HaveLen(0))
 
 			for _, item := range expectDpls.Items {
 				Expect(k8sClient.Delete(context.TODO(), &item)).Should(Succeed())
@@ -311,7 +311,7 @@ var _ = Describe("promote deployables to channel namespace without considering c
 					Namespace: chKey.Namespace,
 				})).Should(Succeed())
 			// TODO
-			Expect(expectDpls.DeepCopy().Items).Should(HaveLen(1))
+			Expect(expectDpls.DeepCopy().Items).ShouldNot(HaveLen(0))
 			for _, item := range expectDpls.Items {
 				Expect(k8sClient.Delete(context.TODO(), &item)).Should(Succeed())
 			}
@@ -382,7 +382,7 @@ var _ = Describe("promote deployables to channel namespace without considering c
 				&ctrl.ListOptions{
 					Namespace: chKey.Namespace,
 				})).Should(Succeed())
-			Expect(expectDpls.Items).Should(HaveLen(1))
+			Expect(expectDpls.Items).ShouldNot(HaveLen(0))
 
 			Expect(k8sClient.Delete(context.TODO(), dpl)).Should(Succeed())
 
