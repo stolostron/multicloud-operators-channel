@@ -174,7 +174,7 @@ func (r *ReconcileDeployable) getChannelForNamespace(namespace string, log logr.
 	}
 
 	if !strings.EqualFold(string(dplchnlist.Items[0].Spec.Type), chv1.ChannelTypeObjectBucket) {
-		log.Error(fmt.Errorf("wrong channel type %v", dplchnlist.Items[0].Spec.Type), "")
+		log.Info(fmt.Sprintf("wrong channel type %v", dplchnlist.Items[0].Spec.Type))
 		return nil
 	}
 
