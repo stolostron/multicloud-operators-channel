@@ -2,6 +2,11 @@
 build/_output
 build/_test
 .build-harness-bootstrap
+.build-harness
+
+!vbh/.build-harness-vendorized
+!vbh/build-harness
+!vbh/build-harness-extensions
 # Created by https://www.gitignore.io/api/go,vim,emacs,visualstudiocode
 ### Emacs ###
 # -*- mode: gitignore; -*-
