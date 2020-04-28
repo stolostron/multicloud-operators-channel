@@ -42,8 +42,9 @@ import (
 )
 
 const (
-	controllerName  = "deployable"
-	controllerSetup = "deployable-setup"
+	controllerName    = "deployable"
+	controllerSetup   = "deployable-setup"
+	deployableIndexer = "generated-deployable"
 )
 
 /**
@@ -70,9 +71,10 @@ type channelMapper struct {
 
 func (mapper *channelMapper) Map(obj handler.MapObject) []reconcile.Request {
 	dpllist := &dplv1.DeployableList{}
-
-	err := mapper.List(context.TODO(), dpllist, &client.ListOptions{})
-	if err != nil {
+	if err := mapper.List(
+		context.TODO(),
+		dpllist,
+	); err != nil {
 		mapper.log.Error(err, "failed to list all deployable ")
 		return nil
 	}
@@ -87,6 +89,23 @@ func (mapper *channelMapper) Map(obj handler.MapObject) []reconcile.Request {
 
 // add adds a new Controller to mgr with r as the reconcile.Reconciler
 func add(mgr manager.Manager, r reconcile.Reconciler, logger logr.Logger) error {
+	if err := mgr.GetFieldIndexer().IndexField(&dplv1.Deployable{}, deployableIndexer, func(rawObj runtime.Object) []string {
+		// grab the job object, extract the owner...
+		dpl := rawObj.(*dplv1.Deployable)
+		anno := dpl.GetAnnotations()
+		if len(anno) == 0 {
+			return nil
+		}
+		// ...make sure it's a CronJob...
+		if _, ok := anno[chv1.KeyChannelSource]; !ok {
+			return nil
+		}
+
+		// ...and if so, return it
+		return []string{"true"}
+	}); err != nil {
+		return err
+	}
 	// Create a new controller
 	c, err := controller.New(controllerName, mgr, controller.Options{Reconciler: r})
 	if err != nil {

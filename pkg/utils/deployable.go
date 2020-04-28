@@ -30,6 +30,10 @@ import (
 	dplv1 "github.com/open-cluster-management/multicloud-operators-deployable/pkg/apis/apps/v1"
 )
 
+const (
+	deployableIndexer = "generated-deployable"
+)
+
 // ValidateDeployableInChannel check if a deployable rightfully in channel
 func ValidateDeployableInChannel(deployable *dplv1.Deployable, channel *chv1.Channel) bool {
 	if deployable == nil || channel == nil {
@@ -198,9 +202,11 @@ func FindDeployableForChannelsInMap(cl client.Client, deployable *dplv1.Deployab
 // CleanupDeployables check all deployables in certain namespace delete all has the channel set the given channel name
 func CleanupDeployables(cl client.Client, channel types.NamespacedName) error {
 	dpllist := &dplv1.DeployableList{}
-	if err := cl.List(context.TODO(), dpllist, &client.ListOptions{Namespace: channel.Namespace}); err != nil {
+	if err := cl.List(context.TODO(), dpllist, client.InNamespace(channel.Namespace), client.MatchingField(deployableIndexer, "true")); err != nil {
 		return gerr.Wrapf(err, "failed to list deploables while clean up for channel %v", channel.Name)
 	}
+
+	fmt.Printf("_______________________len %v \n %v\n", len(dpllist.Items), dpllist)
 
 	var err error
 
