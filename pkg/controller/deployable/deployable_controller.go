@@ -270,6 +270,11 @@ func (r *ReconcileDeployable) propagateDeployableToChannel(
 	// b.1 if channel's namespace source is the same as dpl
 	// // b.1.1 if gate and dpl annotation has a match then promote
 	// // b.1.1 dpl doesn't have annotation, then fail
+	if channelHasDeployable(r.Client, channel, deployable) {
+		logger.Info(fmt.Sprintf("The generated deployable %#v already exist in channel %#v.", deployable.GetName(), channel.GetName()))
+		return nil
+	}
+
 	if !utils.ValidateDeployableToChannel(deployable, channel) {
 		logger.Info(fmt.Sprintf("The deployable %#v can't be promoted to channel %#v.", deployable.GetName(), channel.GetName()))
 		return nil
@@ -357,4 +362,29 @@ func (r *ReconcileDeployable) updateDeployableRelationWithChannel(
 	}
 
 	return dplmap, nil
+}
+
+func channelHasDeployable(clt client.Client, chn *chv1.Channel, dpl *dplv1.Deployable) bool {
+	gn := dpl.GetGenerateName()
+	if len(gn) == 0 {
+		return false
+	}
+
+	chDpls := &dplv1.DeployableList{}
+
+	if err := clt.List(context.TODO(), chDpls, client.InNamespace(chn.GetNamespace())); err != nil {
+		return true
+	}
+
+	if len(chDpls.Items) == 0 {
+		return false
+	}
+
+	for _, item := range chDpls.Items {
+		if item.GetGenerateName() == gn {
+			return true
+		}
+	}
+
+	return false
 }
