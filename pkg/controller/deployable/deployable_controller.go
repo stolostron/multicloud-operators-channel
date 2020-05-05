@@ -42,9 +42,10 @@ import (
 )
 
 const (
-	controllerName            = "deployable"
-	controllerSetup           = "deployable-setup"
-	DeployableGenerateIndexer = "generated-deployable"
+	controllerName                = "deployable"
+	controllerSetup               = "deployable-setup"
+	CtrlDeployableIndexer         = "origin-deployable"
+	CtrlGenerateDeployableIndexer = "generated-deployable"
 )
 
 /**
@@ -74,12 +75,14 @@ func (mapper *channelMapper) Map(obj handler.MapObject) []reconcile.Request {
 	if err := mapper.List(
 		context.TODO(),
 		dpllist,
-		client.MatchingField(DeployableGenerateIndexer, "true"),
+		client.MatchingField(CtrlDeployableIndexer, "true"),
 	); err != nil {
 		mapper.log.Error(err, "failed to list all deployable ")
 		return nil
 	}
 
+	objKey := types.NamespacedName{Name: obj.Meta.GetName(), Namespace: obj.Meta.GetNamespace()}
+	mapper.log.Info(fmt.Sprintf("channel %v mapper's dpl list %v\n", objKey.String(), len(dpllist.Items)))
 	var requests []reconcile.Request
 	for _, dpl := range dpllist.Items {
 		requests = append(requests, reconcile.Request{NamespacedName: types.NamespacedName{Name: dpl.GetName(), Namespace: dpl.GetNamespace()}})
@@ -90,14 +93,34 @@ func (mapper *channelMapper) Map(obj handler.MapObject) []reconcile.Request {
 
 // add adds a new Controller to mgr with r as the reconcile.Reconciler
 func add(mgr manager.Manager, r reconcile.Reconciler, logger logr.Logger) error {
-	if err := mgr.GetFieldIndexer().IndexField(&dplv1.Deployable{}, DeployableGenerateIndexer, func(rawObj runtime.Object) []string {
+	if err := mgr.GetFieldIndexer().IndexField(&dplv1.Deployable{}, CtrlDeployableIndexer, func(rawObj runtime.Object) []string {
 		// grab the job object, extract the owner...
 		dpl := rawObj.(*dplv1.Deployable)
 		anno := dpl.GetAnnotations()
 		if len(anno) == 0 {
 			return nil
 		}
-		// ...make sure it's a generated deployable...
+		// this make sure the indexer will only be applied on non-generated
+		// deployable
+		if _, ok := anno[chv1.KeyChannelSource]; ok {
+			return nil
+		}
+
+		// ...and if so, return it
+		return []string{"true"}
+	}); err != nil {
+		return err
+	}
+
+	if err := mgr.GetFieldIndexer().IndexField(&dplv1.Deployable{}, CtrlGenerateDeployableIndexer, func(rawObj runtime.Object) []string {
+		// grab the job object, extract the owner...
+		dpl := rawObj.(*dplv1.Deployable)
+		anno := dpl.GetAnnotations()
+		if len(anno) == 0 {
+			return nil
+		}
+		// this make sure the indexer will only be applied on generated
+		// deployable
 		if _, ok := anno[chv1.KeyChannelSource]; !ok {
 			return nil
 		}
@@ -355,6 +378,7 @@ func (r *ReconcileDeployable) promoteDeployabeToChannels(
 			return nil, r.Client.Delete(context.TODO(), dpl)
 		}
 
+		logger.Info(fmt.Sprintf("cluster has channels: %#v", clusterChnMap))
 		//promote deployable to channels, specified in deployable.Spec.Channels
 		for _, chname := range dpl.Spec.Channels {
 			ch, ok := clusterChnMap[chname]

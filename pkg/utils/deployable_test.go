@@ -140,7 +140,7 @@ func TestFindDeployableForChannelsInMap(t *testing.T) {
 
 	for _, tC := range testCases {
 		t.Run(tC.desc, func(t *testing.T) {
-			p, dpls, err := utils.FindDeployableForChannelsInMap(c, tC.dpl, tC.ch, tlog.NullLogger{})
+			p, dpls, err := utils.RebuildDeployableRelationshipGraph(c, tC.dpl, tC.ch, tlog.NullLogger{})
 			if assertDpls(tC.expect, p, dpls[chName], err) {
 				t.Errorf("wanted %#v, got %v %v %v", tC.expect, dpls, p, err)
 			}
