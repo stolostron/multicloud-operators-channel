@@ -206,8 +206,6 @@ func CleanupDeployables(cl client.Client, channel types.NamespacedName) error {
 		return gerr.Wrapf(err, "failed to list deploables while clean up for channel %v", channel.Name)
 	}
 
-	fmt.Printf("_______________________len %v \n %v\n", len(dpllist.Items), dpllist)
-
 	var err error
 
 	for _, dpl := range dpllist.Items {
@@ -290,7 +288,7 @@ func createOwnerReference(deployable *dplv1.Deployable) []metav1.OwnerReference 
 	}
 }
 
-//DplGenerateNameStr  will generate a string for the dpl generate name
+//DplGenerateNameStr will generate a string for the dpl generate name
 func DplGenerateNameStr(deployable *dplv1.Deployable) string {
 	gn := ""
 

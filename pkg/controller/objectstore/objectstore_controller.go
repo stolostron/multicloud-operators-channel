@@ -70,7 +70,7 @@ type channelMapper struct {
 func (mapper *channelMapper) Map(obj handler.MapObject) []reconcile.Request {
 	dpllist := &dplv1.DeployableList{}
 
-	err := mapper.List(context.TODO(), dpllist, &client.ListOptions{Namespace: obj.Meta.GetNamespace()})
+	err := mapper.List(context.TODO(), dpllist, client.InNamespace(obj.Meta.GetNamespace()))
 	if err != nil {
 		mapper.logger.Error(err, "failed to list all deployable")
 		return nil
