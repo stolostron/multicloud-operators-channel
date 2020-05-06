@@ -75,7 +75,7 @@ func (mapper *channelMapper) Map(obj handler.MapObject) []reconcile.Request {
 	if err := mapper.List(
 		context.TODO(),
 		dpllist,
-		client.MatchingField(CtrlDeployableIndexer, "true"),
+		client.MatchingFields{CtrlDeployableIndexer: "true"},
 	); err != nil {
 		mapper.log.Error(err, "failed to list all deployable ")
 		return nil
@@ -83,7 +83,9 @@ func (mapper *channelMapper) Map(obj handler.MapObject) []reconcile.Request {
 
 	objKey := types.NamespacedName{Name: obj.Meta.GetName(), Namespace: obj.Meta.GetNamespace()}
 	mapper.log.Info(fmt.Sprintf("channel %v mapper's dpl list %v\n", objKey.String(), len(dpllist.Items)))
+
 	var requests []reconcile.Request
+
 	for _, dpl := range dpllist.Items {
 		requests = append(requests, reconcile.Request{NamespacedName: types.NamespacedName{Name: dpl.GetName(), Namespace: dpl.GetNamespace()}})
 	}

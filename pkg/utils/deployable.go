@@ -202,8 +202,8 @@ func RebuildDeployableRelationshipGraph(cl client.Client, deployable *dplv1.Depl
 // CleanupDeployables check all deployables in certain namespace delete all has the channel set the given channel name
 func CleanupDeployables(cl client.Client, channel types.NamespacedName) error {
 	dpllist := &dplv1.DeployableList{}
-	if err := cl.List(context.TODO(), dpllist, client.InNamespace(channel.Namespace), client.MatchingField(generatedDeployableIndexer, "true")); err != nil {
-		return gerr.Wrapf(err, "failed to list deploables while clean up for channel %v", channel.Name)
+	if err := cl.List(context.TODO(), dpllist, client.InNamespace(channel.Namespace), client.MatchingFields{generatedDeployableIndexer: "true"}); err != nil {
+		return gerr.Wrapf(err, "failed to list deployable while clean up for channel %v", channel.Name)
 	}
 
 	var err error

@@ -20,10 +20,12 @@ import (
 	"testing"
 	"time"
 
+	tlog "github.com/go-logr/logr/testing"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"github.com/onsi/gomega/gexec"
 	"k8s.io/client-go/kubernetes/scheme"
+	"k8s.io/client-go/tools/record"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/envtest"
@@ -37,6 +39,8 @@ const StartTimeout = 30 // seconds
 var testEnv *envtest.Environment
 var k8sManager mgr.Manager
 var k8sClient client.Client
+var recFn reconcile.Reconciler
+var requests chan reconcile.Request
 
 func TestChannelDeployableReconcile(t *testing.T) {
 	RegisterFailHandler(Fail)
@@ -69,6 +73,9 @@ var _ = BeforeSuite(func(done Done) {
 
 	k8sManager, err = mgr.New(cfg, mgr.Options{MetricsBindAddress: "0"})
 	Expect(err).ToNot(HaveOccurred())
+
+	recFn, requests = SetupTestReconcile(newReconciler(k8sManager, record.NewFakeRecorder(fakeRecordBufferSize), tlog.NullLogger{}))
+	Expect(add(k8sManager, recFn, tlog.NullLogger{})).NotTo(HaveOccurred())
 
 	go func() {
 		err = k8sManager.Start(ctrl.SetupSignalHandler())
