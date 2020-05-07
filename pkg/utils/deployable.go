@@ -299,7 +299,7 @@ func DplGenerateNameStr(deployable *dplv1.Deployable) string {
 	if deployable.GetGenerateName() == "" {
 		gn = deployable.GetName() + "-"
 	} else {
-		gn = deployable.GetGenerateName() + "-"
+		gn = deployable.GetGenerateName()
 	}
 
 	return gn
