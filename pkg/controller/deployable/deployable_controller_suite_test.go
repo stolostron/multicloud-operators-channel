@@ -20,27 +20,22 @@ import (
 	"testing"
 	"time"
 
-	tlog "github.com/go-logr/logr/testing"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"github.com/onsi/gomega/gexec"
 	"k8s.io/client-go/kubernetes/scheme"
-	"k8s.io/client-go/tools/record"
-	ctrl "sigs.k8s.io/controller-runtime"
-	"sigs.k8s.io/controller-runtime/pkg/client"
+	"k8s.io/client-go/rest"
 	"sigs.k8s.io/controller-runtime/pkg/envtest"
-	mgr "sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	"github.com/open-cluster-management/multicloud-operators-channel/pkg/apis"
 )
 
-const StartTimeout = 30 // seconds
+const StartTimeout = 60 // seconds
 var testEnv *envtest.Environment
-var k8sManager mgr.Manager
-var k8sClient client.Client
 var recFn reconcile.Reconciler
 var requests chan reconcile.Request
+var cCfg *rest.Config
 
 func TestChannelDeployableReconcile(t *testing.T) {
 	RegisterFailHandler(Fail)
@@ -64,26 +59,14 @@ var _ = BeforeSuite(func(done Done) {
 		}
 	}
 
-	cfg, err := testEnv.Start()
+	var err error
+	// be careful, if we use shorthand assignment, the the cCfg will be a local variable
+	cCfg, err = testEnv.Start()
 	Expect(err).ToNot(HaveOccurred())
-	Expect(cfg).ToNot(BeNil())
+	Expect(cCfg).ToNot(BeNil())
 
 	err = apis.AddToScheme(scheme.Scheme)
 	Expect(err).NotTo(HaveOccurred())
-
-	k8sManager, err = mgr.New(cfg, mgr.Options{MetricsBindAddress: "0"})
-	Expect(err).ToNot(HaveOccurred())
-
-	recFn, requests = SetupTestReconcile(newReconciler(k8sManager, record.NewFakeRecorder(fakeRecordBufferSize), tlog.NullLogger{}))
-	Expect(add(k8sManager, recFn, tlog.NullLogger{})).NotTo(HaveOccurred())
-
-	go func() {
-		err = k8sManager.Start(ctrl.SetupSignalHandler())
-		Expect(err).ToNot(HaveOccurred())
-	}()
-
-	k8sClient = k8sManager.GetClient()
-	Expect(k8sClient).ToNot(BeNil())
 
 	close(done)
 }, StartTimeout)
@@ -91,8 +74,7 @@ var _ = BeforeSuite(func(done Done) {
 var _ = AfterSuite(func() {
 	By("tearing down the test environment")
 	gexec.KillAndWait(5 * time.Second)
-	err := testEnv.Stop()
-	Expect(err).ToNot(HaveOccurred())
+	Expect(testEnv.Stop()).ToNot(HaveOccurred())
 })
 
 // SetupTestReconcile returns a reconcile.Reconcile implementation that delegates to inner and

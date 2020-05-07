@@ -20,6 +20,7 @@ import (
 
 	"golang.org/x/net/context"
 
+	tlog "github.com/go-logr/logr/testing"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 
@@ -28,8 +29,9 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/rand"
+	"k8s.io/client-go/tools/record"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	ctrl "sigs.k8s.io/controller-runtime/pkg/client"
+	mgr "sigs.k8s.io/controller-runtime/pkg/manager"
 
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
@@ -51,10 +53,30 @@ var _ = Describe("channel and deployable requeue", func() {
 	var (
 		expectedRequest = reconcile.Request{NamespacedName: types.NamespacedName{Name: targetDeployableName, Namespace: targetNamespace}}
 	)
+
+	var stop chan struct{}
+	var k8sClient client.Client
+
 	BeforeEach(func() {
+		stop = make(chan struct{})
+
+		k8sManager, err := mgr.New(cCfg, mgr.Options{MetricsBindAddress: "0"})
+		Expect(err).ToNot(HaveOccurred())
+
+		recFn, requests = SetupTestReconcile(newReconciler(k8sManager, record.NewFakeRecorder(fakeRecordBufferSize), tlog.NullLogger{}))
+		Expect(add(k8sManager, recFn, tlog.NullLogger{})).NotTo(HaveOccurred())
+
+		go func() {
+			Expect(k8sManager.Start(stop)).ToNot(HaveOccurred())
+		}()
+
+		k8sClient = k8sManager.GetClient()
+		Expect(k8sClient).ToNot(BeNil())
+
 	})
 
 	AfterEach(func() {
+		close(stop)
 	})
 
 	It("given channel without deployable, should not get reconcile signal", func() {
@@ -139,10 +161,30 @@ var _ = Describe("promote deployables to channel namespace without considering c
 			},
 		}
 	)
+
+	var stop chan struct{}
+	var k8sClient client.Client
+
 	BeforeEach(func() {
-		time.Sleep(k8swait)
+		stop = make(chan struct{})
+
+		k8sManager, err := mgr.New(cCfg, mgr.Options{MetricsBindAddress: "0"})
+		Expect(err).ToNot(HaveOccurred())
+
+		recFn, requests = SetupTestReconcile(newReconciler(k8sManager, record.NewFakeRecorder(fakeRecordBufferSize), tlog.NullLogger{}))
+		Expect(add(k8sManager, recFn, tlog.NullLogger{})).NotTo(HaveOccurred())
+
+		go func() {
+			Expect(k8sManager.Start(stop)).ToNot(HaveOccurred())
+		}()
+
+		k8sClient = k8sManager.GetClient()
+		Expect(k8sClient).ToNot(BeNil())
+
 	})
+
 	AfterEach(func() {
+		close(stop)
 	})
 
 	Context("channel points to deployable or deployable points to channel", func() {
@@ -201,17 +243,15 @@ var _ = Describe("promote deployables to channel namespace without considering c
 			time.Sleep(k8swait)
 
 			expectDpls := dplv1.DeployableList{}
-			Expect(k8sClient.List(context.TODO(), &expectDpls,
-				&ctrl.ListOptions{
-					Namespace: chKey.Namespace,
-				})).Should(Succeed())
+			Expect(k8sClient.List(context.TODO(), &expectDpls, client.InNamespace(chn.GetNamespace()))).Should(Succeed())
+
 			Expect(expectDpls.Items).Should(HaveLen(0))
 			for _, item := range expectDpls.Items {
 				Expect(k8sClient.Delete(context.TODO(), &item)).Should(Succeed())
 			}
 		})
 
-		It("should promote deployable to channel since channel is active watch the deployable's namespace", func() {
+		It("should NOT promote deployable to channel since channel don't have gate even active watch the deployable's namespace", func() {
 			chn := channelInstance.DeepCopy()
 			randStr := fmt.Sprintf("-%v", rand.Intn(100))
 
@@ -237,7 +277,7 @@ var _ = Describe("promote deployables to channel namespace without considering c
 			expectDpls := dplv1.DeployableList{}
 			Expect(k8sClient.List(context.TODO(), &expectDpls, client.InNamespace(chn.GetNamespace()))).Should(Succeed())
 
-			Expect(expectDpls.Items).ShouldNot(HaveLen(0))
+			Expect(expectDpls.Items).Should(HaveLen(0))
 
 			for _, item := range expectDpls.Items {
 				Expect(k8sClient.Delete(context.TODO(), &item)).Should(Succeed())
