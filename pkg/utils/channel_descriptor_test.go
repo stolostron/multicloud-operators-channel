@@ -61,7 +61,7 @@ func TestValidateChannel(t *testing.T) {
 					Namespace: testNs,
 				},
 				Spec: chv1.ChannelSpec{
-					Type:     chv1.ChannelTypeGitHub,
+					Type:     chv1.ChannelTypeGit,
 					Pathname: "",
 				},
 			},
@@ -77,7 +77,7 @@ func TestValidateChannel(t *testing.T) {
 					Namespace: testNs,
 				},
 				Spec: chv1.ChannelSpec{
-					Type:     chv1.ChannelTypeGitHub,
+					Type:     chv1.ChannelTypeGit,
 					Pathname: "",
 					SecretRef: &v1.ObjectReference{
 						Kind:      "Secret",
@@ -98,7 +98,7 @@ func TestValidateChannel(t *testing.T) {
 					Namespace: testNs,
 				},
 				Spec: chv1.ChannelSpec{
-					Type:     chv1.ChannelTypeGitHub,
+					Type:     chv1.ChannelTypeGit,
 					Pathname: "https://www.google.com/" + testBucket + "/",
 					SecretRef: &v1.ObjectReference{
 						Kind:      "Secret",
