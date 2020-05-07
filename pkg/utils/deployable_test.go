@@ -24,6 +24,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	mgr "sigs.k8s.io/controller-runtime/pkg/manager"
 
 	tlog "github.com/go-logr/logr/testing"
 	"github.com/google/go-cmp/cmp"
@@ -32,6 +33,15 @@ import (
 	chv1 "github.com/open-cluster-management/multicloud-operators-channel/pkg/apis/apps/v1"
 	"github.com/open-cluster-management/multicloud-operators-channel/pkg/utils"
 	dplv1 "github.com/open-cluster-management/multicloud-operators-deployable/pkg/apis/apps/v1"
+)
+
+const (
+	dplNode                       = "dplnode"
+	dplParent                     = "dplparent"
+	dplChild                      = "dplchild"
+	dplOrphan                     = "dplorphan"
+	CtrlDeployableIndexer         = "origin-deployable"
+	CtrlGenerateDeployableIndexer = "generated-deployable"
 )
 
 type dplElements struct {
@@ -63,11 +73,6 @@ func dplGenerator(dpl dplElements) *dplv1.Deployable {
 		},
 	}
 }
-
-const dplNode = "dplnode"
-const dplParent = "dplparent"
-const dplChild = "dplchild"
-const dplOrphan = "dplorphan"
 
 // create some pre-define dpl obj to test the relationship
 func initObjQueue() ([]*dplv1.Deployable, map[string]*dplv1.Deployable) {
@@ -537,9 +542,26 @@ func TestCleanupDeployables(t *testing.T) {
 		delFuncs = append(delFuncs, delFunc)
 	}
 
+	stop := make(chan struct{})
+	defer close(stop)
+
+	k8sManager, err := mgr.New(cfg, mgr.Options{MetricsBindAddress: "0"})
+	g.Expect(err).NotTo(gomega.HaveOccurred())
+
+	g.Expect(addIndexFiled(k8sManager)).Should(gomega.Succeed())
+
+	go func() {
+		g.Expect(k8sManager.Start(stop)).ToNot(gomega.HaveOccurred())
+	}()
+
+	k8sClient := k8sManager.GetClient()
+	g.Expect(k8sClient).ToNot(gomega.BeNil())
+
+	g.Expect(k8sManager.GetCache().WaitForCacheSync(stop)).Should(gomega.BeTrue())
+
 	for _, tC := range testCases {
 		t.Run(tC.desc, func(t *testing.T) {
-			got := utils.CleanupDeployables(tC.hubClt, tC.tCh)
+			got := utils.CleanupDeployables(k8sClient, tC.tCh)
 			if diff := cmp.Diff(got, tC.want); diff != "" {
 				t.Errorf("CleanupDeployables mismatch (-want, +got):\n%s", diff)
 			}
@@ -549,6 +571,48 @@ func TestCleanupDeployables(t *testing.T) {
 	for _, fn := range delFuncs {
 		fn()
 	}
+}
+
+func addIndexFiled(k8sManager mgr.Manager) error {
+	if err := k8sManager.GetFieldIndexer().IndexField(&dplv1.Deployable{}, CtrlDeployableIndexer, func(rawObj runtime.Object) []string {
+		// grab the job object, extract the owner...
+		dpl := rawObj.(*dplv1.Deployable)
+		anno := dpl.GetAnnotations()
+		if len(anno) == 0 {
+			return nil
+		}
+		// this make sure the indexer will only be applied on non-generated
+		// deployable
+		if _, ok := anno[chv1.KeyChannelSource]; ok {
+			return nil
+		}
+
+		// ...and if so, return it
+		return []string{"true"}
+	}); err != nil {
+		return err
+	}
+
+	if err := k8sManager.GetFieldIndexer().IndexField(&dplv1.Deployable{}, CtrlGenerateDeployableIndexer, func(rawObj runtime.Object) []string {
+		// grab the job object, extract the owner...
+		dpl := rawObj.(*dplv1.Deployable)
+		anno := dpl.GetAnnotations()
+		if len(anno) == 0 {
+			return nil
+		}
+		// this make sure the indexer will only be applied on generated
+		// deployable
+		if _, ok := anno[chv1.KeyChannelSource]; !ok {
+			return nil
+		}
+
+		// ...and if so, return it
+		return []string{"true"}
+	}); err != nil {
+		return err
+	}
+
+	return nil
 }
 
 func TestGenerateDeployableForChannel(t *testing.T) {
