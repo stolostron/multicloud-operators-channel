@@ -28,6 +28,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/rand"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 	ctrl "sigs.k8s.io/controller-runtime/pkg/client"
 
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
@@ -145,7 +146,7 @@ var _ = Describe("promote deployables to channel namespace without considering c
 	})
 
 	Context("channel points to deployable or deployable points to channel", func() {
-		It("promote deployable to channel, since deployable points to channel and no gate on channel", func() {
+		It("should promote deployable to channel, since deployable points to a no gate channel", func() {
 			chn := channelInstance.DeepCopy()
 			randStr := fmt.Sprintf("-%v", rand.Intn(100))
 
@@ -168,10 +169,7 @@ var _ = Describe("promote deployables to channel namespace without considering c
 			time.Sleep(k8swait)
 
 			expectDpls := dplv1.DeployableList{}
-			Expect(k8sClient.List(context.TODO(), &expectDpls,
-				&ctrl.ListOptions{
-					Namespace: chKey.Namespace,
-				})).Should(Succeed())
+			Expect(k8sClient.List(context.TODO(), &expectDpls, client.InNamespace(chn.GetNamespace()))).Should(Succeed())
 
 			Expect(expectDpls.Items).ShouldNot(HaveLen(0))
 
@@ -213,7 +211,7 @@ var _ = Describe("promote deployables to channel namespace without considering c
 			}
 		})
 
-		It("promote deployable to channel since channel is active watch the deployable's namespace", func() {
+		It("should promote deployable to channel since channel is active watch the deployable's namespace", func() {
 			chn := channelInstance.DeepCopy()
 			randStr := fmt.Sprintf("-%v", rand.Intn(100))
 
@@ -237,10 +235,7 @@ var _ = Describe("promote deployables to channel namespace without considering c
 			time.Sleep(k8swait)
 
 			expectDpls := dplv1.DeployableList{}
-			Expect(k8sClient.List(context.TODO(), &expectDpls,
-				&ctrl.ListOptions{
-					Namespace: chKey.Namespace,
-				})).Should(Succeed())
+			Expect(k8sClient.List(context.TODO(), &expectDpls, client.InNamespace(chn.GetNamespace()))).Should(Succeed())
 
 			Expect(expectDpls.Items).ShouldNot(HaveLen(0))
 
@@ -277,10 +272,7 @@ var _ = Describe("promote deployables to channel namespace without considering c
 			time.Sleep(k8swait)
 
 			expectDpls := dplv1.DeployableList{}
-			Expect(k8sClient.List(context.TODO(), &expectDpls,
-				&ctrl.ListOptions{
-					Namespace: chKey.Namespace,
-				})).Should(Succeed())
+			Expect(k8sClient.List(context.TODO(), &expectDpls, client.InNamespace(chn.GetNamespace()))).Should(Succeed())
 			Expect(expectDpls.DeepCopy().Items).ShouldNot(HaveLen(0))
 
 			for _, item := range expectDpls.Items {
@@ -314,10 +306,7 @@ var _ = Describe("promote deployables to channel namespace without considering c
 			time.Sleep(k8swait)
 
 			expectDpls := dplv1.DeployableList{}
-			Expect(k8sClient.List(context.TODO(), &expectDpls,
-				&ctrl.ListOptions{
-					Namespace: chKey.Namespace,
-				})).Should(Succeed())
+			Expect(k8sClient.List(context.TODO(), &expectDpls, client.InNamespace(chn.GetNamespace()))).Should(Succeed())
 			Expect(expectDpls.Items).Should(HaveLen(0))
 			for _, item := range expectDpls.Items {
 				Expect(k8sClient.Delete(context.TODO(), &item)).Should(Succeed())
@@ -326,7 +315,7 @@ var _ = Describe("promote deployables to channel namespace without considering c
 	})
 
 	Context("given a channel with sourceNamespaces with gate", func() {
-		It("given channel with gate and deployable with matched annotation should be promoted and GC'ed properly", func() {
+		It("should promote deployable and GC'ed properly after the original deployable is deleted", func() {
 			time.Sleep(k8swait)
 
 			chn := channelInstance.DeepCopy()
@@ -350,10 +339,8 @@ var _ = Describe("promote deployables to channel namespace without considering c
 			time.Sleep(k8swait)
 
 			expectDpls := dplv1.DeployableList{}
-			Expect(k8sClient.List(context.TODO(), &expectDpls,
-				&ctrl.ListOptions{
-					Namespace: chKey.Namespace,
-				})).Should(Succeed())
+			Expect(k8sClient.List(context.TODO(), &expectDpls, client.InNamespace(chn.GetNamespace()))).Should(Succeed())
+
 			Expect(expectDpls.Items).ShouldNot(HaveLen(0))
 
 			Expect(k8sClient.Delete(context.TODO(), dpl)).Should(Succeed())
