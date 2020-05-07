@@ -10,7 +10,7 @@ metadata:
   name: git
   namespace: ch-git
 spec:
-  type: GitHub
+  type: Git
   pathname: https://github.com/IBM/charts.git
   #  configRef:
   #    name: ibm-mongodb-dev-cm

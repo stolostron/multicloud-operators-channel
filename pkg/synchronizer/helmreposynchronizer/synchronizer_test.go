@@ -30,8 +30,8 @@ import (
 	dplv1 "github.com/open-cluster-management/multicloud-operators-deployable/pkg/apis/apps/v1"
 )
 
-// 1. clone from github and create deployables for all the resources at github
-// 2. delete/update local deployables resource if github resource changed
+// 1. clone from git and create deployables for all the resources at git
+// 2. delete/update local deployables resource if git resource changed
 
 const (
 	helmTests            = "../../../tests/helm/testhelm"

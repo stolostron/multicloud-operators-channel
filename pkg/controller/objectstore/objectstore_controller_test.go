@@ -143,7 +143,7 @@ var _ = Describe("object bucket controller", func() {
 						Annotations: map[string]string{},
 					},
 					Spec: chv1.ChannelSpec{
-						Type: chv1.ChannelTypeGitHub,
+						Type: chv1.ChannelTypeGit,
 					},
 				},
 				tName:  testNamespace,
@@ -211,7 +211,7 @@ var _ = Describe("object bucket controller", func() {
 						Annotations: map[string]string{},
 					},
 					Spec: chv1.ChannelSpec{
-						Type: chv1.ChannelTypeGitHub,
+						Type: chv1.ChannelTypeGit,
 					},
 				},
 				tName:  testNamespace,
