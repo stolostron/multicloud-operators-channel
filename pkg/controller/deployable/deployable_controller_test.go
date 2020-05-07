@@ -139,12 +139,13 @@ var _ = Describe("promote deployables to channel namespace without considering c
 		}
 	)
 	BeforeEach(func() {
+		time.Sleep(k8swait)
 	})
 	AfterEach(func() {
 	})
 
-	Context("given a channel with sourceNamespaces without gate", func() {
-		It("channel without sourceNamespaces, deployable have target channel", func() {
+	Context("channel points to deployable or deployable points to channel", func() {
+		It("promote deployable to channel, since deployable points to channel and no gate on channel", func() {
 			chn := channelInstance.DeepCopy()
 			randStr := fmt.Sprintf("-%v", rand.Intn(100))
 
@@ -171,19 +172,20 @@ var _ = Describe("promote deployables to channel namespace without considering c
 				&ctrl.ListOptions{
 					Namespace: chKey.Namespace,
 				})).Should(Succeed())
+
 			Expect(expectDpls.Items).ShouldNot(HaveLen(0))
 
 			for _, item := range expectDpls.Items {
 				Expect(k8sClient.Delete(context.TODO(), &item)).Should(Succeed())
 			}
-
 		})
 
-		It("given channel without gate and deployable spec points to different channel", func() {
+		It("should not promote deployable to channel, since deployable is not pointing to wrong channel and channel not looking at deployable's namespace]", func() {
 			chn := channelInstance.DeepCopy()
-			randStr := fmt.Sprintf("-%v", rand.Intn(100))
 
+			randStr := fmt.Sprintf("-%v", rand.Intn(100))
 			chn.SetName(chn.GetName() + randStr)
+
 			Expect(k8sClient.Create(context.TODO(), chn)).Should(Succeed())
 			defer func() {
 				Expect(k8sClient.Delete(context.TODO(), chn)).Should(Succeed())
@@ -211,7 +213,7 @@ var _ = Describe("promote deployables to channel namespace without considering c
 			}
 		})
 
-		It("given channel without gate and deployable with channel at spec", func() {
+		It("promote deployable to channel since channel is active watch the deployable's namespace", func() {
 			chn := channelInstance.DeepCopy()
 			randStr := fmt.Sprintf("-%v", rand.Intn(100))
 
@@ -240,41 +242,8 @@ var _ = Describe("promote deployables to channel namespace without considering c
 					Namespace: chKey.Namespace,
 				})).Should(Succeed())
 
-			Expect(expectDpls.Items).Should(HaveLen(0))
+			Expect(expectDpls.Items).ShouldNot(HaveLen(0))
 
-			for _, item := range expectDpls.Items {
-				Expect(k8sClient.Delete(context.TODO(), &item)).Should(Succeed())
-			}
-		})
-
-		It("given channel without gate and deployable spec points to different channel", func() {
-			chn := channelInstance.DeepCopy()
-			randStr := fmt.Sprintf("-%v", rand.Intn(100))
-
-			chn.SetName(chn.GetName() + randStr)
-			chn.Spec.SourceNamespaces = []string{dplKey.Namespace}
-			Expect(k8sClient.Create(context.TODO(), chn)).Should(Succeed())
-			defer func() {
-				Expect(k8sClient.Delete(context.TODO(), chn)).Should(Succeed())
-			}()
-
-			dpl := deployableInstance.DeepCopy()
-			dpl.SetName(dpl.GetName() + randStr)
-			dpl.Spec.Channels = []string{"wrong"}
-
-			Expect(k8sClient.Create(context.TODO(), dpl)).NotTo(HaveOccurred())
-			defer func() {
-				Expect(k8sClient.Delete(context.TODO(), dpl)).Should(Succeed())
-			}()
-
-			time.Sleep(k8swait)
-
-			expectDpls := dplv1.DeployableList{}
-			Expect(k8sClient.List(context.TODO(), &expectDpls,
-				&ctrl.ListOptions{
-					Namespace: chKey.Namespace,
-				})).Should(Succeed())
-			Expect(expectDpls.Items).Should(HaveLen(0))
 			for _, item := range expectDpls.Items {
 				Expect(k8sClient.Delete(context.TODO(), &item)).Should(Succeed())
 			}
@@ -282,7 +251,7 @@ var _ = Describe("promote deployables to channel namespace without considering c
 	})
 
 	Context("given a channel with sourceNamespaces with gate", func() {
-		It("given channel without gate and deployable with channel at spec", func() {
+		It("should promote deployable to channel's namespace", func() {
 			chn := channelInstance.DeepCopy()
 			chn.Spec.SourceNamespaces = []string{dplKey.Namespace}
 			chn.Spec.Gates = &chv1.ChannelGate{Annotations: map[string]string{"test": "pass"}}
@@ -294,6 +263,8 @@ var _ = Describe("promote deployables to channel namespace without considering c
 			defer func() {
 				Expect(k8sClient.Delete(context.TODO(), chn)).Should(Succeed())
 			}()
+
+			time.Sleep(k8swait)
 
 			dpl := deployableInstance.DeepCopy()
 			dpl.SetName(dpl.GetName() + randStr)
@@ -311,12 +282,13 @@ var _ = Describe("promote deployables to channel namespace without considering c
 					Namespace: chKey.Namespace,
 				})).Should(Succeed())
 			Expect(expectDpls.DeepCopy().Items).ShouldNot(HaveLen(0))
+
 			for _, item := range expectDpls.Items {
 				Expect(k8sClient.Delete(context.TODO(), &item)).Should(Succeed())
 			}
 		})
 
-		It("given channel without gate and deployable spec points to different channel", func() {
+		It("should not promote deployable due to mismatch annotation gate", func() {
 			chn := channelInstance.DeepCopy()
 			chn.Spec.SourceNamespaces = []string{dplKey.Namespace}
 			chn.Spec.Gates = &chv1.ChannelGate{Annotations: map[string]string{"test": "pass"}}
@@ -327,6 +299,8 @@ var _ = Describe("promote deployables to channel namespace without considering c
 			defer func() {
 				Expect(k8sClient.Delete(context.TODO(), chn)).Should(Succeed())
 			}()
+
+			time.Sleep(k8swait)
 
 			dpl := deployableInstance.DeepCopy()
 			dpl.SetName(dpl.GetName() + randStr)
