@@ -10,5 +10,5 @@ metadata:
   name: git
   namespace: ch-git
 spec:
-  type: GitHub
+  type: Git
   pathname: https://github.com/rokej/testrepo

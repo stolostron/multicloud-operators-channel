@@ -33,9 +33,9 @@ const (
 	HelmCRSourceType = "type"
 	// HelmCRSourceHelm is spec.Source.Helmrepo of the Helm CR
 	HelmCRSourceHelm = "helmrepo"
-	// HelmCRSourceGit is spec.Source.Github of the Helm CR
-	HelmCRSourceGit = "github"
-	// HelmCRRepoURL is spec.Source.Github.Urls or spec.Source.Helmrepo.Urls of the Helm CR
+	// HelmCRSourceGit is spec.Source.Git of the Helm CR
+	HelmCRSourceGit = "git"
+	// HelmCRRepoURL is spec.Source.Git.Urls or spec.Source.Helmrepo.Urls of the Helm CR
 	HelmCRRepoURL = "urls"
 	// HelmCRGitRepoChartPath is spec.Source.Github.ChartPath of the Helm CR
 	HelmCRGitRepoChartPath = "chartPath"

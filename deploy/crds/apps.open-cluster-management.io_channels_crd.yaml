@@ -187,10 +187,12 @@ spec:
               - HelmRepo
               - ObjectBucket
               - GitHub
+              - Git
               - namespace
               - helmrepo
               - objectbucket
               - github
+              - git
               type: string
           required:
           - pathname
