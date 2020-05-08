@@ -30,6 +30,10 @@ import (
 	dplv1 "github.com/open-cluster-management/multicloud-operators-deployable/pkg/apis/apps/v1"
 )
 
+const (
+	generatedDeployableIndexer = "generated-deployable"
+)
+
 // ValidateDeployableInChannel check if a deployable rightfully in channel
 func ValidateDeployableInChannel(deployable *dplv1.Deployable, channel *chv1.Channel) bool {
 	if deployable == nil || channel == nil {
@@ -124,10 +128,10 @@ func ValidateDeployableToChannel(deployable *dplv1.Deployable, channel *chv1.Cha
 	return true
 }
 
-// FindDeployableForChannelsInMap check all deployables in certain namespace delete all has
+// FindDeployableForChannelsInMap
 // the channel set the given channel namespace
 // channelnsMap is a set(), which is used to check up if the dpl is within a channel or not
-func FindDeployableForChannelsInMap(cl client.Client, deployable *dplv1.Deployable,
+func RebuildDeployableRelationshipGraph(cl client.Client, deployable *dplv1.Deployable,
 	channelnsMap map[string]string, log logr.Logger) (*dplv1.Deployable,
 	map[string]*dplv1.Deployable, error) {
 	if len(channelnsMap) == 0 {
@@ -144,7 +148,7 @@ func FindDeployableForChannelsInMap(cl client.Client, deployable *dplv1.Deployab
 		return nil, nil, err
 	}
 
-	dplmap := make(map[string]*dplv1.Deployable)
+	childDplmap := make(map[string]*dplv1.Deployable)
 
 	//cur dpl key
 	dplkey := types.NamespacedName{Name: deployable.Name, Namespace: deployable.Namespace}
@@ -174,13 +178,13 @@ func FindDeployableForChannelsInMap(cl client.Client, deployable *dplv1.Deployab
 			if dplanno != nil && dplanno[chv1.KeyChannelSource] == dplkey.String() {
 				log.Info(fmt.Sprintf("adding dpl: %v to children dpl map", dplkey.String()))
 
-				dplmap[dplanno[chv1.KeyChannel]] = dpl.DeepCopy()
+				childDplmap[dplanno[chv1.KeyChannel]] = dpl.DeepCopy()
 			}
 		}
 	}
 
 	dplmapStr := ""
-	for ch, dpl := range dplmap {
+	for ch, dpl := range childDplmap {
 		dplmapStr = dplmapStr + "(ch: " + ch + " dpl: " + dpl.GetNamespace() + "/" + dpl.GetName() + ") "
 	}
 
@@ -192,14 +196,18 @@ func FindDeployableForChannelsInMap(cl client.Client, deployable *dplv1.Deployab
 		log.Info(fmt.Sprintf("deployable: %#v/%#v, parent: %#v, dplmap: %#v", deployable.GetNamespace(), deployable.GetName(), parent, dplmapStr))
 	}
 
-	return parent, dplmap, nil
+	return parent, childDplmap, nil
 }
 
 // CleanupDeployables check all deployables in certain namespace delete all has the channel set the given channel name
 func CleanupDeployables(cl client.Client, channel types.NamespacedName) error {
 	dpllist := &dplv1.DeployableList{}
-	if err := cl.List(context.TODO(), dpllist, &client.ListOptions{Namespace: channel.Namespace}); err != nil {
-		return gerr.Wrapf(err, "failed to list deploables while clean up for channel %v", channel.Name)
+	if err := cl.List(context.TODO(),
+		dpllist,
+		client.InNamespace(channel.Namespace),
+		client.MatchingFields{generatedDeployableIndexer: "true"},
+	); err != nil {
+		return gerr.Wrapf(err, "failed to list deployable while clean up for channel %v", channel.Name)
 	}
 
 	var err error
@@ -284,7 +292,7 @@ func createOwnerReference(deployable *dplv1.Deployable) []metav1.OwnerReference 
 	}
 }
 
-//DplGenerateNameStr  will generate a string for the dpl generate name
+//DplGenerateNameStr will generate a string for the dpl generate name
 func DplGenerateNameStr(deployable *dplv1.Deployable) string {
 	gn := ""
 

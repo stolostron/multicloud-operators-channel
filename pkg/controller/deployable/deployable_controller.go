@@ -42,8 +42,10 @@ import (
 )
 
 const (
-	controllerName  = "deployable"
-	controllerSetup = "deployable-setup"
+	controllerName                = "deployable"
+	controllerSetup               = "deployable-setup"
+	CtrlDeployableIndexer         = "origin-deployable"
+	CtrlGenerateDeployableIndexer = "generated-deployable"
 )
 
 /**
@@ -70,14 +72,20 @@ type channelMapper struct {
 
 func (mapper *channelMapper) Map(obj handler.MapObject) []reconcile.Request {
 	dpllist := &dplv1.DeployableList{}
-
-	err := mapper.List(context.TODO(), dpllist, &client.ListOptions{})
-	if err != nil {
+	if err := mapper.List(
+		context.TODO(),
+		dpllist,
+		client.MatchingFields{CtrlDeployableIndexer: "true"},
+	); err != nil {
 		mapper.log.Error(err, "failed to list all deployable ")
 		return nil
 	}
 
+	objKey := types.NamespacedName{Name: obj.Meta.GetName(), Namespace: obj.Meta.GetNamespace()}
+	mapper.log.Info(fmt.Sprintf("channel %v mapper's dpl list %v\n", objKey.String(), len(dpllist.Items)))
+
 	var requests []reconcile.Request
+
 	for _, dpl := range dpllist.Items {
 		requests = append(requests, reconcile.Request{NamespacedName: types.NamespacedName{Name: dpl.GetName(), Namespace: dpl.GetNamespace()}})
 	}
@@ -87,6 +95,43 @@ func (mapper *channelMapper) Map(obj handler.MapObject) []reconcile.Request {
 
 // add adds a new Controller to mgr with r as the reconcile.Reconciler
 func add(mgr manager.Manager, r reconcile.Reconciler, logger logr.Logger) error {
+	if err := mgr.GetFieldIndexer().IndexField(&dplv1.Deployable{}, CtrlDeployableIndexer, func(rawObj runtime.Object) []string {
+		// grab the job object, extract the owner...
+		dpl := rawObj.(*dplv1.Deployable)
+		anno := dpl.GetAnnotations()
+		if len(anno) == 0 {
+			return nil
+		}
+		// this make sure the indexer will only be applied on non-generated
+		// deployable
+		if _, ok := anno[chv1.KeyChannelSource]; ok {
+			return nil
+		}
+
+		// ...and if so, return it
+		return []string{"true"}
+	}); err != nil {
+		return err
+	}
+
+	if err := mgr.GetFieldIndexer().IndexField(&dplv1.Deployable{}, CtrlGenerateDeployableIndexer, func(rawObj runtime.Object) []string {
+		// grab the job object, extract the owner...
+		dpl := rawObj.(*dplv1.Deployable)
+		anno := dpl.GetAnnotations()
+		if len(anno) == 0 {
+			return nil
+		}
+		// this make sure the indexer will only be applied on generated
+		// deployable
+		if _, ok := anno[chv1.KeyChannelSource]; !ok {
+			return nil
+		}
+
+		// ...and if so, return it
+		return []string{"true"}
+	}); err != nil {
+		return err
+	}
 	// Create a new controller
 	c, err := controller.New(controllerName, mgr, controller.Options{Reconciler: r})
 	if err != nil {
@@ -151,8 +196,8 @@ func (r *ReconcileDeployable) Reconcile(request reconcile.Request) (reconcile.Re
 
 	defer log.Info(fmt.Sprintf("Finish %v reconcile loop for %v", controllerName, request.NamespacedName))
 
-	instance := &dplv1.Deployable{}
-	err := r.Get(context.TODO(), request.NamespacedName, instance)
+	dpl := &dplv1.Deployable{}
+	err := r.Get(context.TODO(), request.NamespacedName, dpl)
 
 	if err != nil {
 		if errors.IsNotFound(err) {
@@ -165,36 +210,36 @@ func (r *ReconcileDeployable) Reconcile(request reconcile.Request) (reconcile.Re
 		return reconcile.Result{}, err
 	}
 
-	channelmap, err := utils.GenerateChannelMap(r.Client, log)
+	clusterChnMap, err := utils.GenerateChannelMap(r.Client, log)
 	if err != nil {
 		if !errors.IsNotFound(err) {
 			log.Error(err, "failed to get all deployables")
 			return reconcile.Result{}, nil
 		}
 
-		channelmap = make(map[string]*chv1.Channel)
+		clusterChnMap = make(map[string]*chv1.Channel)
 	}
 
 	channelNsMap := make(map[string]string)
 
-	for _, ch := range channelmap {
+	for _, ch := range clusterChnMap {
 		channelNsMap[ch.Namespace] = ch.Name
 	}
 
-	parent, dplmap, err := utils.FindDeployableForChannelsInMap(r.Client, instance, channelNsMap, log)
+	parent, childDplmap, err := utils.RebuildDeployableRelationshipGraph(r.Client, dpl, channelNsMap, log)
 	if err != nil && !errors.IsNotFound(err) {
 		log.Error(err, "failed to get all deployables")
 		return reconcile.Result{}, nil
 	}
 
-	log.Info(fmt.Sprintf("Dpl Map, before deletion: %#v", dplmap))
+	log.Info(fmt.Sprintf("Dpl Map, before deletion: %#v", childDplmap))
 
-	dplmap, err = r.updateDeployableRelationWithChannel(instance, dplmap, parent, channelNsMap, channelmap, log)
+	childDplmap, err = r.promoteDeployabeToChannels(dpl, childDplmap, parent, channelNsMap, clusterChnMap, log)
 	if err != nil {
 		return reconcile.Result{}, err
 	}
 
-	r.handleOrphanDeployable(dplmap, log)
+	r.handleOrphanDeployable(childDplmap, log)
 
 	return reconcile.Result{}, err
 }
@@ -329,39 +374,43 @@ func (r *ReconcileDeployable) propagateDeployableToChannel(
 	return err
 }
 
-func (r *ReconcileDeployable) updateDeployableRelationWithChannel(
-	instance *dplv1.Deployable, dplmap map[string]*dplv1.Deployable,
-	parent *dplv1.Deployable, channelNsMap map[string]string,
-	channelmap map[string]*chv1.Channel, logger logr.Logger) (map[string]*dplv1.Deployable, error) {
-	if len(instance.GetFinalizers()) == 0 {
-		annotations := instance.Annotations
-		if channelNsMap[instance.Namespace] != "" && annotations != nil && annotations[chv1.KeyChannelSource] != "" && parent == nil {
-			r.Log.Info(fmt.Sprintf("Delete instance: The parent of the instance not found: %#v, %#v", annotations[chv1.KeyChannelSource], instance))
-			return nil, r.Client.Delete(context.TODO(), instance)
+func (r *ReconcileDeployable) promoteDeployabeToChannels(
+	dpl *dplv1.Deployable, childDplMap map[string]*dplv1.Deployable,
+	parent *dplv1.Deployable, chNsSet map[string]string,
+	clusterChnMap map[string]*chv1.Channel, logger logr.Logger) (map[string]*dplv1.Deployable, error) {
+	if len(dpl.GetFinalizers()) == 0 {
+		annotations := dpl.Annotations
+		if chNsSet[dpl.Namespace] != "" && annotations != nil && annotations[chv1.KeyChannelSource] != "" && parent == nil {
+			r.Log.Info(fmt.Sprintf("Delete instance: The parent of the instance not found: %#v, %#v", annotations[chv1.KeyChannelSource], dpl))
+			return nil, r.Client.Delete(context.TODO(), dpl)
 		}
 
-		for _, chname := range instance.Spec.Channels {
-			ch, ok := channelmap[chname]
+		logger.Info(fmt.Sprintf("cluster has channels: %#v", clusterChnMap))
+		//promote deployable to channels, specified in deployable.Spec.Channels
+		for _, chname := range dpl.Spec.Channels {
+			ch, ok := clusterChnMap[chname]
 			if !ok {
-				logger.Info(fmt.Sprintf("failed to find channel name %v for deployable %v/%v", chname, instance.Namespace, instance.Name))
+				logger.Info(fmt.Sprintf("failed to find channel name %v for deployable %v/%v", chname, dpl.Namespace, dpl.Name))
 				continue
 			}
 
-			if err := r.propagateDeployableToChannel(instance, dplmap, ch, logger); err != nil {
-				logger.Info(fmt.Sprintf("failed to validate deplyable for %v ", instance))
+			if err := r.propagateDeployableToChannel(dpl, childDplMap, ch, logger); err != nil {
+				logger.Info(fmt.Sprintf("failed to validate deplyable for %v ", dpl))
 			}
 
-			delete(channelmap, chname)
+			delete(clusterChnMap, chname)
 		}
 
-		for _, ch := range channelmap {
-			if err := r.propagateDeployableToChannel(instance, dplmap, ch, logger); err != nil {
-				logger.Error(err, fmt.Sprintf("Failed to propagate %v To Channel", instance))
+		//promote deployable to channels, who's watching the deployable's
+		//namespace
+		for _, ch := range clusterChnMap {
+			if err := r.propagateDeployableToChannel(dpl, childDplMap, ch, logger); err != nil {
+				logger.Error(err, fmt.Sprintf("Failed to propagate %v To Channel", dpl))
 			}
 		}
 	}
 
-	return dplmap, nil
+	return childDplMap, nil
 }
 
 func channelHasDeployable(clt client.Client, chn *chv1.Channel, dpl *dplv1.Deployable) bool {

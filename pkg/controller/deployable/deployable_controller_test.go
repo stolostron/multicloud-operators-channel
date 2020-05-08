@@ -15,11 +15,12 @@
 package deployable
 
 import (
+	"fmt"
 	"time"
 
-	tlog "github.com/go-logr/logr/testing"
 	"golang.org/x/net/context"
 
+	tlog "github.com/go-logr/logr/testing"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 
@@ -27,8 +28,10 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/apimachinery/pkg/util/rand"
 	"k8s.io/client-go/tools/record"
-	ctrl "sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/client"
+	mgr "sigs.k8s.io/controller-runtime/pkg/manager"
 
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
@@ -47,7 +50,35 @@ const (
 )
 
 var _ = Describe("channel and deployable requeue", func() {
-	var expectedRequest = reconcile.Request{NamespacedName: types.NamespacedName{Name: targetDeployableName, Namespace: targetNamespace}}
+	var (
+		expectedRequest = reconcile.Request{NamespacedName: types.NamespacedName{Name: targetDeployableName, Namespace: targetNamespace}}
+	)
+
+	var stop chan struct{}
+	var k8sClient client.Client
+
+	BeforeEach(func() {
+		stop = make(chan struct{})
+
+		k8sManager, err := mgr.New(cCfg, mgr.Options{MetricsBindAddress: "0"})
+		Expect(err).ToNot(HaveOccurred())
+
+		recFn, requests = SetupTestReconcile(newReconciler(k8sManager, record.NewFakeRecorder(fakeRecordBufferSize), tlog.NullLogger{}))
+		Expect(add(k8sManager, recFn, tlog.NullLogger{})).NotTo(HaveOccurred())
+
+		go func() {
+			Expect(k8sManager.Start(stop)).ToNot(HaveOccurred())
+		}()
+
+		k8sClient = k8sManager.GetClient()
+		Expect(k8sClient).ToNot(BeNil())
+
+	})
+
+	AfterEach(func() {
+		close(stop)
+	})
+
 	It("given channel without deployable, should not get reconcile signal", func() {
 		channelInstance := chv1.Channel{
 			ObjectMeta: metav1.ObjectMeta{
@@ -58,10 +89,6 @@ var _ = Describe("channel and deployable requeue", func() {
 				Pathname: targetNamespace,
 			},
 		}
-
-		recFn, requests := SetupTestReconcile(newReconciler(k8sManager, record.NewFakeRecorder(fakeRecordBufferSize), tlog.NullLogger{}))
-		Expect(add(k8sManager, recFn, tlog.NullLogger{})).NotTo(HaveOccurred())
-
 		// Create the Channel object and expect the Reconcile
 		Expect(k8sClient.Create(context.TODO(), channelInstance.DeepCopy())).NotTo(HaveOccurred())
 
@@ -87,14 +114,13 @@ var _ = Describe("channel and deployable requeue", func() {
 				},
 			},
 		}
-		recFn, requests := SetupTestReconcile(newReconciler(k8sManager, record.NewFakeRecorder(fakeRecordBufferSize), tlog.NullLogger{}))
-		Expect(add(k8sManager, recFn, tlog.NullLogger{})).NotTo(HaveOccurred())
 
 		Expect(k8sClient.Create(context.TODO(), deployableInstance.DeepCopy())).NotTo(HaveOccurred())
 
 		defer func() {
 			Expect(k8sClient.Delete(context.TODO(), &deployableInstance)).Should(Succeed())
 		}()
+
 		time.Sleep(k8swait)
 
 		//if there's deployables, then the channel update will generate requests on all the existing deployables
@@ -135,58 +161,79 @@ var _ = Describe("promote deployables to channel namespace without considering c
 			},
 		}
 	)
+
+	var stop chan struct{}
+	var k8sClient client.Client
+
 	BeforeEach(func() {
-	})
-	AfterEach(func() {
+		stop = make(chan struct{})
+
+		k8sManager, err := mgr.New(cCfg, mgr.Options{MetricsBindAddress: "0"})
+		Expect(err).ToNot(HaveOccurred())
+
+		recFn, requests = SetupTestReconcile(newReconciler(k8sManager, record.NewFakeRecorder(fakeRecordBufferSize), tlog.NullLogger{}))
+		Expect(add(k8sManager, recFn, tlog.NullLogger{})).NotTo(HaveOccurred())
+
+		go func() {
+			Expect(k8sManager.Start(stop)).ToNot(HaveOccurred())
+		}()
+
+		k8sClient = k8sManager.GetClient()
+		Expect(k8sClient).ToNot(BeNil())
+
 	})
 
-	Context("given a channel with sourceNamespaces without gate", func() {
-		It("channel without sourceNamespaces, deployable have target channel", func() {
+	AfterEach(func() {
+		close(stop)
+	})
+
+	Context("channel points to deployable or deployable points to channel", func() {
+		It("should promote deployable to channel, since deployable points to a no gate channel", func() {
 			chn := channelInstance.DeepCopy()
+			randStr := fmt.Sprintf("-%v", rand.Intn(100))
+
+			chn.SetName(chn.GetName() + randStr)
 			Expect(k8sClient.Create(context.TODO(), chn)).Should(Succeed())
 			defer func() {
 				Expect(k8sClient.Delete(context.TODO(), chn)).Should(Succeed())
 			}()
 
 			time.Sleep(k8swait)
-			recFn := newReconciler(k8sManager, record.NewFakeRecorder(fakeRecordBufferSize), tlog.NullLogger{})
-			Expect(add(k8sManager, recFn, tlog.NullLogger{})).NotTo(HaveOccurred())
 
 			dpl := deployableInstance.DeepCopy()
-			dpl.Spec.Channels = []string{chKey.Name}
+			dpl.SetName(dpl.GetName() + randStr)
+			dpl.Spec.Channels = []string{chn.GetName()}
 			Expect(k8sClient.Create(context.TODO(), dpl)).NotTo(HaveOccurred())
 			defer func() {
 				Expect(k8sClient.Delete(context.TODO(), dpl)).Should(Succeed())
 			}()
 
 			time.Sleep(k8swait)
-			req := reconcile.Request{NamespacedName: dplKey}
-			recFn.Reconcile(req)
 
 			expectDpls := dplv1.DeployableList{}
-			Expect(k8sClient.List(context.TODO(), &expectDpls,
-				&ctrl.ListOptions{
-					Namespace: chKey.Namespace,
-				})).Should(Succeed())
+			Expect(k8sClient.List(context.TODO(), &expectDpls, client.InNamespace(chn.GetNamespace()))).Should(Succeed())
+
 			Expect(expectDpls.Items).ShouldNot(HaveLen(0))
 
 			for _, item := range expectDpls.Items {
 				Expect(k8sClient.Delete(context.TODO(), &item)).Should(Succeed())
 			}
-
 		})
 
-		It("given channel without gate and deployable spec points to different channel", func() {
+		It("should not promote deployable to channel, since deployable is not pointing to wrong channel and channel not looking at deployable's namespace]", func() {
 			chn := channelInstance.DeepCopy()
+
+			randStr := fmt.Sprintf("-%v", rand.Intn(100))
+			chn.SetName(chn.GetName() + randStr)
+
 			Expect(k8sClient.Create(context.TODO(), chn)).Should(Succeed())
 			defer func() {
 				Expect(k8sClient.Delete(context.TODO(), chn)).Should(Succeed())
 			}()
-			dpl := deployableInstance.DeepCopy()
-			dpl.Spec.Channels = []string{"wrong"}
 
-			recFn := newReconciler(k8sManager, record.NewFakeRecorder(fakeRecordBufferSize), tlog.NullLogger{})
-			Expect(add(k8sManager, recFn, tlog.NullLogger{})).NotTo(HaveOccurred())
+			dpl := deployableInstance.DeepCopy()
+			dpl.SetName(dpl.GetName() + randStr)
+			dpl.Spec.Channels = []string{"wrong"}
 
 			Expect(k8sClient.Create(context.TODO(), dpl)).NotTo(HaveOccurred())
 			defer func() {
@@ -194,22 +241,21 @@ var _ = Describe("promote deployables to channel namespace without considering c
 			}()
 
 			time.Sleep(k8swait)
-			req := reconcile.Request{NamespacedName: dplKey}
-			recFn.Reconcile(req)
 
 			expectDpls := dplv1.DeployableList{}
-			Expect(k8sClient.List(context.TODO(), &expectDpls,
-				&ctrl.ListOptions{
-					Namespace: chKey.Namespace,
-				})).Should(Succeed())
+			Expect(k8sClient.List(context.TODO(), &expectDpls, client.InNamespace(chn.GetNamespace()))).Should(Succeed())
+
 			Expect(expectDpls.Items).Should(HaveLen(0))
 			for _, item := range expectDpls.Items {
 				Expect(k8sClient.Delete(context.TODO(), &item)).Should(Succeed())
 			}
 		})
 
-		It("given channel without gate and deployable with channel at spec", func() {
+		It("should NOT promote deployable to channel since channel don't have gate even active watch the deployable's namespace", func() {
 			chn := channelInstance.DeepCopy()
+			randStr := fmt.Sprintf("-%v", rand.Intn(100))
+
+			chn.SetName(chn.GetName() + randStr)
 			chn.Spec.SourceNamespaces = []string{dplKey.Namespace}
 
 			Expect(k8sClient.Create(context.TODO(), chn)).Should(Succeed())
@@ -218,61 +264,21 @@ var _ = Describe("promote deployables to channel namespace without considering c
 			}()
 
 			time.Sleep(k8swait)
-			recFn := newReconciler(k8sManager, record.NewFakeRecorder(fakeRecordBufferSize), tlog.NullLogger{})
-			Expect(add(k8sManager, recFn, tlog.NullLogger{})).NotTo(HaveOccurred())
 
 			dpl := deployableInstance.DeepCopy()
+			dpl.SetName(dpl.GetName() + randStr)
 			Expect(k8sClient.Create(context.TODO(), dpl)).NotTo(HaveOccurred())
 			defer func() {
 				Expect(k8sClient.Delete(context.TODO(), dpl)).Should(Succeed())
 			}()
 
 			time.Sleep(k8swait)
-			req := reconcile.Request{NamespacedName: dplKey}
-			recFn.Reconcile(req)
 
 			expectDpls := dplv1.DeployableList{}
-			Expect(k8sClient.List(context.TODO(), &expectDpls,
-				&ctrl.ListOptions{
-					Namespace: chKey.Namespace,
-				})).Should(Succeed())
+			Expect(k8sClient.List(context.TODO(), &expectDpls, client.InNamespace(chn.GetNamespace()))).Should(Succeed())
 
 			Expect(expectDpls.Items).Should(HaveLen(0))
 
-			for _, item := range expectDpls.Items {
-				Expect(k8sClient.Delete(context.TODO(), &item)).Should(Succeed())
-			}
-		})
-
-		It("given channel without gate and deployable spec points to different channel", func() {
-			chn := channelInstance.DeepCopy()
-			chn.Spec.SourceNamespaces = []string{dplKey.Namespace}
-			Expect(k8sClient.Create(context.TODO(), chn)).Should(Succeed())
-			defer func() {
-				Expect(k8sClient.Delete(context.TODO(), chn)).Should(Succeed())
-			}()
-
-			dpl := deployableInstance.DeepCopy()
-			dpl.Spec.Channels = []string{"wrong"}
-
-			recFn := newReconciler(k8sManager, record.NewFakeRecorder(fakeRecordBufferSize), tlog.NullLogger{})
-			Expect(add(k8sManager, recFn, tlog.NullLogger{})).NotTo(HaveOccurred())
-
-			Expect(k8sClient.Create(context.TODO(), dpl)).NotTo(HaveOccurred())
-			defer func() {
-				Expect(k8sClient.Delete(context.TODO(), dpl)).Should(Succeed())
-			}()
-
-			time.Sleep(k8swait)
-			req := reconcile.Request{NamespacedName: dplKey}
-			recFn.Reconcile(req)
-
-			expectDpls := dplv1.DeployableList{}
-			Expect(k8sClient.List(context.TODO(), &expectDpls,
-				&ctrl.ListOptions{
-					Namespace: chKey.Namespace,
-				})).Should(Succeed())
-			Expect(expectDpls.Items).Should(HaveLen(0))
 			for _, item := range expectDpls.Items {
 				Expect(k8sClient.Delete(context.TODO(), &item)).Should(Succeed())
 			}
@@ -280,20 +286,23 @@ var _ = Describe("promote deployables to channel namespace without considering c
 	})
 
 	Context("given a channel with sourceNamespaces with gate", func() {
-		It("given channel without gate and deployable with channel at spec", func() {
+		It("should promote deployable to channel's namespace", func() {
 			chn := channelInstance.DeepCopy()
 			chn.Spec.SourceNamespaces = []string{dplKey.Namespace}
 			chn.Spec.Gates = &chv1.ChannelGate{Annotations: map[string]string{"test": "pass"}}
+
+			randStr := fmt.Sprintf("-%v", rand.Intn(100))
+			chn.SetName(chn.GetName() + randStr)
 
 			Expect(k8sClient.Create(context.TODO(), chn)).Should(Succeed())
 			defer func() {
 				Expect(k8sClient.Delete(context.TODO(), chn)).Should(Succeed())
 			}()
 
-			recFn := newReconciler(k8sManager, record.NewFakeRecorder(fakeRecordBufferSize), tlog.NullLogger{})
-			Expect(add(k8sManager, recFn, tlog.NullLogger{})).NotTo(HaveOccurred())
+			time.Sleep(k8swait)
 
 			dpl := deployableInstance.DeepCopy()
+			dpl.SetName(dpl.GetName() + randStr)
 			dpl.Annotations = map[string]string{"test": "pass"}
 			Expect(k8sClient.Create(context.TODO(), dpl)).NotTo(HaveOccurred())
 			defer func() {
@@ -301,49 +310,43 @@ var _ = Describe("promote deployables to channel namespace without considering c
 			}()
 
 			time.Sleep(k8swait)
-			req := reconcile.Request{NamespacedName: dplKey}
-			recFn.Reconcile(req)
 
 			expectDpls := dplv1.DeployableList{}
-			Expect(k8sClient.List(context.TODO(), &expectDpls,
-				&ctrl.ListOptions{
-					Namespace: chKey.Namespace,
-				})).Should(Succeed())
+			Expect(k8sClient.List(context.TODO(), &expectDpls, client.InNamespace(chn.GetNamespace()))).Should(Succeed())
 			Expect(expectDpls.DeepCopy().Items).ShouldNot(HaveLen(0))
+
 			for _, item := range expectDpls.Items {
 				Expect(k8sClient.Delete(context.TODO(), &item)).Should(Succeed())
 			}
 		})
 
-		It("given channel without gate and deployable spec points to different channel", func() {
+		It("should not promote deployable due to mismatch annotation gate", func() {
 			chn := channelInstance.DeepCopy()
 			chn.Spec.SourceNamespaces = []string{dplKey.Namespace}
 			chn.Spec.Gates = &chv1.ChannelGate{Annotations: map[string]string{"test": "pass"}}
+
+			randStr := fmt.Sprintf("-%v", rand.Intn(100))
+			chn.SetName(chn.GetName() + randStr)
 			Expect(k8sClient.Create(context.TODO(), chn)).Should(Succeed())
 			defer func() {
 				Expect(k8sClient.Delete(context.TODO(), chn)).Should(Succeed())
 			}()
 
+			time.Sleep(k8swait)
+
 			dpl := deployableInstance.DeepCopy()
+			dpl.SetName(dpl.GetName() + randStr)
 			dpl.Annotations = map[string]string{"test": "not-pass"}
 
-			recFn := newReconciler(k8sManager, record.NewFakeRecorder(fakeRecordBufferSize), tlog.NullLogger{})
-			Expect(add(k8sManager, recFn, tlog.NullLogger{})).NotTo(HaveOccurred())
-
 			Expect(k8sClient.Create(context.TODO(), dpl)).NotTo(HaveOccurred())
 			defer func() {
 				Expect(k8sClient.Delete(context.TODO(), dpl)).Should(Succeed())
 			}()
 
 			time.Sleep(k8swait)
-			req := reconcile.Request{NamespacedName: dplKey}
-			recFn.Reconcile(req)
 
 			expectDpls := dplv1.DeployableList{}
-			Expect(k8sClient.List(context.TODO(), &expectDpls,
-				&ctrl.ListOptions{
-					Namespace: chKey.Namespace,
-				})).Should(Succeed())
+			Expect(k8sClient.List(context.TODO(), &expectDpls, client.InNamespace(chn.GetNamespace()))).Should(Succeed())
 			Expect(expectDpls.Items).Should(HaveLen(0))
 			for _, item := range expectDpls.Items {
 				Expect(k8sClient.Delete(context.TODO(), &item)).Should(Succeed())
@@ -352,34 +355,32 @@ var _ = Describe("promote deployables to channel namespace without considering c
 	})
 
 	Context("given a channel with sourceNamespaces with gate", func() {
-		It("given channel with gate and deployable with matched annotation should be promoted and GC'ed properly", func() {
+		It("should promote deployable and GC'ed properly after the original deployable is deleted", func() {
 			time.Sleep(k8swait)
 
 			chn := channelInstance.DeepCopy()
 			chn.Spec.SourceNamespaces = []string{dplKey.Namespace}
 			chn.Spec.Gates = &chv1.ChannelGate{Annotations: map[string]string{"test": "pass"}}
+			randStr := fmt.Sprintf("-%v", rand.Intn(100))
+			chn.SetName(chn.GetName() + randStr)
+
 			Expect(k8sClient.Create(context.TODO(), chn)).Should(Succeed())
 			defer func() {
 				Expect(k8sClient.Delete(context.TODO(), chn)).Should(Succeed())
 			}()
 
 			time.Sleep(k8swait)
-			recFn := newReconciler(k8sManager, record.NewFakeRecorder(fakeRecordBufferSize), tlog.NullLogger{})
-			Expect(add(k8sManager, recFn, tlog.NullLogger{})).NotTo(HaveOccurred())
 
 			dpl := deployableInstance.DeepCopy()
 			dpl.Annotations = map[string]string{"test": "pass"}
+			dpl.SetName(dpl.GetName() + randStr)
 			Expect(k8sClient.Create(context.TODO(), dpl)).NotTo(HaveOccurred())
 
 			time.Sleep(k8swait)
-			req := reconcile.Request{NamespacedName: dplKey}
-			recFn.Reconcile(req)
 
 			expectDpls := dplv1.DeployableList{}
-			Expect(k8sClient.List(context.TODO(), &expectDpls,
-				&ctrl.ListOptions{
-					Namespace: chKey.Namespace,
-				})).Should(Succeed())
+			Expect(k8sClient.List(context.TODO(), &expectDpls, client.InNamespace(chn.GetNamespace()))).Should(Succeed())
+
 			Expect(expectDpls.Items).ShouldNot(HaveLen(0))
 
 			Expect(k8sClient.Delete(context.TODO(), dpl)).Should(Succeed())
