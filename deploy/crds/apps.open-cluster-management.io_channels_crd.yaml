@@ -30,12 +30,12 @@ spec:
         apiVersion:
           description: 'APIVersion defines the versioned schema of this representation
             of an object. Servers should convert recognized schemas to the latest
-            internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/api-conventions.md#resources'
+            internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources'
           type: string
         kind:
           description: 'Kind is a string value representing the REST resource this
             object represents. Servers may infer this from the endpoint the client
-            submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/api-conventions.md#types-kinds'
+            submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds'
           type: string
         metadata:
           type: object
@@ -43,8 +43,10 @@ spec:
           description: ChannelSpec defines the desired state of Channel
           properties:
             configMapRef:
-              description: ObjectReference contains enough information to let you
-                inspect or modify the referred object.
+              description: Reference to a ConfigMap which contains additional settings
+                for accessing the channel. For example, the `insecureSkipVerify` option
+                for accessing HTTPS endpoints can be set in the ConfigMap to indicate
+                a insecure connection.
               properties:
                 apiVersion:
                   description: API version of the referent.
@@ -63,7 +65,7 @@ spec:
                     in the future.'
                   type: string
                 kind:
-                  description: 'Kind of the referent. More info: https://git.k8s.io/community/contributors/devel/api-conventions.md#types-kinds'
+                  description: 'Kind of the referent. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds'
                   type: string
                 name:
                   description: 'Name of the referent. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names'
@@ -73,24 +75,24 @@ spec:
                   type: string
                 resourceVersion:
                   description: 'Specific resourceVersion to which this reference is
-                    made, if any. More info: https://git.k8s.io/community/contributors/devel/api-conventions.md#concurrency-control-and-consistency'
+                    made, if any. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#concurrency-control-and-consistency'
                   type: string
                 uid:
                   description: 'UID of the referent. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#uids'
                   type: string
               type: object
             gates:
-              description: ChannelGate defines criteria for promote to channel
+              description: Criteria for promoting a Deployable from the sourceNamespaces
+                to Channel.
               properties:
                 annotations:
                   additionalProperties:
                     type: string
+                  description: The annotations which must present on a Deployable
+                    for it to be eligible for promotion.
                   type: object
                 labelSelector:
-                  description: A label selector is a label query over a set of resources.
-                    The result of matchLabels and matchExpressions are ANDed. An empty
-                    label selector matches all objects. A null label selector matches
-                    no objects.
+                  description: A label selector for selecting the Deployables.
                   properties:
                     matchExpressions:
                       description: matchExpressions is a list of label selector requirements.
@@ -137,10 +139,17 @@ spec:
                   type: string
               type: object
             pathname:
+              description: For a `namespace` channel, pathname is the name of the
+                namespace; For a `helmrepo` or `github` channel, pathname is the remote
+                URL for the channel contents; For a `objectbucket` channel, pathname
+                is the URL and name of the bucket.
               type: string
             secretRef:
-              description: ObjectReference contains enough information to let you
-                inspect or modify the referred object.
+              description: For a `github` channel or a `helmrepo` channel on github,
+                this can be used to reference a Secret which contains the credentials
+                for authentication, i.e. `user` and `accessToken`. For a `objectbucket`
+                channel, this can be used to reference a Secret which contains the
+                AWS credentials, i.e. `AccessKeyID` and `SecretAccessKey`.
               properties:
                 apiVersion:
                   description: API version of the referent.
@@ -159,7 +168,7 @@ spec:
                     in the future.'
                   type: string
                 kind:
-                  description: 'Kind of the referent. More info: https://git.k8s.io/community/contributors/devel/api-conventions.md#types-kinds'
+                  description: 'Kind of the referent. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds'
                   type: string
                 name:
                   description: 'Name of the referent. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names'
@@ -169,19 +178,20 @@ spec:
                   type: string
                 resourceVersion:
                   description: 'Specific resourceVersion to which this reference is
-                    made, if any. More info: https://git.k8s.io/community/contributors/devel/api-conventions.md#concurrency-control-and-consistency'
+                    made, if any. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#concurrency-control-and-consistency'
                   type: string
                 uid:
                   description: 'UID of the referent. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#uids'
                   type: string
               type: object
             sourceNamespaces:
+              description: A list of namespace names from which Deployables can be
+                promoted.
               items:
                 type: string
               type: array
             type:
-              description: 'INSERT ADDITIONAL SPEC FIELDS - desired state of cluster
-                Important: Run "make" to regenerate code after modifying this file'
+              description: ChannelType defines types of channel
               enum:
               - Namespace
               - HelmRepo
@@ -199,7 +209,7 @@ spec:
           - type
           type: object
         status:
-          description: ChannelStatus defines the observed state of Channel
+          description: The most recent observed status of the Channel.
           type: object
       type: object
   version: v1
