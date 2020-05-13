@@ -14,7 +14,7 @@ require (
 	github.com/onsi/gomega v1.9.0
 	github.com/open-cluster-management/multicloud-operators-deployable v0.0.0-20200324042552-efcef6528509
 	github.com/open-cluster-management/multicloud-operators-placementrule v0.0.0-20200324034428-30b1b40184d3
-	github.com/operator-framework/operator-sdk v0.12.0
+	github.com/operator-framework/operator-sdk v0.16.0
 	github.com/otiai10/copy v1.1.1
 	github.com/pkg/errors v0.8.1
 	github.com/spf13/pflag v1.0.5

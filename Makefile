@@ -120,6 +120,12 @@ test:
 coverage:
 	@common/scripts/codecov.sh
 
+
+openapi-gen:
+	which build/_output/bin/openapi-gen > /dev/null || go build -o build/_output/bin/openapi-gen k8s.io/kube-openapi/cmd/openapi-gen
+	build/_output/bin/openapi-gen -o . -i $(GIT_HOST)/$(BASE_DIR)/pkg/apis/apps/v1 \
+		-p pkg/apis/apps/v1 \
+		-h hack/boilerplate.go.txt
 ############################################################
 # build section
 ############################################################
