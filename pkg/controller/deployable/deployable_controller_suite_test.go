@@ -26,6 +26,7 @@ import (
 	"k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/client-go/rest"
 	"sigs.k8s.io/controller-runtime/pkg/envtest"
+	"sigs.k8s.io/controller-runtime/pkg/envtest/printer"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	"github.com/open-cluster-management/multicloud-operators-channel/pkg/apis"
@@ -42,7 +43,7 @@ func TestChannelDeployableReconcile(t *testing.T) {
 
 	RunSpecsWithDefaultAndCustomReporters(t,
 		"Deployable Controller Suite",
-		[]Reporter{envtest.NewlineReporter{}})
+		[]Reporter{printer.NewlineReporter{}})
 }
 
 var _ = BeforeSuite(func(done Done) {
