@@ -39,6 +39,7 @@ import (
 	typedcorev1 "k8s.io/client-go/kubernetes/typed/core/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client/config"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
+	"sigs.k8s.io/controller-runtime/pkg/webhook"
 
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 
@@ -46,7 +47,7 @@ import (
 	"github.com/open-cluster-management/multicloud-operators-channel/pkg/controller"
 	"github.com/open-cluster-management/multicloud-operators-channel/pkg/log/zap"
 	"github.com/open-cluster-management/multicloud-operators-channel/pkg/utils"
-	"github.com/open-cluster-management/multicloud-operators-channel/pkg/webhook"
+	chWebhook "github.com/open-cluster-management/multicloud-operators-channel/pkg/webhook"
 
 	helmsync "github.com/open-cluster-management/multicloud-operators-channel/pkg/synchronizer/helmreposynchronizer"
 	objsync "github.com/open-cluster-management/multicloud-operators-channel/pkg/synchronizer/objectstoresynchronizer"
@@ -163,13 +164,6 @@ func RunManager(sig <-chan struct{}) {
 		os.Exit(exitCode)
 	}
 
-	logger.Info("setting up webhooks")
-
-	if err := webhook.AddToManager(mgr); err != nil {
-		logger.Error(err, "unable to register webhooks to the manager")
-		os.Exit(exitCode)
-	}
-
 	if err = serveCRMetrics(cfg); err != nil {
 		logger.Info("Could not generate and serve custom resource metrics", "error", err.Error())
 	}
@@ -213,6 +207,16 @@ func RunManager(sig <-chan struct{}) {
 	placementutils.DetectClusterRegistry(mgr.GetAPIReader(), sig)
 
 	logger.Info("Starting the Cmd.")
+
+	// Setup webhooks
+	logger.Info("setting up webhook server")
+	hookServer := mgr.GetWebhookServer()
+	hookServer.CertDir = "/Users/ianzhang/.minikube"
+	hookServer.CertName = "ca.crt"
+	hookServer.KeyName = "ca.key"
+
+	logger.Info("registering webhooks to the webhook server")
+	hookServer.Register("/validate-apps-open-cluster-management-io-v1-channel", &webhook.Admission{Handler: &chWebhook.ChannelValidator{Client: mgr.GetClient()}})
 
 	// Start the Cmd
 	if err := mgr.Start(sig); err != nil {
