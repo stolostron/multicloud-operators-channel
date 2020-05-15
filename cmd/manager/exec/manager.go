@@ -62,7 +62,11 @@ var (
 	setupLog                  = logf.Log.WithName("setup")
 )
 
-const exitCode = 1
+const (
+	exitCode      = 1
+	validatorPath = "/validate-apps-open-cluster-management-io-v1-channel"
+	webhookPort   = 9443
+)
 
 func printVersion() {
 	setupLog.Info(fmt.Sprintf("Go Version: %s", runtime.Version()))
@@ -211,12 +215,10 @@ func RunManager(sig <-chan struct{}) {
 	// Setup webhooks
 	logger.Info("setting up webhook server")
 	hookServer := mgr.GetWebhookServer()
-	hookServer.CertDir = "/Users/ianzhang/.minikube"
-	hookServer.CertName = "ca.crt"
-	hookServer.KeyName = "ca.key"
+	hookServer.Port = webhookPort
 
 	logger.Info("registering webhooks to the webhook server")
-	hookServer.Register("/validate-apps-open-cluster-management-io-v1-channel", &webhook.Admission{Handler: &chWebhook.ChannelValidator{Client: mgr.GetClient()}})
+	hookServer.Register(validatorPath, &webhook.Admission{Handler: &chWebhook.ChannelValidator{Client: mgr.GetClient()}})
 
 	// Start the Cmd
 	if err := mgr.Start(sig); err != nil {

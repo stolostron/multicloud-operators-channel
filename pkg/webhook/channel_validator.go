@@ -21,6 +21,7 @@ import (
 
 	chv1 "github.com/open-cluster-management/multicloud-operators-channel/pkg/apis/apps/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
 )
 
@@ -29,11 +30,13 @@ type ChannelValidator struct {
 	decoder *admission.Decoder
 }
 
-// +kubebuilder:webhook:verbs=create;update,path=/validate-apps-open-cluster-management-io-v1-channel,mutating=false,failurePolicy=fail,groups=apps.open-cluster-management.io.open-cluster-management.io,resources=channels,versions=v1,name=vchannel.kb.io
+// +kubebuilder:webhook:verbs=create;update,path=/validate-apps-open-cluster-management-io-v1-channel,mutating=false,failurePolicy=fail,groups=apps.open-cluster-management.io,resources=channels,versions=v1,name=vchannel.kb.io
 
-// ChannelValidator admits a channel if a specific channel can coexit in the
+// ChannelValidator admits a channel if a specific channel can co-exit in the
 // requested namespace.
 func (v *ChannelValidator) Handle(ctx context.Context, req admission.Request) admission.Response {
+	logf.Log.Info("--------------> entry webhook")
+	defer logf.Log.Info("++++++++++++++++++++exit webhook")
 	chn := &chv1.Channel{}
 
 	err := v.decoder.Decode(req, chn)

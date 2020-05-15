@@ -1,0 +1,24 @@
+  
+# The following manifests contain a self-signed issuer CR and a certificate CR.
+# More document can be found at https://docs.cert-manager.io
+apiVersion: cert-manager.io/v1alpha2
+kind: Issuer
+metadata:
+  name: channel-webhook-selfsigned-issuer
+spec:
+  selfSigned: {}
+---
+apiVersion: cert-manager.io/v1alpha2
+kind: Certificate
+metadata:
+  name: channel-webhook-serving-cert  # this name should match the one appeared in kustomizeconfig.yaml
+spec:
+  # $(SERVICE_NAME) and $(SERVICE_NAMESPACE) will be substituted by kustomize
+  commonName: channel-webhook-service.default.svc
+  dnsNames:
+  - channel-webhook-service.default.svc
+  isCA: true
+  issuerRef:
+    kind: Issuer
+    name: channel-webhook-selfsigned-issuer
+  secretName: channel-webhook-server-cert # this secret will not be prefixed, since it's not managed by kustomize
