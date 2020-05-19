@@ -137,13 +137,7 @@ func (r *ReconcileDeployable) createOrUpdateDeployableInObjectBucket(deployable 
 		return errors.Wrap(err, "failed to marshall packaged deployable")
 	}
 
-	var dplGenerateName string
-
-	if deployable.GetGenerateName() != "" {
-		dplGenerateName = deployable.GetGenerateName()
-	} else {
-		dplGenerateName = deployable.GetName()
-	}
+	dplGenerateName := utils.DplGenerateNameStr(deployable)
 
 	dplObj := utils.DeployableObject{
 		Name:         deployable.GetName(),
