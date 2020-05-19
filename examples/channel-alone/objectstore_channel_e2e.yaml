@@ -8,7 +8,7 @@ metadata:
   namespace: default
 spec: 
   channels: 
-  - dev
+  - deva
   template: 
     apiVersion: v1
     data: 
@@ -25,11 +25,11 @@ metadata:
 apiVersion: apps.open-cluster-management.io/v1
 kind: Channel
 metadata:
-  name: dev
+  name: deva
   namespace: ch-obj
 spec:
   type: ObjectBucket
-  pathname: http://52.90.18.11:9000/dev
+  pathname: http://52.90.18.11:9000/deva
   sourceNamespaces:
     - default
   secretRef:
