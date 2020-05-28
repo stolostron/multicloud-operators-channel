@@ -35,6 +35,10 @@ spec:
               valueFrom:
                 fieldRef:
                   fieldPath: metadata.name
+            - name: POD_NAMESPACE
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.namespace
             - name: OPERATOR_NAME
               value: "multicluster-operators-channel"
           resources:
@@ -44,13 +48,3 @@ spec:
               limits:
                 cpu: 500m
                 memory: 512Mi
-          volumeMounts:
-          - mountPath: /tmp/k8s-webhook-server/serving-certs
-            name: cert
-            readOnly: true
-      volumes:
-      - name: cert
-        secret:
-          defaultMode: 420
-          secretName: channel-webhook-server-cert
-

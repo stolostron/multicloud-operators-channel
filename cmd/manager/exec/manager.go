@@ -39,7 +39,6 @@ import (
 	typedcorev1 "k8s.io/client-go/kubernetes/typed/core/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client/config"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
-	"sigs.k8s.io/controller-runtime/pkg/webhook"
 
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 
@@ -63,9 +62,7 @@ var (
 )
 
 const (
-	exitCode      = 1
-	validatorPath = "/validate-apps-open-cluster-management-io-v1-channel"
-	webhookPort   = 9443
+	exitCode = 1
 )
 
 func printVersion() {
@@ -214,11 +211,13 @@ func RunManager(sig <-chan struct{}) {
 
 	// Setup webhooks
 	logger.Info("setting up webhook server")
-	hookServer := mgr.GetWebhookServer()
-	hookServer.Port = webhookPort
 
-	logger.Info("registering webhooks to the webhook server")
-	hookServer.Register(validatorPath, &webhook.Admission{Handler: &chWebhook.ChannelValidator{Client: mgr.GetClient()}})
+	hookServer := mgr.GetWebhookServer()
+
+	if err := chWebhook.WireUpWebhookWithKube(mgr.GetClient(), hookServer); err != nil {
+		logger.Error(err, "Manager exited non-zero")
+		os.Exit(exitCode)
+	}
 
 	// Start the Cmd
 	if err := mgr.Start(sig); err != nil {
