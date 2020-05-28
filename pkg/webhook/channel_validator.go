@@ -20,7 +20,6 @@ import (
 	"net/http"
 
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
 
 	chv1 "github.com/open-cluster-management/multicloud-operators-channel/pkg/apis/apps/v1"
@@ -34,8 +33,8 @@ type ChannelValidator struct {
 // ChannelValidator admits a channel if a specific channel can co-exit in the
 // requested namespace.
 func (v *ChannelValidator) Handle(ctx context.Context, req admission.Request) admission.Response {
-	logf.Log.Info(" entry webhook")
-	defer logf.Log.Info("exit webhook")
+	log.Info("entry webhook handle")
+	defer log.Info("exit webhook handle")
 
 	chn := &chv1.Channel{}
 

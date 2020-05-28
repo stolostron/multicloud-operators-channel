@@ -18,6 +18,7 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"path/filepath"
 	"runtime"
 
 	"k8s.io/client-go/kubernetes"
@@ -207,18 +208,21 @@ func RunManager(sig <-chan struct{}) {
 	logger.Info("Detecting ACM cluster API service...")
 	placementutils.DetectClusterRegistry(mgr.GetAPIReader(), sig)
 
-	logger.Info("Starting the Cmd.")
-
 	// Setup webhooks
 	logger.Info("setting up webhook server")
 
 	hookServer := mgr.GetWebhookServer()
+	certDir := filepath.Join(os.TempDir(), "k8s-webhook-server", "serving-certs")
 
-	if err := chWebhook.WireUpWebhookWithKube(mgr.GetClient(), hookServer); err != nil {
-		logger.Error(err, "Manager exited non-zero")
+	caCert, err := chWebhook.WireUpWebhook(mgr.GetClient(), hookServer, certDir)
+	if err != nil {
+		logger.Error(err, "failed to wire up webhook")
 		os.Exit(exitCode)
 	}
 
+	go chWebhook.WireUpWebhookSupplymentryResource(mgr, sig, certDir, caCert)
+
+	logger.Info("Starting the Cmd.")
 	// Start the Cmd
 	if err := mgr.Start(sig); err != nil {
 		logger.Error(err, "Manager exited non-zero")

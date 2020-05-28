@@ -18,7 +18,7 @@ spec:
       containers:
         - name: multicluster-operators-channel
           imagePullPolicy: IfNotPresent
-          image: quay.io/ianzhang366/channel-webhook:v1
+          image: quay.io/open-cluster-management/multicluster-operators-channel:latest
           ports:
           - containerPort: 8443
             name: ch-api
