@@ -58,9 +58,9 @@ func GenerateWebhookCerts(certDir string) ([]byte, error) {
 	}
 
 	alternateDNS := []string{
-		fmt.Sprintf("%s.%s", webhookServiceName, podNs),
-		fmt.Sprintf("%s.%s.svc", webhookServiceName, podNs),
-		fmt.Sprintf("%s.%s.svc.cluster.local", webhookServiceName, podNs),
+		fmt.Sprintf("%s.%s", WebhookServiceName, podNs),
+		fmt.Sprintf("%s.%s.svc", WebhookServiceName, podNs),
+		fmt.Sprintf("%s.%s.svc.cluster.local", WebhookServiceName, podNs),
 	}
 
 	ca, err := GenerateSelfSignedCACert(certName)
@@ -68,7 +68,7 @@ func GenerateWebhookCerts(certDir string) ([]byte, error) {
 		return nil, err
 	}
 
-	cert, err := GenerateSignedCert(webhookServiceName, alternateDNS, ca)
+	cert, err := GenerateSignedCert(WebhookServiceName, alternateDNS, ca)
 	if err != nil {
 		return nil, err
 	}

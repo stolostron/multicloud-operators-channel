@@ -220,7 +220,8 @@ func RunManager(sig <-chan struct{}) {
 		os.Exit(exitCode)
 	}
 
-	go chWebhook.WireUpWebhookSupplymentryResource(mgr, sig, chWebhook.WebhookValidatorName, certDir, caCert)
+	go chWebhook.WireUpWebhookSupplymentryResource(mgr, sig, chWebhook.WebhookServiceName,
+		chWebhook.WebhookValidatorName, certDir, caCert)
 
 	logger.Info("Starting the Cmd.")
 	// Start the Cmd

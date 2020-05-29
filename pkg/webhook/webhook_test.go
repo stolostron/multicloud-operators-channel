@@ -38,13 +38,16 @@ var _ = Describe("test webhook svc and validation mainifest creation", func() {
 		testNs  string
 		caCert  []byte
 		err     error
+		sstop   chan struct{}
 	)
+
 	BeforeEach(func() {
 		lMgr, err = mgr.New(testEnv.Config, mgr.Options{MetricsBindAddress: "0"})
 		Expect(err).Should(BeNil())
 
+		sstop = make(chan struct{}, 0)
 		go func() {
-			Expect(lMgr.Start(stop)).Should(Succeed())
+			Expect(lMgr.Start(sstop)).Should(Succeed())
 		}()
 
 		certDir = filepath.Join(os.TempDir(), "k8s-webhook-server", "serving-certs")
@@ -56,16 +59,21 @@ var _ = Describe("test webhook svc and validation mainifest creation", func() {
 
 	})
 
+	AfterEach(func() {
+		close(sstop)
+	})
+
 	Context("", func() {
 		It("should create a service and ValidatingWebhookConfiguration", func() {
 			validatorName := "test-validator"
-			WireUpWebhookSupplymentryResource(lMgr, stop, validatorName, certDir, caCert)
+			wbhSvcNm := "ch-wbh-svc"
+			WireUpWebhookSupplymentryResource(lMgr, stop, wbhSvcNm, validatorName, certDir, caCert)
 
 			ns, err := findEnvVariable(podNamespaceEnvVar)
 			Expect(err).Should(BeNil())
 
 			wbhSvc := &corev1.Service{}
-			svcKey := types.NamespacedName{Name: webhookServiceName, Namespace: ns}
+			svcKey := types.NamespacedName{Name: wbhSvcNm, Namespace: ns}
 			Expect(k8sClient.Get(context.TODO(), svcKey, wbhSvc)).Should(Succeed())
 			defer func() {
 				Expect(k8sClient.Delete(context.TODO(), wbhSvc)).Should(Succeed())

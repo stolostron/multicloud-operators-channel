@@ -46,12 +46,12 @@ const (
 	WebhookPort          = 9443
 	ValidatorPath        = "/validate-apps-open-cluster-management-io-v1-channel"
 	WebhookValidatorName = "channel-webhook-validator"
+	WebhookServiceName   = "channel-webhook-svc"
 
 	podNamespaceEnvVar = "POD_NAMESPACE"
 	operatorNameEnvVar = "OPERATOR_NAME"
 
-	webhookName        = "vchannel.kb.io"
-	webhookServiceName = "channel-webhook-svc"
+	webhookName = "vchannel.kb.io"
 
 	resourceName = "channels"
 )
@@ -70,7 +70,7 @@ func WireUpWebhook(clt client.Client, whk *webhook.Server, certDir string) ([]by
 
 //assuming we have a service set up for the webhook, and the service is linking
 //to a secret which has the CA
-func WireUpWebhookSupplymentryResource(mgr manager.Manager, stop <-chan struct{}, validatorName, certDir string, caCert []byte) {
+func WireUpWebhookSupplymentryResource(mgr manager.Manager, stop <-chan struct{}, wbhSvcName, validatorName, certDir string, caCert []byte) {
 	log.Info("entry wire up webhook")
 	defer log.Info("exit wire up webhook ")
 
@@ -87,11 +87,11 @@ func WireUpWebhookSupplymentryResource(mgr manager.Manager, stop <-chan struct{}
 
 	clt := mgr.GetClient()
 
-	if err := createWebhookService(clt, podNs); err != nil {
+	if err := createWebhookService(clt, wbhSvcName, podNs); err != nil {
 		log.Error(err, "failed to wire up webhook with kube")
 	}
 
-	if err := createOrUpdateValiatingWebhook(clt, validatorName, podNs, ValidatorPath, caCert); err != nil {
+	if err := createOrUpdateValiatingWebhook(clt, wbhSvcName, validatorName, podNs, ValidatorPath, caCert); err != nil {
 		log.Error(err, "failed to wire up webhook with kube")
 	}
 }
@@ -105,13 +105,13 @@ func findEnvVariable(envName string) (string, error) {
 	return val, nil
 }
 
-func createWebhookService(c client.Client, namespace string) error {
+func createWebhookService(c client.Client, wbhSvcName, namespace string) error {
 	service := &corev1.Service{}
-	key := types.NamespacedName{Name: webhookServiceName, Namespace: namespace}
+	key := types.NamespacedName{Name: wbhSvcName, Namespace: namespace}
 
 	if err := c.Get(context.TODO(), key, service); err != nil {
 		if errors.IsNotFound(err) {
-			service, err := newWebhookService(namespace)
+			service, err := newWebhookService(wbhSvcName, namespace)
 			if err != nil {
 				return gerr.Wrap(err, "failed to create service for webhook")
 			}
@@ -122,24 +122,24 @@ func createWebhookService(c client.Client, namespace string) error {
 				return err
 			}
 
-			log.Info(fmt.Sprintf("Create %s/%s service", namespace, webhookServiceName))
+			log.Info(fmt.Sprintf("Create %s/%s service", namespace, wbhSvcName))
 
 			return nil
 		}
 	}
 
-	log.Info(fmt.Sprintf("%s/%s service is found", namespace, webhookServiceName))
+	log.Info(fmt.Sprintf("%s/%s service is found", namespace, wbhSvcName))
 
 	return nil
 }
 
-func createOrUpdateValiatingWebhook(c client.Client, validatorName, namespace, path string, ca []byte) error {
+func createOrUpdateValiatingWebhook(c client.Client, wbhSvcName, validatorName, namespace, path string, ca []byte) error {
 	validator := &admissionregistration.ValidatingWebhookConfiguration{}
 	key := types.NamespacedName{Name: validatorName}
 
 	if err := c.Get(context.TODO(), key, validator); err != nil {
 		if errors.IsNotFound(err) {
-			cfg := newValidatingWebhookCfg(validatorName, namespace, path, ca)
+			cfg := newValidatingWebhookCfg(wbhSvcName, validatorName, namespace, path, ca)
 
 			setOwnerReferences(c, namespace, cfg)
 
@@ -183,7 +183,7 @@ func setOwnerReferences(c client.Client, namespace string, obj metav1.Object) {
 		*metav1.NewControllerRef(owner, owner.GetObjectKind().GroupVersionKind())})
 }
 
-func newWebhookService(namespace string) (*corev1.Service, error) {
+func newWebhookService(wbhSvcName, namespace string) (*corev1.Service, error) {
 	operatorName, err := findEnvVariable(operatorNameEnvVar)
 	if err != nil {
 		return nil, err
@@ -191,7 +191,7 @@ func newWebhookService(namespace string) (*corev1.Service, error) {
 
 	return &corev1.Service{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      webhookServiceName,
+			Name:      wbhSvcName,
 			Namespace: namespace,
 		},
 		Spec: corev1.ServiceSpec{
@@ -206,7 +206,7 @@ func newWebhookService(namespace string) (*corev1.Service, error) {
 	}, nil
 }
 
-func newValidatingWebhookCfg(validatorName, namespace, path string, ca []byte) *admissionregistration.ValidatingWebhookConfiguration {
+func newValidatingWebhookCfg(wbhSvcName, validatorName, namespace, path string, ca []byte) *admissionregistration.ValidatingWebhookConfiguration {
 	fail := admissionregistration.Fail
 	side := admissionregistration.SideEffectClassNone
 
@@ -222,7 +222,7 @@ func newValidatingWebhookCfg(validatorName, namespace, path string, ca []byte) *
 			FailurePolicy:           &fail,
 			ClientConfig: admissionregistration.WebhookClientConfig{
 				Service: &admissionregistration.ServiceReference{
-					Name:      webhookServiceName,
+					Name:      wbhSvcName,
 					Namespace: namespace,
 					Path:      &path,
 				},
