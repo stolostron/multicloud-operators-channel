@@ -64,6 +64,7 @@ func WireUpWebhook(clt client.Client, whk *webhook.Server, certDir string) ([]by
 
 	log.Info("registering webhooks to the webhook server")
 	whk.Register(ValidatorPath, &webhook.Admission{Handler: &ChannelValidator{Client: clt}})
+
 	return GenerateWebhookCerts(certDir)
 }
 

@@ -23,7 +23,9 @@ import (
 
 func TestGenerateSignedWebhookCertificates(t *testing.T) {
 	os.Setenv(podNamespaceEnvVar, "test")
+
 	certDir := "/tmp/tmp-cert"
+
 	defer func() {
 		os.RemoveAll(certDir)
 		os.Unsetenv(podNamespaceEnvVar)
@@ -42,6 +44,7 @@ func TestGenerateSignedWebhookCertificates(t *testing.T) {
 	if err != nil {
 		t.Errorf("Generate signed certificate failed, %v", err)
 	}
+
 	if !canReadCertAndKey {
 		t.Errorf("Generate signed certificate failed")
 	}

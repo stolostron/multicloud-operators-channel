@@ -42,7 +42,6 @@ import (
 )
 
 const (
-	k8swait      = time.Second * 2
 	StartTimeout = 60 // seconds
 )
 

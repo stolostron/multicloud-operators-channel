@@ -26,8 +26,9 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	mgr "sigs.k8s.io/controller-runtime/pkg/manager"
 
-	chv1 "github.com/open-cluster-management/multicloud-operators-channel/pkg/apis/apps/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+
+	chv1 "github.com/open-cluster-management/multicloud-operators-channel/pkg/apis/apps/v1"
 )
 
 var _ = Describe("test webhook svc and validation mainifest creation", func() {
