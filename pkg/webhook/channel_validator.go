@@ -43,7 +43,7 @@ func (v *ChannelValidator) Handle(ctx context.Context, req admission.Request) ad
 		return admission.Errored(http.StatusBadRequest, err)
 	}
 
-	if chn.Spec.Type == chv1.ChannelTypeGit {
+	if chn.Spec.Type == chv1.ChannelTypeGit || chn.Spec.Type == chv1.ChannelTypeGitHub {
 		return admission.Allowed("")
 	}
 
@@ -52,11 +52,25 @@ func (v *ChannelValidator) Handle(ctx context.Context, req admission.Request) ad
 		return admission.Denied(fmt.Sprint("k8s cluster state unknow "))
 	}
 
-	if len(chList.Items) != 0 {
+	if len(chList.Items) == 0 {
+		return admission.Allowed("")
+	}
+
+	if !isAllGit(chList) {
 		return admission.Denied(fmt.Sprint("there's channel in the requested namespace"))
 	}
 
 	return admission.Allowed("")
+}
+
+func isAllGit(chList *chv1.ChannelList) bool {
+	for _, ch := range chList.Items {
+		if ch.Spec.Type != chv1.ChannelTypeGit && ch.Spec.Type != chv1.ChannelTypeGitHub {
+			return false
+		}
+	}
+
+	return true
 }
 
 // ChannelValidator implements admission.DecoderInjector.

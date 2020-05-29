@@ -43,15 +43,15 @@ const (
 	tlsCrt = "tls.crt"
 	tlsKey = "tls.key"
 
-	WebhookPort   = 9443
-	ValidatorPath = "/validate-apps-open-cluster-management-io-v1-channel"
+	WebhookPort          = 9443
+	ValidatorPath        = "/validate-apps-open-cluster-management-io-v1-channel"
+	WebhookValidatorName = "channel-webhook-validator"
 
 	podNamespaceEnvVar = "POD_NAMESPACE"
 	operatorNameEnvVar = "OPERATOR_NAME"
 
-	webhookName          = "vchannel.kb.io"
-	webhookValidatorName = "channel-webhook-validator"
-	webhookServiceName   = "channel-webhook-svc"
+	webhookName        = "vchannel.kb.io"
+	webhookServiceName = "channel-webhook-svc"
 
 	resourceName = "channels"
 )
@@ -69,7 +69,7 @@ func WireUpWebhook(clt client.Client, whk *webhook.Server, certDir string) ([]by
 
 //assuming we have a service set up for the webhook, and the service is linking
 //to a secret which has the CA
-func WireUpWebhookSupplymentryResource(mgr manager.Manager, stop <-chan struct{}, certDir string, caCert []byte) {
+func WireUpWebhookSupplymentryResource(mgr manager.Manager, stop <-chan struct{}, validatorName, certDir string, caCert []byte) {
 	log.Info("entry wire up webhook")
 	defer log.Info("exit wire up webhook ")
 
@@ -82,13 +82,15 @@ func WireUpWebhookSupplymentryResource(mgr manager.Manager, stop <-chan struct{}
 		log.Error(gerr.New("cache not started"), "failed to start up cache")
 	}
 
+	log.Info("cache is ready to consume")
+
 	clt := mgr.GetClient()
-	//leverage ocp to generate cert secret
+
 	if err := createWebhookService(clt, podNs); err != nil {
 		log.Error(err, "failed to wire up webhook with kube")
 	}
 
-	if err := createOrUpdateValiatingWebhook(clt, podNs, ValidatorPath, caCert); err != nil {
+	if err := createOrUpdateValiatingWebhook(clt, validatorName, podNs, ValidatorPath, caCert); err != nil {
 		log.Error(err, "failed to wire up webhook with kube")
 	}
 }
@@ -130,21 +132,21 @@ func createWebhookService(c client.Client, namespace string) error {
 	return nil
 }
 
-func createOrUpdateValiatingWebhook(c client.Client, namespace, path string, ca []byte) error {
+func createOrUpdateValiatingWebhook(c client.Client, validatorName, namespace, path string, ca []byte) error {
 	validator := &admissionregistration.ValidatingWebhookConfiguration{}
-	key := types.NamespacedName{Name: webhookValidatorName}
+	key := types.NamespacedName{Name: validatorName}
 
 	if err := c.Get(context.TODO(), key, validator); err != nil {
 		if errors.IsNotFound(err) {
-			cfg := newValidatingWebhookCfg(namespace, path, ca)
+			cfg := newValidatingWebhookCfg(validatorName, namespace, path, ca)
 
 			setOwnerReferences(c, namespace, cfg)
 
 			if err := c.Create(context.TODO(), cfg); err != nil {
-				return gerr.Wrap(err, fmt.Sprintf("Failed to create validating webhook %s", webhookValidatorName))
+				return gerr.Wrap(err, fmt.Sprintf("Failed to create validating webhook %s", validatorName))
 			}
 
-			log.Info(fmt.Sprintf("Create validating webhook %s", webhookValidatorName))
+			log.Info(fmt.Sprintf("Create validating webhook %s", validatorName))
 
 			return nil
 		}
@@ -154,10 +156,10 @@ func createOrUpdateValiatingWebhook(c client.Client, namespace, path string, ca 
 	validator.Webhooks[0].ClientConfig.CABundle = ca
 
 	if err := c.Update(context.TODO(), validator); err != nil {
-		return gerr.Wrap(err, fmt.Sprintf("Failed to update validating webhook %s", webhookValidatorName))
+		return gerr.Wrap(err, fmt.Sprintf("Failed to update validating webhook %s", validatorName))
 	}
 
-	log.Info(fmt.Sprintf("Update validating webhook %s", webhookValidatorName))
+	log.Info(fmt.Sprintf("Update validating webhook %s", validatorName))
 
 	return nil
 }
@@ -203,13 +205,13 @@ func newWebhookService(namespace string) (*corev1.Service, error) {
 	}, nil
 }
 
-func newValidatingWebhookCfg(namespace, path string, ca []byte) *admissionregistration.ValidatingWebhookConfiguration {
+func newValidatingWebhookCfg(validatorName, namespace, path string, ca []byte) *admissionregistration.ValidatingWebhookConfiguration {
 	fail := admissionregistration.Fail
 	side := admissionregistration.SideEffectClassNone
 
 	return &admissionregistration.ValidatingWebhookConfiguration{
 		ObjectMeta: metav1.ObjectMeta{
-			Name: webhookValidatorName,
+			Name: validatorName,
 		},
 
 		Webhooks: []admissionregistration.ValidatingWebhook{{

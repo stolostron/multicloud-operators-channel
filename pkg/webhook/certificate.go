@@ -48,6 +48,10 @@ type Certificate struct {
 // GenerateWebhookCerts generate self singed CA and a signed cert pair. The
 // signed pair is stored at the certDir
 func GenerateWebhookCerts(certDir string) ([]byte, error) {
+	if len(certDir) == 0 {
+		certDir = filepath.Join(os.TempDir(), "k8s-webhook-server", "serving-certs")
+	}
+
 	podNs, err := findEnvVariable(podNamespaceEnvVar)
 	if err != nil {
 		return []byte{}, gerr.Wrap(err, "failed to generate server certs")
