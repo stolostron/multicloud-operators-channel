@@ -45,7 +45,7 @@ var _ = Describe("test webhook svc and validation mainifest creation", func() {
 		lMgr, err = mgr.New(testEnv.Config, mgr.Options{MetricsBindAddress: "0"})
 		Expect(err).Should(BeNil())
 
-		sstop = make(chan struct{}, 0)
+		sstop = make(chan struct{})
 		go func() {
 			Expect(lMgr.Start(sstop)).Should(Succeed())
 		}()
