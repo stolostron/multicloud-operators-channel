@@ -31,65 +31,6 @@ import (
 	chv1 "github.com/open-cluster-management/multicloud-operators-channel/pkg/apis/apps/v1"
 )
 
-var _ = Describe("test webhook svc and validation mainifest creation", func() {
-	var (
-		lMgr    mgr.Manager
-		certDir string
-		testNs  string
-		caCert  []byte
-		err     error
-		sstop   chan struct{}
-	)
-
-	BeforeEach(func() {
-		lMgr, err = mgr.New(testEnv.Config, mgr.Options{MetricsBindAddress: "0"})
-		Expect(err).Should(BeNil())
-
-		sstop = make(chan struct{})
-		go func() {
-			Expect(lMgr.Start(sstop)).Should(Succeed())
-		}()
-
-		certDir = filepath.Join(os.TempDir(), "k8s-webhook-server", "serving-certs")
-		testNs = "default"
-		os.Setenv("POD_NAMESPACE", testNs)
-
-		caCert, err = GenerateWebhookCerts(certDir)
-		Expect(err).Should(BeNil())
-
-	})
-
-	AfterEach(func() {
-		close(sstop)
-	})
-
-	Context("", func() {
-		It("should create a service and ValidatingWebhookConfiguration", func() {
-			validatorName := "test-validator"
-			wbhSvcNm := "ch-wbh-svc"
-			WireUpWebhookSupplymentryResource(lMgr, stop, wbhSvcNm, validatorName, certDir, caCert)
-
-			ns, err := findEnvVariable(podNamespaceEnvVar)
-			Expect(err).Should(BeNil())
-
-			wbhSvc := &corev1.Service{}
-			svcKey := types.NamespacedName{Name: wbhSvcNm, Namespace: ns}
-			Expect(k8sClient.Get(context.TODO(), svcKey, wbhSvc)).Should(Succeed())
-			defer func() {
-				Expect(k8sClient.Delete(context.TODO(), wbhSvc)).Should(Succeed())
-			}()
-
-			wbhCfg := &admissionv1.ValidatingWebhookConfiguration{}
-			cfgKey := types.NamespacedName{Name: validatorName}
-			Expect(k8sClient.Get(context.TODO(), cfgKey, wbhCfg)).Should(Succeed())
-
-			defer func() {
-				Expect(k8sClient.Delete(context.TODO(), wbhCfg)).Should(Succeed())
-			}()
-		})
-	})
-})
-
 var _ = Describe("test channel validation logic", func() {
 	Context("given an exist namespace channel in a namespace", func() {
 		var (
@@ -333,6 +274,58 @@ var _ = Describe("test channel validation logic", func() {
 			dupChn.SetName("dup-chn1")
 
 			Expect(k8sClient.Create(context.TODO(), dupChn)).ShouldNot(Succeed())
+		})
+	})
+
+	// make sure this one runs at the end, otherwise, we might register this
+	// webhook before the default one, which cause unexpected results.
+	Context("given a k8s env, it create svc and validating webhook config", func() {
+		var (
+			lMgr    mgr.Manager
+			certDir string
+			testNs  string
+			caCert  []byte
+			err     error
+			sstop   chan struct{}
+		)
+
+		It("should create a service and ValidatingWebhookConfiguration", func() {
+			lMgr, err = mgr.New(testEnv.Config, mgr.Options{MetricsBindAddress: "0"})
+			Expect(err).Should(BeNil())
+
+			sstop = make(chan struct{})
+			defer close(sstop)
+			go func() {
+				Expect(lMgr.Start(sstop)).Should(Succeed())
+			}()
+
+			certDir = filepath.Join(os.TempDir(), "k8s-webhook-server", "serving-certs")
+			testNs = "default"
+			os.Setenv("POD_NAMESPACE", testNs)
+
+			caCert, err = GenerateWebhookCerts(certDir)
+			Expect(err).Should(BeNil())
+			validatorName := "test-validator"
+			wbhSvcNm := "ch-wbh-svc"
+			WireUpWebhookSupplymentryResource(lMgr, stop, wbhSvcNm, validatorName, certDir, caCert)
+
+			ns, err := findEnvVariable(podNamespaceEnvVar)
+			Expect(err).Should(BeNil())
+
+			wbhSvc := &corev1.Service{}
+			svcKey := types.NamespacedName{Name: wbhSvcNm, Namespace: ns}
+			Expect(k8sClient.Get(context.TODO(), svcKey, wbhSvc)).Should(Succeed())
+			defer func() {
+				Expect(k8sClient.Delete(context.TODO(), wbhSvc)).Should(Succeed())
+			}()
+
+			wbhCfg := &admissionv1.ValidatingWebhookConfiguration{}
+			cfgKey := types.NamespacedName{Name: validatorName}
+			Expect(k8sClient.Get(context.TODO(), cfgKey, wbhCfg)).Should(Succeed())
+
+			defer func() {
+				Expect(k8sClient.Delete(context.TODO(), wbhCfg)).Should(Succeed())
+			}()
 		})
 	})
 })
