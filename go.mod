@@ -15,7 +15,6 @@ require (
 	github.com/open-cluster-management/multicloud-operators-placementrule v1.0.0-2020-05-12-22-38-29.0.20200513204034-766ba50d9664
 	github.com/operator-framework/operator-sdk v0.17.0
 	github.com/pkg/errors v0.9.1
-
 	github.com/spf13/pflag v1.0.5
 	github.com/stretchr/testify v1.4.0
 	go.uber.org/zap v1.14.1
@@ -29,6 +28,7 @@ require (
 	k8s.io/helm v2.16.3+incompatible
 	k8s.io/klog v1.0.0
 	k8s.io/kube-openapi v0.0.0-20191107075043-30be4d16710a
+	k8s.io/kubectl v0.17.4
 	sigs.k8s.io/controller-runtime v0.5.2
 )
 

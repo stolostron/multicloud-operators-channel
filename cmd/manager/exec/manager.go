@@ -18,6 +18,7 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"path/filepath"
 	"runtime"
 
 	"k8s.io/client-go/kubernetes"
@@ -46,7 +47,7 @@ import (
 	"github.com/open-cluster-management/multicloud-operators-channel/pkg/controller"
 	"github.com/open-cluster-management/multicloud-operators-channel/pkg/log/zap"
 	"github.com/open-cluster-management/multicloud-operators-channel/pkg/utils"
-	"github.com/open-cluster-management/multicloud-operators-channel/pkg/webhook"
+	chWebhook "github.com/open-cluster-management/multicloud-operators-channel/pkg/webhook"
 
 	helmsync "github.com/open-cluster-management/multicloud-operators-channel/pkg/synchronizer/helmreposynchronizer"
 	objsync "github.com/open-cluster-management/multicloud-operators-channel/pkg/synchronizer/objectstoresynchronizer"
@@ -61,7 +62,9 @@ var (
 	setupLog                  = logf.Log.WithName("setup")
 )
 
-const exitCode = 1
+const (
+	exitCode = 1
+)
 
 func printVersion() {
 	setupLog.Info(fmt.Sprintf("Go Version: %s", runtime.Version()))
@@ -163,13 +166,6 @@ func RunManager(sig <-chan struct{}) {
 		os.Exit(exitCode)
 	}
 
-	logger.Info("setting up webhooks")
-
-	if err := webhook.AddToManager(mgr); err != nil {
-		logger.Error(err, "unable to register webhooks to the manager")
-		os.Exit(exitCode)
-	}
-
 	if err = serveCRMetrics(cfg); err != nil {
 		logger.Info("Could not generate and serve custom resource metrics", "error", err.Error())
 	}
@@ -212,8 +208,22 @@ func RunManager(sig <-chan struct{}) {
 	logger.Info("Detecting ACM cluster API service...")
 	placementutils.DetectClusterRegistry(mgr.GetAPIReader(), sig)
 
-	logger.Info("Starting the Cmd.")
+	// Setup webhooks
+	logger.Info("setting up webhook server")
 
+	hookServer := mgr.GetWebhookServer()
+	certDir := filepath.Join(os.TempDir(), "k8s-webhook-server", "serving-certs")
+
+	caCert, err := chWebhook.WireUpWebhook(mgr.GetClient(), hookServer, certDir)
+	if err != nil {
+		logger.Error(err, "failed to wire up webhook")
+		os.Exit(exitCode)
+	}
+
+	go chWebhook.WireUpWebhookSupplymentryResource(mgr, sig, chWebhook.WebhookServiceName,
+		chWebhook.WebhookValidatorName, certDir, caCert)
+
+	logger.Info("Starting the Cmd.")
 	// Start the Cmd
 	if err := mgr.Start(sig); err != nil {
 		logger.Error(err, "Manager exited non-zero")
