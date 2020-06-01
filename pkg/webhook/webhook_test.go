@@ -18,6 +18,7 @@ import (
 	"context"
 	"os"
 	"path/filepath"
+	"time"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -312,19 +313,20 @@ var _ = Describe("test channel validation logic", func() {
 			ns, err := findEnvVariable(podNamespaceEnvVar)
 			Expect(err).Should(BeNil())
 
+			time.Sleep(3 * time.Second)
 			wbhSvc := &corev1.Service{}
 			svcKey := types.NamespacedName{Name: wbhSvcNm, Namespace: ns}
-			Expect(k8sClient.Get(context.TODO(), svcKey, wbhSvc)).Should(Succeed())
+			Expect(lMgr.GetClient().Get(context.TODO(), svcKey, wbhSvc)).Should(Succeed())
 			defer func() {
-				Expect(k8sClient.Delete(context.TODO(), wbhSvc)).Should(Succeed())
+				Expect(lMgr.GetClient().Delete(context.TODO(), wbhSvc)).Should(Succeed())
 			}()
 
 			wbhCfg := &admissionv1.ValidatingWebhookConfiguration{}
 			cfgKey := types.NamespacedName{Name: validatorName}
-			Expect(k8sClient.Get(context.TODO(), cfgKey, wbhCfg)).Should(Succeed())
+			Expect(lMgr.GetClient().Get(context.TODO(), cfgKey, wbhCfg)).Should(Succeed())
 
 			defer func() {
-				Expect(k8sClient.Delete(context.TODO(), wbhCfg)).Should(Succeed())
+				Expect(lMgr.GetClient().Delete(context.TODO(), wbhCfg)).Should(Succeed())
 			}()
 		})
 	})
