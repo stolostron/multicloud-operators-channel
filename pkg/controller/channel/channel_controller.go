@@ -241,6 +241,10 @@ func (r *ReconcileChannel) Reconcile(request reconcile.Request) (reconcile.Resul
 	srtRef := instance.Spec.SecretRef
 
 	if srtRef != nil {
+		if srtRef.Namespace == "" {
+			srtRef.Namespace = instance.GetNamespace()
+		}
+
 		if err := r.updatedReferencedObjectLabels(srtRef, srtGvk, log); err != nil {
 			r.Log.Error(err, "failed to update referred secret label")
 		}
@@ -253,6 +257,10 @@ func (r *ReconcileChannel) Reconcile(request reconcile.Request) (reconcile.Resul
 	//	//sync the channel to the serving-channel annotation in all involved ConfigMaps.
 	cmRef := instance.Spec.ConfigMapRef
 	if cmRef != nil {
+		if cmRef.Namespace == "" {
+			cmRef.Namespace = instance.GetNamespace()
+		}
+
 		if err := r.updatedReferencedObjectLabels(cmRef, cmGvk, log); err != nil {
 			r.Log.Error(err, "failed to update referred configMap label")
 		}
