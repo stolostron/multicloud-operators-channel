@@ -105,6 +105,10 @@ func (sync *ChannelSynchronizer) syncChannel(chn *chv1.Channel, localIdxFunc uti
 	chnRefCfgMap := &corev1.ConfigMap{}
 
 	if chn.Spec.ConfigMapRef != nil {
+		if chn.Spec.ConfigMapRef.Namespace == "" {
+			chn.Spec.ConfigMapRef.Namespace = chn.GetNamespace()
+		}
+
 		chnRefCfgMapKey := types.NamespacedName{Name: chn.Spec.ConfigMapRef.Name, Namespace: chn.Spec.ConfigMapRef.Namespace}
 		if err := sync.kubeClient.Get(context.TODO(), chnRefCfgMapKey, chnRefCfgMap); err != nil {
 			logf.Error(err, "failed to Get channel's referred configmap")
