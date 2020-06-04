@@ -95,7 +95,7 @@ func (mapper *channelMapper) Map(obj handler.MapObject) []reconcile.Request {
 
 // add adds a new Controller to mgr with r as the reconcile.Reconciler
 func add(mgr manager.Manager, r reconcile.Reconciler, logger logr.Logger) error {
-	if err := mgr.GetFieldIndexer().IndexField(&dplv1.Deployable{}, CtrlDeployableIndexer, func(rawObj runtime.Object) []string {
+	if err := mgr.GetFieldIndexer().IndexField(context.TODO(), &dplv1.Deployable{}, CtrlDeployableIndexer, func(rawObj runtime.Object) []string {
 		// grab the job object, extract the owner...
 		dpl := rawObj.(*dplv1.Deployable)
 		anno := dpl.GetAnnotations()
@@ -114,7 +114,7 @@ func add(mgr manager.Manager, r reconcile.Reconciler, logger logr.Logger) error 
 		return err
 	}
 
-	if err := mgr.GetFieldIndexer().IndexField(&dplv1.Deployable{}, CtrlGenerateDeployableIndexer, func(rawObj runtime.Object) []string {
+	if err := mgr.GetFieldIndexer().IndexField(context.TODO(), &dplv1.Deployable{}, CtrlGenerateDeployableIndexer, func(rawObj runtime.Object) []string {
 		// grab the job object, extract the owner...
 		dpl := rawObj.(*dplv1.Deployable)
 		anno := dpl.GetAnnotations()

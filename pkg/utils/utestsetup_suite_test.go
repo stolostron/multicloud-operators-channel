@@ -36,8 +36,17 @@ var c client.Client
 
 // testing.M is going to set up a local k8s env and provide the client, so the other test case can access to the cluster
 func TestMain(m *testing.M) {
+	customAPIServerFlags := []string{"--disable-admission-plugins=NamespaceLifecycle,LimitRanger,ServiceAccount," +
+		"TaintNodesByCondition,Priority,DefaultTolerationSeconds,DefaultStorageClass,StorageObjectInUseProtection," +
+		"PersistentVolumeClaimResize,ResourceQuota",
+	}
+
+	apiServerFlags := append([]string(nil), envtest.DefaultKubeAPIServerFlags...)
+	apiServerFlags = append(apiServerFlags, customAPIServerFlags...)
+
 	testEnv := &envtest.Environment{
-		CRDDirectoryPaths: []string{filepath.Join("..", "..", "deploy", "crds"), filepath.Join("..", "..", "deploy", "dependent-crds")},
+		CRDDirectoryPaths:  []string{filepath.Join("..", "..", "deploy", "crds"), filepath.Join("..", "..", "deploy", "dependent-crds")},
+		KubeAPIServerFlags: apiServerFlags,
 	}
 
 	s := scheme.Scheme

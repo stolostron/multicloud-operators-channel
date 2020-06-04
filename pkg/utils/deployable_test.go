@@ -574,7 +574,7 @@ func TestCleanupDeployables(t *testing.T) {
 }
 
 func addIndexFiled(k8sManager mgr.Manager) error {
-	if err := k8sManager.GetFieldIndexer().IndexField(&dplv1.Deployable{}, CtrlDeployableIndexer, func(rawObj runtime.Object) []string {
+	if err := k8sManager.GetFieldIndexer().IndexField(context.TODO(), &dplv1.Deployable{}, CtrlDeployableIndexer, func(rawObj runtime.Object) []string {
 		// grab the job object, extract the owner...
 		dpl := rawObj.(*dplv1.Deployable)
 		anno := dpl.GetAnnotations()
@@ -593,7 +593,7 @@ func addIndexFiled(k8sManager mgr.Manager) error {
 		return err
 	}
 
-	if err := k8sManager.GetFieldIndexer().IndexField(&dplv1.Deployable{}, CtrlGenerateDeployableIndexer, func(rawObj runtime.Object) []string {
+	if err := k8sManager.GetFieldIndexer().IndexField(context.TODO(), &dplv1.Deployable{}, CtrlGenerateDeployableIndexer, func(rawObj runtime.Object) []string {
 		// grab the job object, extract the owner...
 		dpl := rawObj.(*dplv1.Deployable)
 		anno := dpl.GetAnnotations()
