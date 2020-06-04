@@ -235,8 +235,13 @@ func (r *ReconcileChannel) Reconcile(request reconcile.Request) (reconcile.Resul
 		return reconcile.Result{}, err
 	}
 
-	// If the channel has relative secret and configMap, annotate the channel info in the secret and configMap
+	r.handleReferencedObjects(instance, request, log)
 
+	return reconcile.Result{}, nil
+}
+
+func (r *ReconcileChannel) handleReferencedObjects(instance *chv1.Channel, req reconcile.Request, log logr.Logger) {
+	// If the channel has relative secret and configMap, annotate the channel info in the secret and configMap
 	//sync the channel to the serving-channel annotation in all involved secrets.
 	srtRef := instance.Spec.SecretRef
 
@@ -249,7 +254,7 @@ func (r *ReconcileChannel) Reconcile(request reconcile.Request) (reconcile.Resul
 			r.Log.Error(err, "failed to update referred secret label")
 		}
 
-		if err := r.syncReferredObjAnnotation(request, srtRef, srtGvk, log); err != nil {
+		if err := r.syncReferredObjAnnotation(req, srtRef, srtGvk, log); err != nil {
 			r.Log.Error(err, "failed to annotate")
 		}
 	}
@@ -265,12 +270,10 @@ func (r *ReconcileChannel) Reconcile(request reconcile.Request) (reconcile.Resul
 			r.Log.Error(err, "failed to update referred configMap label")
 		}
 
-		if err := r.syncReferredObjAnnotation(request, cmRef, cmGvk, log); err != nil {
+		if err := r.syncReferredObjAnnotation(req, cmRef, cmGvk, log); err != nil {
 			r.Log.Error(err, "failed to annotate")
 		}
 	}
-
-	return reconcile.Result{}, nil
 }
 
 func (r *ReconcileChannel) updatedReferencedObjectLabels(ref *corev1.ObjectReference, objGvk schema.GroupVersionKind, logger logr.Logger) error {
