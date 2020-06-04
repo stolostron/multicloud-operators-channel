@@ -46,12 +46,16 @@ const (
 	WebhookPort          = 9443
 	ValidatorPath        = "/validate-apps-open-cluster-management-io-v1-channel"
 	WebhookValidatorName = "channel-webhook-validator"
-	WebhookServiceName   = "channel-webhook-svc"
+	WebhookServiceName   = "multicluster-operators-channel-svc"
 
 	podNamespaceEnvVar = "POD_NAMESPACE"
 	operatorNameEnvVar = "OPERATOR_NAME"
+	// acm is using `app: multicluster-operators-application` as pod label
+	podLabelEnvVar = "POD_LABEL"
 
-	webhookName = "vchannel.kb.io"
+	podSelectorName = "app"
+
+	webhookName = "multicluster-operators-channel-webhook"
 
 	resourceName = "channels"
 )
@@ -184,7 +188,7 @@ func setOwnerReferences(c client.Client, namespace string, obj metav1.Object) {
 }
 
 func newWebhookService(wbhSvcName, namespace string) (*corev1.Service, error) {
-	operatorName, err := findEnvVariable(operatorNameEnvVar)
+	podLabel, err := findEnvVariable(podLabelEnvVar)
 	if err != nil {
 		return nil, err
 	}
@@ -201,7 +205,7 @@ func newWebhookService(wbhSvcName, namespace string) (*corev1.Service, error) {
 					TargetPort: intstr.FromInt(WebhookPort),
 				},
 			},
-			Selector: map[string]string{"name": operatorName},
+			Selector: map[string]string{podSelectorName: podLabel},
 		},
 	}, nil
 }
