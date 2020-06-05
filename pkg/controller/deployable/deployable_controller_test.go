@@ -21,6 +21,7 @@ import (
 	"golang.org/x/net/context"
 
 	tlog "github.com/go-logr/logr/testing"
+	"github.com/google/go-cmp/cmp"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 
@@ -391,5 +392,39 @@ var _ = Describe("promote deployables to channel namespace without considering c
 				Expect(k8sClient.Delete(context.TODO(), &item)).Should(Succeed())
 			}
 		})
+	})
+})
+
+var _ = Describe("test deployable label operations", func() {
+	It("given a deployable and map, deployable should merge the entry from map", func() {
+		dpl := dplv1.Deployable{
+			ObjectMeta: metav1.ObjectMeta{
+				Name: "dpl-label",
+			},
+			Spec: dplv1.DeployableSpec{
+				Template: &runtime.RawExtension{
+					Object: &corev1.ConfigMap{},
+				},
+			},
+		}
+
+		var tests = []struct {
+			given    map[string]string
+			add      map[string]string
+			expected map[string]string
+		}{
+			{map[string]string{}, map[string]string{"a": "b"}, map[string]string{"a": "b"}},
+			{map[string]string{"a": "g"}, map[string]string{"a": "b"}, map[string]string{"a": "b"}},
+			{map[string]string{"a": "g"}, map[string]string{"a": "b", "e": "f"}, map[string]string{"a": "b", "e": "f"}},
+		}
+		for _, tt := range tests {
+			tt := tt
+			tdpl := dpl.DeepCopy()
+			tl := tdpl.GetLabels()
+			tdpl.SetLabels(tl)
+			addOrAppendChannelLabel(tdpl, tt.add)
+			tlabel := tdpl.GetLabels()
+			Expect(cmp.Equal(tlabel, tt.expected)).Should(BeTrue())
+		}
 	})
 })
