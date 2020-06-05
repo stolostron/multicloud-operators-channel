@@ -44,7 +44,7 @@ const (
 	tlsKey = "tls.key"
 
 	WebhookPort          = 9443
-	ValidatorPath        = "/validate-apps-open-cluster-management-io-v1-channel"
+	ValidatorPath        = "/v1-validate"
 	WebhookValidatorName = "channel-webhook-validator"
 	WebhookServiceName   = "multicluster-operators-channel-svc"
 
