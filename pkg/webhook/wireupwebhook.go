@@ -55,7 +55,7 @@ const (
 
 	podSelectorName = "app"
 
-	webhookName = "multicluster-operators-channel-webhook"
+	webhookName = "channels.apps.open-cluster-management.webhook"
 
 	resourceName = "channels"
 )
