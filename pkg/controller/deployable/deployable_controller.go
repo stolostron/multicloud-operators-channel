@@ -330,6 +330,14 @@ func (r *ReconcileDeployable) propagateDeployableToChannel(
 		return err
 	}
 
+	// for hub subscription to get its subscribing resource
+	addL := map[string]string{
+		chv1.KeyChannel:     channel.GetName(),
+		chv1.KeyChannelType: string(channel.Spec.Type),
+	}
+
+	addOrAppendChannelLabel(chdpl, addL)
+
 	exdpl, ok := dplmap[chkey]
 
 	if !ok {
@@ -372,6 +380,23 @@ func (r *ReconcileDeployable) propagateDeployableToChannel(
 	delete(dplmap, chkey)
 
 	return err
+}
+
+func addOrAppendChannelLabel(dpl *dplv1.Deployable, addL map[string]string) {
+	if dpl == nil || len(addL) == 0 {
+		return
+	}
+
+	curL := dpl.GetLabels()
+	if len(curL) == 0 {
+		curL = make(map[string]string)
+	}
+
+	for k, v := range addL {
+		curL[k] = v
+	}
+
+	dpl.SetLabels(curL)
 }
 
 func (r *ReconcileDeployable) promoteDeployabeToChannels(

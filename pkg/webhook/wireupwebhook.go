@@ -44,14 +44,17 @@ const (
 	tlsKey = "tls.key"
 
 	WebhookPort          = 9443
-	ValidatorPath        = "/validate-apps-open-cluster-management-io-v1-channel"
+	ValidatorPath        = "/v1-validate"
 	WebhookValidatorName = "channel-webhook-validator"
-	WebhookServiceName   = "channel-webhook-svc"
+	WebhookServiceName   = "multicluster-operators-channel-svc"
 
 	podNamespaceEnvVar = "POD_NAMESPACE"
-	operatorNameEnvVar = "OPERATOR_NAME"
+	// acm is using `app: multicluster-operators-application` as pod label
+	deployLabelEnvVar = "DEPLOYMENT_LABEL"
 
-	webhookName = "vchannel.kb.io"
+	deploySelectorName = "app"
+
+	webhookName = "channels.apps.open-cluster-management.webhook"
 
 	resourceName = "channels"
 )
@@ -89,10 +92,12 @@ func WireUpWebhookSupplymentryResource(mgr manager.Manager, stop <-chan struct{}
 
 	if err := createWebhookService(clt, wbhSvcName, podNs); err != nil {
 		log.Error(err, "failed to wire up webhook with kube")
+		os.Exit(1)
 	}
 
 	if err := createOrUpdateValiatingWebhook(clt, wbhSvcName, validatorName, podNs, ValidatorPath, caCert); err != nil {
 		log.Error(err, "failed to wire up webhook with kube")
+		os.Exit(1)
 	}
 }
 
@@ -166,12 +171,12 @@ func createOrUpdateValiatingWebhook(c client.Client, wbhSvcName, validatorName, 
 }
 
 func setOwnerReferences(c client.Client, namespace string, obj metav1.Object) {
-	operatorName, err := findEnvVariable(operatorNameEnvVar)
+	deployLabel, err := findEnvVariable(deployLabelEnvVar)
 	if err != nil {
 		return
 	}
 
-	key := types.NamespacedName{Name: operatorName, Namespace: namespace}
+	key := types.NamespacedName{Name: deployLabel, Namespace: namespace}
 	owner := &appsv1.Deployment{}
 
 	if err := c.Get(context.TODO(), key, owner); err != nil {
@@ -184,7 +189,7 @@ func setOwnerReferences(c client.Client, namespace string, obj metav1.Object) {
 }
 
 func newWebhookService(wbhSvcName, namespace string) (*corev1.Service, error) {
-	operatorName, err := findEnvVariable(operatorNameEnvVar)
+	deployLabel, err := findEnvVariable(deployLabelEnvVar)
 	if err != nil {
 		return nil, err
 	}
@@ -201,7 +206,7 @@ func newWebhookService(wbhSvcName, namespace string) (*corev1.Service, error) {
 					TargetPort: intstr.FromInt(WebhookPort),
 				},
 			},
-			Selector: map[string]string{"name": operatorName},
+			Selector: map[string]string{deploySelectorName: deployLabel},
 		},
 	}, nil
 }
