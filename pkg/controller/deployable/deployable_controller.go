@@ -332,8 +332,8 @@ func (r *ReconcileDeployable) propagateDeployableToChannel(
 
 	// for hub subscription to get its subscribing resource
 	addL := map[string]string{
-		chv1.KeyChannelSource: channel.GetName(),
-		chv1.KeyChannelType:   string(channel.Spec.Type),
+		chv1.KeyChannel:     channel.GetName(),
+		chv1.KeyChannelType: string(channel.Spec.Type),
 	}
 
 	addOrAppendChannelLabel(chdpl, addL)
