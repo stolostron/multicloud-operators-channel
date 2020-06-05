@@ -93,10 +93,12 @@ func WireUpWebhookSupplymentryResource(mgr manager.Manager, stop <-chan struct{}
 
 	if err := createWebhookService(clt, wbhSvcName, podNs); err != nil {
 		log.Error(err, "failed to wire up webhook with kube")
+		os.Exit(1)
 	}
 
 	if err := createOrUpdateValiatingWebhook(clt, wbhSvcName, validatorName, podNs, ValidatorPath, caCert); err != nil {
 		log.Error(err, "failed to wire up webhook with kube")
+		os.Exit(1)
 	}
 }
 
