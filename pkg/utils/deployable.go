@@ -213,6 +213,8 @@ func CleanupDeployables(cl client.Client, channel types.NamespacedName) error {
 	var err error
 
 	for _, dpl := range dpllist.Items {
+		dpl := dpl
+
 		if dpl.Spec.Channels != nil {
 			for _, chname := range dpl.Spec.Channels {
 				if chname == channel.Name {

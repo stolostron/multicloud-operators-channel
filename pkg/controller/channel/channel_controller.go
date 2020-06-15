@@ -339,6 +339,7 @@ func (r *ReconcileChannel) syncReferredObjAnnotation(
 	}
 
 	for _, obj := range uObjList.Items {
+		obj := obj
 		annotations := obj.GetAnnotations()
 
 		if annotations == nil {
