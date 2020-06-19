@@ -57,7 +57,8 @@ func (v *ChannelValidator) Handle(ctx context.Context, req admission.Request) ad
 	}
 
 	if !isAllGit(chList) {
-		return admission.Denied(fmt.Sprint("there's channel in the requested namespace"))
+		return admission.Denied(fmt.Sprintf("there's channel %v in the requested namespace %v",
+			chn.GetName(), chn.GetNamespace()))
 	}
 
 	return admission.Allowed("")

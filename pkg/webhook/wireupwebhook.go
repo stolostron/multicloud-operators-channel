@@ -241,7 +241,7 @@ func newValidatingWebhookCfg(wbhSvcName, validatorName, namespace, path string, 
 				},
 				Operations: []admissionregistration.OperationType{
 					admissionregistration.Create,
-					admissionregistration.Update,
+					//update should be a ok path, admissionregistration.Update,
 				},
 			}},
 		}},
