@@ -12,23 +12,23 @@ require (
 	github.com/google/go-cmp v0.4.0
 	github.com/onsi/ginkgo v1.12.0
 	github.com/onsi/gomega v1.9.0
-	github.com/open-cluster-management/multicloud-operators-deployable v0.0.0-20200603180154-d1d17d718c30
-	github.com/open-cluster-management/multicloud-operators-placementrule v1.0.1-2020-05-28-18-29-00.0.20200603172904-efde26079087
+	github.com/open-cluster-management/api v0.0.0-20200623215229-19a96fed707a
+	github.com/open-cluster-management/multicloud-operators-deployable v0.0.0-20200625020633-0d458afa0fc2
+	github.com/open-cluster-management/multicloud-operators-placementrule v0.0.0-20200624201731-5e0510647fa9
 	github.com/operator-framework/operator-sdk v0.18.0
 	github.com/pkg/errors v0.9.1
 	github.com/spf13/pflag v1.0.5
 	github.com/stretchr/testify v1.5.1
 	go.uber.org/zap v1.14.1
-	golang.org/x/net v0.0.0-20200301022130-244492dfa37a
+	golang.org/x/net v0.0.0-20200421231249-e086a090c8fd
 	gopkg.in/yaml.v2 v2.2.8
-	k8s.io/api v0.18.2
+	k8s.io/api v0.18.3
 	k8s.io/apiextensions-apiserver v0.18.2
-	k8s.io/apimachinery v0.18.2
+	k8s.io/apimachinery v0.18.3
 	k8s.io/client-go v12.0.0+incompatible
-	k8s.io/cluster-registry v0.0.6
 	k8s.io/helm v2.16.3+incompatible
 	k8s.io/klog v1.0.0
-	k8s.io/kube-openapi v0.0.0-20200121204235-bf4fb3bd569c
+	k8s.io/kube-openapi v0.0.0-20200410145947-61e04a5be9a6
 	sigs.k8s.io/controller-runtime v0.6.0
 )
 

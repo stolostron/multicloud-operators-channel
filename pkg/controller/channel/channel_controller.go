@@ -20,6 +20,7 @@ import (
 	"reflect"
 	"strings"
 
+	spokeClusterV1 "github.com/open-cluster-management/api/cluster/v1"
 	chv1 "github.com/open-cluster-management/multicloud-operators-channel/pkg/apis/apps/v1"
 	helmsync "github.com/open-cluster-management/multicloud-operators-channel/pkg/synchronizer/helmreposynchronizer"
 	"github.com/open-cluster-management/multicloud-operators-channel/pkg/utils"
@@ -42,7 +43,6 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/tools/record"
-	clusterv1alpha1 "k8s.io/cluster-registry/pkg/apis/clusterregistry/v1alpha1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
@@ -121,7 +121,7 @@ func add(mgr manager.Manager, r reconcile.Reconciler, logger logr.Logger) error 
 
 	if placementutils.IsReadyACMClusterRegistry(mgr.GetAPIReader()) {
 		err = c.Watch(
-			&source.Kind{Type: &clusterv1alpha1.Cluster{}},
+			&source.Kind{Type: &spokeClusterV1.ManagedCluster{}},
 			&handler.EnqueueRequestsFromMapFunc{ToRequests: &clusterMapper{Client: mgr.GetClient(), logger: logger}},
 			placementutils.ClusterPredicateFunc,
 		)
@@ -383,7 +383,7 @@ func (r *ReconcileChannel) validateClusterRBAC(instance *chv1.Channel, logger lo
 
 	var subjects []rbac.Subject
 
-	cllist := &clusterv1alpha1.ClusterList{}
+	cllist := &spokeClusterV1.ManagedClusterList{}
 
 	if err := r.List(context.TODO(), cllist, &client.ListOptions{}); err != nil {
 		if metaerr.IsNoMatchError(err) {
@@ -402,7 +402,7 @@ func (r *ReconcileChannel) validateClusterRBAC(instance *chv1.Channel, logger lo
 		subjects = append(subjects, rbac.Subject{
 			APIGroup: "rbac.authorization.k8s.io",
 			Kind:     "User",
-			Name:     "hcm:clusters:" + cl.Namespace + ":" + cl.Name,
+			Name:     "hcm:clusters:" + cl.Name + ":" + cl.Name,
 		})
 	}
 
