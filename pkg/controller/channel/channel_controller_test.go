@@ -31,11 +31,11 @@ import (
 	"k8s.io/client-go/kubernetes/scheme"
 	typedcorev1 "k8s.io/client-go/kubernetes/typed/core/v1"
 	"k8s.io/client-go/tools/record"
-	clusterv1alpha1 "k8s.io/cluster-registry/pkg/apis/clusterregistry/v1alpha1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
+	spokeClusterV1 "github.com/open-cluster-management/api/cluster/v1"
 	chv1 "github.com/open-cluster-management/multicloud-operators-channel/pkg/apis/apps/v1"
 )
 
@@ -230,7 +230,7 @@ func assertRoleBinding(t *testing.T, clt client.Client, chn *chv1.Channel, rb *r
 		return
 	}
 
-	cllist := &clusterv1alpha1.ClusterList{}
+	cllist := &spokeClusterV1.ManagedClusterList{}
 
 	//if we encounter errors, meaning we are running in a standalone mode
 	if err := clt.List(context.TODO(), cllist, &client.ListOptions{}); err != nil {
@@ -243,7 +243,7 @@ func assertRoleBinding(t *testing.T, clt client.Client, chn *chv1.Channel, rb *r
 	}
 
 	for _, cluster := range cllist.Items {
-		rbStr := "hcm:clusters:" + cluster.Namespace + cluster.Name
+		rbStr := "hcm:clusters:" + cluster.Name + cluster.Name
 
 		if _, ok := rbMap[rbStr]; !ok {
 			t.Errorf("missing rolebinding for cluster %v", rbStr)
@@ -318,5 +318,5 @@ func TestChannelReconcileWithoutClusterCRD(t *testing.T) {
 	g.Expect(c.Get(
 		context.TODO(),
 		types.NamespacedName{Name: chn.Name, Namespace: chn.Namespace},
-		expectedRoleBinding)).Should(gomega.HaveOccurred())
+		expectedRoleBinding)).NotTo(gomega.HaveOccurred())
 }

@@ -17,10 +17,10 @@ package apis
 
 import (
 	"k8s.io/apimachinery/pkg/runtime"
-	clusterv1alpha1 "k8s.io/cluster-registry/pkg/apis/clusterregistry/v1alpha1"
 
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 
+	spokeClusterV1 "github.com/open-cluster-management/api/cluster/v1"
 	dplapis "github.com/open-cluster-management/multicloud-operators-deployable/pkg/apis"
 )
 
@@ -36,8 +36,8 @@ func AddToScheme(s *runtime.Scheme) error {
 		return err
 	}
 
-	if err = clusterv1alpha1.AddToScheme(s); err != nil {
-		logf.Log.Error(err, "unable add deployable APIs to scheme")
+	if err = spokeClusterV1.AddToScheme(s); err != nil {
+		logf.Log.Error(err, "unable add managed cluster APIs to scheme")
 		return err
 	}
 
