@@ -402,7 +402,7 @@ func (r *ReconcileChannel) validateClusterRBAC(instance *chv1.Channel, logger lo
 		subjects = append(subjects, rbac.Subject{
 			APIGroup: "rbac.authorization.k8s.io",
 			Kind:     "User",
-			Name:     "hcm:clusters:" + cl.Name + ":" + cl.Name,
+			Name:     "system:serviceaccount:" + cl.Name + ":" + cl.Name + "-appmgr",
 		})
 	}
 
