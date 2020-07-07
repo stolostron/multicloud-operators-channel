@@ -56,22 +56,22 @@ func (v *ChannelValidator) Handle(ctx context.Context, req admission.Request) ad
 		return admission.Allowed("")
 	}
 
-	if !isAllGit(chList) {
+	if v, ok := isAllGit(chList); !ok {
 		return admission.Denied(fmt.Sprintf("there's channel %v in the requested namespace %v",
-			chn.GetName(), chn.GetNamespace()))
+			v, chn.GetNamespace()))
 	}
 
 	return admission.Allowed("")
 }
 
-func isAllGit(chList *chv1.ChannelList) bool {
+func isAllGit(chList *chv1.ChannelList) (string, bool) {
 	for _, ch := range chList.Items {
 		if ch.Spec.Type != chv1.ChannelTypeGit && ch.Spec.Type != chv1.ChannelTypeGitHub {
-			return false
+			return ch.GetName(), false
 		}
 	}
 
-	return true
+	return "", true
 }
 
 // ChannelValidator implements admission.DecoderInjector.
