@@ -18,6 +18,7 @@ import (
 	"context"
 	"fmt"
 	"net/http"
+	"strings"
 
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
@@ -43,7 +44,8 @@ func (v *ChannelValidator) Handle(ctx context.Context, req admission.Request) ad
 		return admission.Errored(http.StatusBadRequest, err)
 	}
 
-	if chn.Spec.Type == chv1.ChannelTypeGit || chn.Spec.Type == chv1.ChannelTypeGitHub {
+	chnType := string(chn.Spec.Type)
+	if strings.EqualFold(chnType, chv1.ChannelTypeGit) || strings.EqualFold(chnType, chv1.ChannelTypeGitHub) {
 		return admission.Allowed("")
 	}
 
