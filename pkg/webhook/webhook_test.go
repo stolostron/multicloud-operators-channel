@@ -125,6 +125,17 @@ var _ = Describe("test channel validation logic", func() {
 			}()
 		})
 
+		It("should create 2nd git channel", func() {
+			dupChn := chnIns.DeepCopy()
+			dupChn.Spec.Type = "GitHub"
+			dupChn.SetName("dup-chn1-1")
+
+			Expect(k8sClient.Create(context.TODO(), dupChn)).Should(Succeed())
+			defer func() {
+				Expect(k8sClient.Delete(context.TODO(), dupChn)).Should(Succeed())
+			}()
+		})
+
 		It("should create 2nd  namespace channel", func() {
 			dupChn := chnIns.DeepCopy()
 			dupChn.Spec.Type = chv1.ChannelTypeNamespace
