@@ -25,8 +25,9 @@ import (
 
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 
-	admissionregistration "k8s.io/api/admissionregistration/v1"
+	admissionv1 "k8s.io/api/admissionregistration/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 
 	"k8s.io/apimachinery/pkg/types"
@@ -35,8 +36,6 @@ import (
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/webhook"
-
-	chv1 "github.com/open-cluster-management/multicloud-operators-channel/pkg/apis/apps/v1"
 )
 
 const (
@@ -68,12 +67,18 @@ func WireUpWebhook(clt client.Client, whk *webhook.Server, certDir string) ([]by
 	log.Info("registering webhooks to the webhook server")
 	whk.Register(ValidatorPath, &webhook.Admission{Handler: &ChannelValidator{Client: clt}})
 
-	return GenerateWebhookCerts(certDir)
+	podNs, err := findEnvVariable(podNamespaceEnvVar)
+	if err != nil {
+		return []byte{}, gerr.Wrap(err, "faild to get pod namespace ")
+	}
+
+	return GenerateWebhookCerts(certDir, podNs, WebhookServiceName)
 }
 
 //assuming we have a service set up for the webhook, and the service is linking
 //to a secret which has the CA
-func WireUpWebhookSupplymentryResource(mgr manager.Manager, stop <-chan struct{}, wbhSvcName, validatorName, certDir string, caCert []byte) {
+func WireUpWebhookSupplymentryResource(mgr manager.Manager, stop <-chan struct{}, wbhSvcName, validatorName, certDir string,
+	caCert []byte, gvk schema.GroupVersionKind, ops []admissionv1.OperationType) {
 	log.Info("entry wire up webhook")
 	defer log.Info("exit wire up webhook ")
 
@@ -95,7 +100,7 @@ func WireUpWebhookSupplymentryResource(mgr manager.Manager, stop <-chan struct{}
 		os.Exit(1)
 	}
 
-	if err := createOrUpdateValiatingWebhook(clt, wbhSvcName, validatorName, podNs, ValidatorPath, caCert); err != nil {
+	if err := createOrUpdateValiatingWebhook(clt, wbhSvcName, validatorName, podNs, ValidatorPath, caCert, gvk, ops); err != nil {
 		log.Error(err, "failed to wire up webhook with kube")
 		os.Exit(1)
 	}
@@ -138,13 +143,14 @@ func createWebhookService(c client.Client, wbhSvcName, namespace string) error {
 	return nil
 }
 
-func createOrUpdateValiatingWebhook(c client.Client, wbhSvcName, validatorName, namespace, path string, ca []byte) error {
-	validator := &admissionregistration.ValidatingWebhookConfiguration{}
+func createOrUpdateValiatingWebhook(c client.Client, wbhSvcName, validatorName, namespace, path string, ca []byte,
+	gvk schema.GroupVersionKind, ops []admissionv1.OperationType) error {
+	validator := &admissionv1.ValidatingWebhookConfiguration{}
 	key := types.NamespacedName{Name: validatorName}
 
 	if err := c.Get(context.TODO(), key, validator); err != nil {
 		if errors.IsNotFound(err) {
-			cfg := newValidatingWebhookCfg(wbhSvcName, validatorName, namespace, path, ca)
+			cfg := newValidatingWebhookCfg(wbhSvcName, validatorName, namespace, path, ca, gvk, ops)
 
 			setOwnerReferences(c, namespace, cfg)
 
@@ -211,39 +217,38 @@ func newWebhookService(wbhSvcName, namespace string) (*corev1.Service, error) {
 	}, nil
 }
 
-func newValidatingWebhookCfg(wbhSvcName, validatorName, namespace, path string, ca []byte) *admissionregistration.ValidatingWebhookConfiguration {
-	fail := admissionregistration.Fail
-	side := admissionregistration.SideEffectClassNone
+func newValidatingWebhookCfg(wbhSvcName, validatorName, namespace, path string, ca []byte,
+	gvk schema.GroupVersionKind, ops []admissionv1.OperationType) *admissionv1.ValidatingWebhookConfiguration {
+	fail := admissionv1.Fail
+	side := admissionv1.SideEffectClassNone
 
-	return &admissionregistration.ValidatingWebhookConfiguration{
+	return &admissionv1.ValidatingWebhookConfiguration{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: validatorName,
 		},
 
-		Webhooks: []admissionregistration.ValidatingWebhook{{
+		Webhooks: []admissionv1.ValidatingWebhook{{
 			Name:                    webhookName,
 			AdmissionReviewVersions: []string{"v1beta1"},
 			SideEffects:             &side,
 			FailurePolicy:           &fail,
-			ClientConfig: admissionregistration.WebhookClientConfig{
-				Service: &admissionregistration.ServiceReference{
+			ClientConfig: admissionv1.WebhookClientConfig{
+				Service: &admissionv1.ServiceReference{
 					Name:      wbhSvcName,
 					Namespace: namespace,
 					Path:      &path,
 				},
 				CABundle: ca,
 			},
-			Rules: []admissionregistration.RuleWithOperations{{
-				Rule: admissionregistration.Rule{
-					APIGroups:   []string{chv1.SchemeGroupVersion.Group},
-					APIVersions: []string{chv1.SchemeGroupVersion.Version},
-					Resources:   []string{resourceName},
+			Rules: []admissionv1.RuleWithOperations{{
+				Rule: admissionv1.Rule{
+					APIGroups:   []string{gvk.Group},
+					APIVersions: []string{gvk.Version},
+					Resources:   []string{gvk.Kind},
 				},
-				Operations: []admissionregistration.OperationType{
-					admissionregistration.Create,
-					//update should be a ok path, admissionregistration.Update,
-				},
+				Operations: ops,
+			},
 			}},
-		}},
+		},
 	}
 }

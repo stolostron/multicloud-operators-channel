@@ -41,6 +41,9 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client/config"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 
+	admissionv1 "k8s.io/api/admissionregistration/v1"
+
+	chv1 "github.com/open-cluster-management/multicloud-operators-channel/pkg/apis/apps/v1"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 
 	"github.com/open-cluster-management/multicloud-operators-channel/pkg/apis"
@@ -64,6 +67,7 @@ var (
 
 const (
 	exitCode = 1
+	kindName = "channels"
 )
 
 func printVersion() {
@@ -221,7 +225,8 @@ func RunManager(sig <-chan struct{}) {
 	}
 
 	go chWebhook.WireUpWebhookSupplymentryResource(mgr, sig, chWebhook.WebhookServiceName,
-		chWebhook.WebhookValidatorName, certDir, caCert)
+		chWebhook.WebhookValidatorName, certDir, caCert,
+		chv1.SchemeGroupVersion.WithKind(kindName), []admissionv1.OperationType{admissionv1.Create})
 
 	logger.Info("Starting the Cmd.")
 	// Start the Cmd

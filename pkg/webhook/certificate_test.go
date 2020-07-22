@@ -31,7 +31,12 @@ func TestGenerateSignedWebhookCertificates(t *testing.T) {
 		os.Unsetenv(podNamespaceEnvVar)
 	}()
 
-	ca, err := GenerateWebhookCerts(certDir)
+	podNs, err := findEnvVariable(podNamespaceEnvVar)
+	if err != nil {
+		t.Errorf("failed to get the pod namespace, %v", err)
+	}
+
+	ca, err := GenerateWebhookCerts(certDir, podNs, WebhookServiceName)
 	if err != nil {
 		t.Errorf("Generate signed certificate failed, %v", err)
 	}
