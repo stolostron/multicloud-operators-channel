@@ -216,16 +216,28 @@ func RunManager(sig <-chan struct{}) {
 	logger.Info("setting up webhook server")
 
 	hookServer := mgr.GetWebhookServer()
-	certDir := filepath.Join(os.TempDir(), "k8s-webhook-server", "serving-certs")
 
-	caCert, err := chWebhook.WireUpWebhook(mgr.GetClient(), hookServer, certDir)
+	wbhCertDir := func(w *chWebhook.WebHookWireUp) {
+		w.CertDir = filepath.Join(os.TempDir(), "k8s-webhook-server", "serving-certs")
+	}
+
+	wbhLogger := func(w *chWebhook.WebHookWireUp) {
+		w.Logger = logger.WithName("channel-operator-duplicate-webhook")
+	}
+
+	wiredWebhook, err := chWebhook.NewWebHookWireUp(mgr, sig, hookServer, wbhCertDir, wbhLogger, chWebhook.ValidateLogic)
+	if err != nil {
+		logger.Error(err, "failed to initial wire up webhook")
+		os.Exit(exitCode)
+	}
+
+	caCert, err := wiredWebhook.Attach()
 	if err != nil {
 		logger.Error(err, "failed to wire up webhook")
 		os.Exit(exitCode)
 	}
 
-	go chWebhook.WireUpWebhookSupplymentryResource(mgr, sig, chWebhook.WebhookServiceName,
-		chWebhook.WebhookValidatorName, certDir, caCert,
+	go wiredWebhook.WireUpWebhookSupplymentryResource(caCert,
 		chv1.SchemeGroupVersion.WithKind(kindName), []admissionv1.OperationType{admissionv1.Create})
 
 	logger.Info("Starting the Cmd.")

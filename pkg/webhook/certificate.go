@@ -45,15 +45,15 @@ type Certificate struct {
 
 // GenerateWebhookCerts generate self singed CA and a signed cert pair. The
 // signed pair is stored at the certDir. The CA will respect the inCluster DNS
-func GenerateWebhookCerts(certDir, podNs, webhookServiceName string) ([]byte, error) {
+func GenerateWebhookCerts(certDir, webhookServiceNs, webhookServiceName string) ([]byte, error) {
 	if len(certDir) == 0 {
 		certDir = filepath.Join(os.TempDir(), "k8s-webhook-server", "serving-certs")
 	}
 
 	alternateDNS := []string{
-		fmt.Sprintf("%s.%s", webhookServiceName, podNs),
-		fmt.Sprintf("%s.%s.svc", webhookServiceName, podNs),
-		fmt.Sprintf("%s.%s.svc.cluster.local", webhookServiceName, podNs),
+		fmt.Sprintf("%s.%s", webhookServiceName, webhookServiceNs),
+		fmt.Sprintf("%s.%s.svc", webhookServiceName, webhookServiceNs),
+		fmt.Sprintf("%s.%s.svc.cluster.local", webhookServiceName, webhookServiceNs),
 	}
 
 	ca, err := GenerateSelfSignedCACert(certName)

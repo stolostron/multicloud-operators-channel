@@ -23,19 +23,26 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
 
+	"github.com/go-logr/logr"
 	chv1 "github.com/open-cluster-management/multicloud-operators-channel/pkg/apis/apps/v1"
 )
 
 type ChannelValidator struct {
+	logr.Logger
 	client.Client
 	decoder *admission.Decoder
+}
+
+//add ChannelValidator to webhook
+var ValidateLogic = func(w *WebHookWireUp) {
+	w.Handler = &ChannelValidator{Client: w.mgr.GetClient(), Logger: w.Logger}
 }
 
 // ChannelValidator admits a channel if a specific channel can co-exit in the
 // requested namespace.
 func (v *ChannelValidator) Handle(ctx context.Context, req admission.Request) admission.Response {
-	log.Info("entry webhook handle")
-	defer log.Info("exit webhook handle")
+	v.Logger.Info("entry webhook handle")
+	defer v.Logger.Info("exit webhook handle")
 
 	chn := &chv1.Channel{}
 
