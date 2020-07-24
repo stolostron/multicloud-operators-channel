@@ -51,6 +51,9 @@ var k8sClient client.Client
 
 var (
 	webhookValidatorName = "test-suite-webhook"
+	validatorPath        = "/v1-validate"
+	webhookName          = "channels.apps.open-cluster-management.webhook"
+	resourceName         = "channels"
 	stop                 = ctrl.SetupSignalHandler()
 )
 
@@ -110,7 +113,12 @@ var _ = BeforeSuite(func(done Done) {
 	k8sClient, err = client.New(testEnv.Config, client.Options{})
 	Expect(err).NotTo(HaveOccurred())
 
-	hookServer.Register(ValidatorPath, &webhook.Admission{Handler: &ChannelValidator{Client: k8sClient}})
+	hookServer.Register(validatorPath,
+		&webhook.Admission{
+			Handler: &ChannelValidator{
+				Client: k8sClient,
+				Logger: ctrl.Log,
+			}})
 	Expect(err).ToNot(HaveOccurred())
 
 	go func() {
@@ -131,7 +139,7 @@ func initializeWebhookInEnvironment() {
 	failedTypeV1 := admissionv1.Fail
 	equivalentTypeV1 := admissionv1.Equivalent
 	noSideEffectsV1 := admissionv1.SideEffectClassNone
-	webhookPathV1 := ValidatorPath
+	webhookPathV1 := validatorPath
 
 	testEnv.WebhookInstallOptions = envtest.WebhookInstallOptions{
 		ValidatingWebhooks: []runtime.Object{

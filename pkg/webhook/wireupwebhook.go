@@ -33,6 +33,8 @@ import (
 	"k8s.io/apimachinery/pkg/api/errors"
 
 	"github.com/go-logr/logr"
+	logf "sigs.k8s.io/controller-runtime/pkg/log"
+
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
@@ -45,10 +47,10 @@ const (
 )
 
 type WebHookWireUp struct {
-	mgr    manager.Manager
-	stop   <-chan struct{}
-	server *webhook.Server
+	mgr  manager.Manager
+	stop <-chan struct{}
 
+	Server  *webhook.Server
 	Handler webhook.AdmissionHandler
 	CertDir string
 	logr.Logger
@@ -66,7 +68,6 @@ type WebHookWireUp struct {
 }
 
 func NewWebHookWireUp(mgr manager.Manager, stop <-chan struct{},
-	webhookServer *webhook.Server,
 	opts ...func(*WebHookWireUp)) (*WebHookWireUp, error) {
 
 	WebhookName := "channels-apps-open-cluster-management-webhook"
@@ -92,14 +93,15 @@ func NewWebHookWireUp(mgr manager.Manager, stop <-chan struct{},
 	wireUp := &WebHookWireUp{
 		mgr:    mgr,
 		stop:   stop,
-		server: webhookServer,
+		Server: mgr.GetWebhookServer(),
+		Logger: logf.Log,
 
 		WebhookName:        WebhookName,
 		WebHookPort:        9443,
 		WebHookServicePort: 443,
 
 		ValidtorPath:       "/duplicate-validation",
-		WebHookeSvcKey:     types.NamespacedName{Name: getWebHookServiceName(WebhookName), Namespace: podNamespace},
+		WebHookeSvcKey:     types.NamespacedName{Name: GetWebHookServiceName(WebhookName), Namespace: podNamespace},
 		DeployLabel:        deploymentLabel,
 		DeploymentSelector: deploymentSelector,
 	}
@@ -111,21 +113,21 @@ func NewWebHookWireUp(mgr manager.Manager, stop <-chan struct{},
 	return wireUp, nil
 }
 
-func getValidatorName(wbhName string) string {
+func GetValidatorName(wbhName string) string {
 	//domain style, seperate by dots
 	return strings.ReplaceAll(wbhName, "-", ".") + ".validator"
 }
 
-func getWebHookServiceName(wbhName string) string {
+func GetWebHookServiceName(wbhName string) string {
 	//k8s resrouce nameing, seperate by '-'
 	return wbhName + "-svc"
 }
 
 func (w *WebHookWireUp) Attach() ([]byte, error) {
-	w.server.Port = w.WebHookPort
+	w.Server.Port = w.WebHookPort
 
 	w.Logger.Info("registering webhooks to the webhook server")
-	w.server.Register(w.ValidtorPath, &webhook.Admission{Handler: w.Handler})
+	w.Server.Register(w.ValidtorPath, &webhook.Admission{Handler: w.Handler})
 
 	return GenerateWebhookCerts(w.CertDir, w.WebHookeSvcKey.Namespace, w.WebHookeSvcKey.Name)
 }
@@ -192,9 +194,9 @@ func (w *WebHookWireUp) createWebhookService() error {
 func (w *WebHookWireUp) createOrUpdateValiationWebhook(ca []byte, gvk schema.GroupVersionKind,
 	ops []admissionv1.OperationType) error {
 	validator := &admissionv1.ValidatingWebhookConfiguration{}
-	key := types.NamespacedName{Name: getValidatorName(w.WebhookName)}
+	key := types.NamespacedName{Name: GetValidatorName(w.WebhookName)}
 
-	validatorName := getValidatorName(w.WebhookName)
+	validatorName := GetValidatorName(w.WebhookName)
 	if err := w.mgr.GetClient().Get(context.TODO(), key, validator); err != nil {
 		if errors.IsNotFound(err) {
 			cfg := newValidatingWebhookCfg(w.WebHookeSvcKey, validatorName, w.ValidtorPath, ca, gvk, ops)

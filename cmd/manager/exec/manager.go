@@ -215,8 +215,6 @@ func RunManager(sig <-chan struct{}) {
 	// Setup webhooks
 	logger.Info("setting up webhook server")
 
-	hookServer := mgr.GetWebhookServer()
-
 	wbhCertDir := func(w *chWebhook.WebHookWireUp) {
 		w.CertDir = filepath.Join(os.TempDir(), "k8s-webhook-server", "serving-certs")
 	}
@@ -225,7 +223,7 @@ func RunManager(sig <-chan struct{}) {
 		w.Logger = logger.WithName("channel-operator-duplicate-webhook")
 	}
 
-	wiredWebhook, err := chWebhook.NewWebHookWireUp(mgr, sig, hookServer, wbhCertDir, wbhLogger, chWebhook.ValidateLogic)
+	wiredWebhook, err := chWebhook.NewWebHookWireUp(mgr, sig, wbhCertDir, wbhLogger, chWebhook.ValidateLogic)
 	if err != nil {
 		logger.Error(err, "failed to initial wire up webhook")
 		os.Exit(exitCode)
