@@ -46,7 +46,7 @@ const (
 	tlsKey = "tls.key"
 )
 
-type WebHookWireUp struct {
+type WireUp struct {
 	mgr  manager.Manager
 	stop <-chan struct{}
 
@@ -67,9 +67,8 @@ type WebHookWireUp struct {
 	DeploymentSelector map[string]string
 }
 
-func NewWebHookWireUp(mgr manager.Manager, stop <-chan struct{},
-	opts ...func(*WebHookWireUp)) (*WebHookWireUp, error) {
-
+func NewWireUp(mgr manager.Manager, stop <-chan struct{},
+	opts ...func(*WireUp)) (*WireUp, error) {
 	WebhookName := "channels-apps-open-cluster-management-webhook"
 
 	deployLabelEnvVar := "DEPLOYMENT_LABEL"
@@ -90,7 +89,7 @@ func NewWebHookWireUp(mgr manager.Manager, stop <-chan struct{},
 		return nil, gerr.Wrap(err, "failed to create a new webhook wireup")
 	}
 
-	wireUp := &WebHookWireUp{
+	wireUp := &WireUp{
 		mgr:    mgr,
 		stop:   stop,
 		Server: mgr.GetWebhookServer(),
@@ -114,16 +113,16 @@ func NewWebHookWireUp(mgr manager.Manager, stop <-chan struct{},
 }
 
 func GetValidatorName(wbhName string) string {
-	//domain style, seperate by dots
+	//domain style, separate by dots
 	return strings.ReplaceAll(wbhName, "-", ".") + ".validator"
 }
 
 func GetWebHookServiceName(wbhName string) string {
-	//k8s resrouce nameing, seperate by '-'
+	//k8s resrouce nameing, separate by '-'
 	return wbhName + "-svc"
 }
 
-func (w *WebHookWireUp) Attach() ([]byte, error) {
+func (w *WireUp) Attach() ([]byte, error) {
 	w.Server.Port = w.WebHookPort
 
 	w.Logger.Info("registering webhooks to the webhook server")
@@ -134,7 +133,7 @@ func (w *WebHookWireUp) Attach() ([]byte, error) {
 
 //assuming we have a service set up for the webhook, and the service is linking
 //to a secret which has the CA
-func (w *WebHookWireUp) WireUpWebhookSupplymentryResource(caCert []byte, gvk schema.GroupVersionKind, ops []admissionv1.OperationType) {
+func (w *WireUp) WireUpWebhookSupplymentryResource(caCert []byte, gvk schema.GroupVersionKind, ops []admissionv1.OperationType) {
 	w.Logger.Info("entry wire up webhook")
 	defer w.Logger.Info("exit wire up webhook ")
 
@@ -164,15 +163,12 @@ func findEnvVariable(envName string) (string, error) {
 	return val, nil
 }
 
-func (w *WebHookWireUp) createWebhookService() error {
+func (w *WireUp) createWebhookService() error {
 	service := &corev1.Service{}
 
 	if err := w.mgr.GetClient().Get(context.TODO(), w.WebHookeSvcKey, service); err != nil {
 		if errors.IsNotFound(err) {
-			service, err := newWebhookService(w.WebHookeSvcKey, w.WebHookPort, w.WebHookServicePort, w.DeploymentSelector)
-			if err != nil {
-				return gerr.Wrap(err, "failed to create service for webhook")
-			}
+			service := newWebhookServiceTemplate(w.WebHookeSvcKey, w.WebHookPort, w.WebHookServicePort, w.DeploymentSelector)
 
 			setOwnerReferences(w.mgr.GetClient(), w.Logger, w.WebHookeSvcKey.Namespace, w.DeployLabel, service)
 
@@ -191,12 +187,13 @@ func (w *WebHookWireUp) createWebhookService() error {
 	return nil
 }
 
-func (w *WebHookWireUp) createOrUpdateValiationWebhook(ca []byte, gvk schema.GroupVersionKind,
+func (w *WireUp) createOrUpdateValiationWebhook(ca []byte, gvk schema.GroupVersionKind,
 	ops []admissionv1.OperationType) error {
 	validator := &admissionv1.ValidatingWebhookConfiguration{}
 	key := types.NamespacedName{Name: GetValidatorName(w.WebhookName)}
 
 	validatorName := GetValidatorName(w.WebhookName)
+
 	if err := w.mgr.GetClient().Get(context.TODO(), key, validator); err != nil {
 		if errors.IsNotFound(err) {
 			cfg := newValidatingWebhookCfg(w.WebHookeSvcKey, validatorName, w.ValidtorPath, ca, gvk, ops)
@@ -238,7 +235,7 @@ func setOwnerReferences(c client.Client, logger logr.Logger, deployNs string, de
 		*metav1.NewControllerRef(owner, owner.GetObjectKind().GroupVersionKind())})
 }
 
-func newWebhookService(svcKey types.NamespacedName, webHookPort, webHookServicePort int, deploymentSelector map[string]string) (*corev1.Service, error) {
+func newWebhookServiceTemplate(svcKey types.NamespacedName, webHookPort, webHookServicePort int, deploymentSelector map[string]string) *corev1.Service {
 	return &corev1.Service{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      svcKey.Name,
@@ -253,7 +250,7 @@ func newWebhookService(svcKey types.NamespacedName, webHookPort, webHookServiceP
 			},
 			Selector: deploymentSelector,
 		},
-	}, nil
+	}
 }
 
 func newValidatingWebhookCfg(svcKey types.NamespacedName, validatorName, path string, ca []byte,

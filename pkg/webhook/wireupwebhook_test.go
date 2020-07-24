@@ -55,11 +55,11 @@ var _ = PDescribe("test if webhook's supplymentryResource create properly", func
 			os.Setenv("DEPLOYMENT_LABEL", testNs)
 
 			wbhName := "test-wbh"
-			wbhNameSetUp := func(w *WebHookWireUp) {
+			wbhNameSetUp := func(w *WireUp) {
 				w.WebhookName = wbhName
 			}
 
-			wireUp, err := NewWebHookWireUp(lMgr, sstop, wbhNameSetUp)
+			wireUp, err := NewWireUp(lMgr, sstop, wbhNameSetUp)
 			Expect(err).NotTo(HaveOccurred())
 
 			caCert, err := wireUp.Attach()

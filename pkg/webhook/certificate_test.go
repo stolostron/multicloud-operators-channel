@@ -24,6 +24,7 @@ import (
 func TestGenerateSignedWebhookCertificates(t *testing.T) {
 	podNamespaceEnvVar := "POD_NAMESPACE"
 	webhookServiceName := "default"
+
 	os.Setenv(podNamespaceEnvVar, "test")
 
 	certDir := "/tmp/tmp-cert"

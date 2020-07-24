@@ -24,6 +24,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
 
 	"github.com/go-logr/logr"
+
 	chv1 "github.com/open-cluster-management/multicloud-operators-channel/pkg/apis/apps/v1"
 )
 
@@ -33,8 +34,8 @@ type ChannelValidator struct {
 	decoder *admission.Decoder
 }
 
-//add ChannelValidator to webhook
-var ValidateLogic = func(w *WebHookWireUp) {
+//ValidateLogic add ChannelValidator to webhook wireup
+var ValidateLogic = func(w *WireUp) {
 	w.Handler = &ChannelValidator{Client: w.mgr.GetClient(), Logger: w.Logger}
 }
 

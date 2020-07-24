@@ -43,8 +43,9 @@ import (
 
 	admissionv1 "k8s.io/api/admissionregistration/v1"
 
-	chv1 "github.com/open-cluster-management/multicloud-operators-channel/pkg/apis/apps/v1"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
+
+	chv1 "github.com/open-cluster-management/multicloud-operators-channel/pkg/apis/apps/v1"
 
 	"github.com/open-cluster-management/multicloud-operators-channel/pkg/apis"
 	"github.com/open-cluster-management/multicloud-operators-channel/pkg/controller"
@@ -215,15 +216,15 @@ func RunManager(sig <-chan struct{}) {
 	// Setup webhooks
 	logger.Info("setting up webhook server")
 
-	wbhCertDir := func(w *chWebhook.WebHookWireUp) {
+	wbhCertDir := func(w *chWebhook.WireUp) {
 		w.CertDir = filepath.Join(os.TempDir(), "k8s-webhook-server", "serving-certs")
 	}
 
-	wbhLogger := func(w *chWebhook.WebHookWireUp) {
+	wbhLogger := func(w *chWebhook.WireUp) {
 		w.Logger = logger.WithName("channel-operator-duplicate-webhook")
 	}
 
-	wiredWebhook, err := chWebhook.NewWebHookWireUp(mgr, sig, wbhCertDir, wbhLogger, chWebhook.ValidateLogic)
+	wiredWebhook, err := chWebhook.NewWireUp(mgr, sig, wbhCertDir, wbhLogger, chWebhook.ValidateLogic)
 	if err != nil {
 		logger.Error(err, "failed to initial wire up webhook")
 		os.Exit(exitCode)
