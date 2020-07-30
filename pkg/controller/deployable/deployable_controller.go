@@ -336,7 +336,7 @@ func (r *ReconcileDeployable) propagateDeployableToChannel(
 		chv1.KeyChannelType: string(channel.Spec.Type),
 	}
 
-	addOrAppendChannelLabel(chdpl, addL)
+	utils.AddOrAppendChannelLabel(chdpl, addL)
 
 	exdpl, ok := dplmap[chkey]
 
@@ -380,23 +380,6 @@ func (r *ReconcileDeployable) propagateDeployableToChannel(
 	delete(dplmap, chkey)
 
 	return err
-}
-
-func addOrAppendChannelLabel(dpl *dplv1.Deployable, addL map[string]string) {
-	if dpl == nil || len(addL) == 0 {
-		return
-	}
-
-	curL := dpl.GetLabels()
-	if len(curL) == 0 {
-		curL = make(map[string]string)
-	}
-
-	for k, v := range addL {
-		curL[k] = v
-	}
-
-	dpl.SetLabels(curL)
 }
 
 func (r *ReconcileDeployable) promoteDeployabeToChannels(
