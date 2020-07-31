@@ -37,6 +37,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	chv1 "github.com/open-cluster-management/multicloud-operators-channel/pkg/apis/apps/v1"
+	"github.com/open-cluster-management/multicloud-operators-channel/pkg/utils"
 	dplv1 "github.com/open-cluster-management/multicloud-operators-deployable/pkg/apis/apps/v1"
 )
 
@@ -422,7 +423,7 @@ var _ = Describe("test deployable label operations", func() {
 			tdpl := dpl.DeepCopy()
 			tl := tdpl.GetLabels()
 			tdpl.SetLabels(tl)
-			addOrAppendChannelLabel(tdpl, tt.add)
+			utils.AddOrAppendChannelLabel(tdpl, tt.add)
 			tlabel := tdpl.GetLabels()
 			Expect(cmp.Equal(tlabel, tt.expected)).Should(BeTrue())
 		}

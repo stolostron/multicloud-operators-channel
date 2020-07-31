@@ -17,6 +17,7 @@ package utils
 import (
 	"context"
 	"fmt"
+	"strings"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
@@ -305,4 +306,47 @@ func DplGenerateNameStr(deployable *dplv1.Deployable) string {
 	}
 
 	return gn
+}
+
+//AAddOrAppendChannelLabel append the give labels to dpl
+func AddOrAppendChannelLabel(dpl *dplv1.Deployable, addL map[string]string) {
+	if dpl == nil || len(addL) == 0 {
+		return
+	}
+
+	curL := dpl.GetLabels()
+	if len(curL) == 0 {
+		curL = make(map[string]string)
+	}
+
+	for k, v := range addL {
+		curL[k] = v
+	}
+
+	dpl.SetLabels(curL)
+}
+
+func SplitStringToTypes(s string) types.NamespacedName {
+	n := len(s)
+	ans := types.NamespacedName{}
+
+	if n == 0 {
+		return ans
+	}
+
+	sp := strings.Split(s, "/")
+	a, b := sp[0], sp[1]
+
+	if b == "" {
+		return ans
+	}
+
+	ans.Name = b
+	ans.Namespace = a
+
+	if ans.Namespace == "" {
+		ans.Namespace = "default"
+	}
+
+	return ans
 }

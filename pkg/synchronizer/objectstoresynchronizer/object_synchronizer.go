@@ -209,10 +209,19 @@ func (sync *ChannelSynchronizer) addNewResourceFromHostResMap(chn *chv1.Channel,
 		tplannotations := tpl.GetAnnotations()
 		if tplannotations == nil {
 			tplannotations = make(map[string]string)
-		} else if _, ok := tplannotations[dplv1.AnnotationHosting]; ok {
-			continue
+		}
+
+		if v, ok := tplannotations[dplv1.AnnotationHosting]; ok {
+			vkey := utils.SplitStringToTypes(v)
+			tmp := &dplv1.Deployable{}
+
+			//meaning the deployable exist in the channel's namespace
+			if err := sync.kubeClient.Get(context.TODO(), vkey, tmp); err == nil {
+				continue
+			}
 		}
 		// Set AnnotationExternalSource
+
 		tplannotations[dplv1.AnnotationExternalSource] = chn.Spec.Pathname
 		tplannotations[dplv1.AnnotationLocal] = "false"
 		tpl.SetAnnotations(tplannotations)
@@ -224,6 +233,16 @@ func (sync *ChannelSynchronizer) addNewResourceFromHostResMap(chn *chv1.Channel,
 		dpl.Namespace = chn.Namespace
 		dpl.Spec.Template = &runtime.RawExtension{}
 		dpl.Spec.Template.Raw, err = json.Marshal(tpl)
+
+		// for hub subscription to get its subscribing resource
+		addL := map[string]string{
+			chv1.KeyChannel:     chn.GetName(),
+			chv1.KeyChannelType: string(chn.Spec.Type),
+		}
+
+		utils.AddOrAppendChannelLabel(dpl, addL)
+
+		syncLog.Info(fmt.Sprintf("aaaaa creating deployable %v in channel %v", tplname, chn.GetName()))
 
 		if err != nil {
 			syncLog.Error(err, "failed to marshal template ")

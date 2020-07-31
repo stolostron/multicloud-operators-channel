@@ -689,3 +689,26 @@ func TestGenerateDeployableForChannel(t *testing.T) {
 		})
 	}
 }
+
+func TestSplitStringToKey(t *testing.T) {
+	var tests = []struct {
+		name     string
+		given    string
+		expected types.NamespacedName
+	}{
+		{name: "only have name", given: "/test", expected: types.NamespacedName{Name: "test", Namespace: "default"}},
+		{name: "have name and ns", given: "chn/test", expected: types.NamespacedName{Name: "test", Namespace: "chn"}},
+		{name: "only have ns", given: "chn/", expected: types.NamespacedName{}},
+		{name: "only have name", given: "", expected: types.NamespacedName{}},
+	}
+
+	for _, tt := range tests {
+		tt := tt
+		t.Run(tt.name, func(t *testing.T) {
+			actual := utils.SplitStringToTypes(tt.given)
+			if actual != tt.expected {
+				t.Errorf("(%s): expected %s, actual %s", tt.given, tt.expected, actual)
+			}
+		})
+	}
+}
