@@ -18,6 +18,7 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"strings"
 
 	gerr "github.com/pkg/errors"
 
@@ -25,78 +26,130 @@ import (
 
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime/schema"
+	"k8s.io/apimachinery/pkg/util/intstr"
 
-	admissionregistration "k8s.io/api/admissionregistration/v1"
+	admissionv1 "k8s.io/api/admissionregistration/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 
-	"k8s.io/apimachinery/pkg/types"
-	"k8s.io/apimachinery/pkg/util/intstr"
-	"sigs.k8s.io/controller-runtime/pkg/client"
+	"github.com/go-logr/logr"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
+
+	"k8s.io/apimachinery/pkg/types"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/webhook"
-
-	chv1 "github.com/open-cluster-management/multicloud-operators-channel/pkg/apis/apps/v1"
 )
 
 const (
 	tlsCrt = "tls.crt"
 	tlsKey = "tls.key"
-
-	WebhookPort          = 9443
-	ValidatorPath        = "/v1-validate"
-	WebhookValidatorName = "channel-webhook-validator"
-	WebhookServiceName   = "multicluster-operators-channel-svc"
-
-	podNamespaceEnvVar = "POD_NAMESPACE"
-	// acm is using `app: multicluster-operators-application` as pod label
-	deployLabelEnvVar = "DEPLOYMENT_LABEL"
-
-	deploySelectorName = "app"
-
-	webhookName = "channels.apps.open-cluster-management.webhook"
-
-	resourceName = "channels"
 )
 
-var log = logf.Log.WithName("operator-channnel-webhook")
+type WireUp struct {
+	mgr  manager.Manager
+	stop <-chan struct{}
 
-func WireUpWebhook(clt client.Client, whk *webhook.Server, certDir string) ([]byte, error) {
-	whk.Port = WebhookPort
-	whk.CertDir = certDir
+	Server  *webhook.Server
+	Handler webhook.AdmissionHandler
+	CertDir string
+	logr.Logger
 
-	log.Info("registering webhooks to the webhook server")
-	whk.Register(ValidatorPath, &webhook.Admission{Handler: &ChannelValidator{Client: clt}})
+	WebhookName string
+	WebHookPort int
 
-	return GenerateWebhookCerts(certDir)
+	WebHookeSvcKey     types.NamespacedName
+	WebHookServicePort int
+
+	ValidtorPath string
+
+	DeployLabel        string
+	DeploymentSelector map[string]string
+}
+
+func NewWireUp(mgr manager.Manager, stop <-chan struct{},
+	opts ...func(*WireUp)) (*WireUp, error) {
+	WebhookName := "channels-apps-open-cluster-management-webhook"
+
+	deployLabelEnvVar := "DEPLOYMENT_LABEL"
+	deploymentLabel, err := findEnvVariable(deployLabelEnvVar)
+
+	if err != nil {
+		return nil, gerr.Wrap(err, "failed to create a new webhook wireup")
+	}
+
+	deploymentSelectKey := "app"
+
+	deploymentSelector := map[string]string{deploymentSelectKey: deploymentLabel}
+
+	podNamespaceEnvVar := "POD_NAMESPACE"
+
+	podNamespace, err := findEnvVariable(podNamespaceEnvVar)
+	if err != nil {
+		return nil, gerr.Wrap(err, "failed to create a new webhook wireup")
+	}
+
+	wireUp := &WireUp{
+		mgr:    mgr,
+		stop:   stop,
+		Server: mgr.GetWebhookServer(),
+		Logger: logf.Log,
+
+		WebhookName:        WebhookName,
+		WebHookPort:        9443,
+		WebHookServicePort: 443,
+
+		ValidtorPath:       "/duplicate-validation",
+		WebHookeSvcKey:     types.NamespacedName{Name: GetWebHookServiceName(WebhookName), Namespace: podNamespace},
+		DeployLabel:        deploymentLabel,
+		DeploymentSelector: deploymentSelector,
+	}
+
+	for _, op := range opts {
+		op(wireUp)
+	}
+
+	return wireUp, nil
+}
+
+func GetValidatorName(wbhName string) string {
+	//domain style, separate by dots
+	return strings.ReplaceAll(wbhName, "-", ".") + ".validator"
+}
+
+func GetWebHookServiceName(wbhName string) string {
+	//k8s resrouce nameing, separate by '-'
+	return wbhName + "-svc"
+}
+
+func (w *WireUp) Attach() ([]byte, error) {
+	w.Server.Port = w.WebHookPort
+
+	w.Logger.Info("registering webhooks to the webhook server")
+	w.Server.Register(w.ValidtorPath, &webhook.Admission{Handler: w.Handler})
+
+	return GenerateWebhookCerts(w.CertDir, w.WebHookeSvcKey.Namespace, w.WebHookeSvcKey.Name)
 }
 
 //assuming we have a service set up for the webhook, and the service is linking
 //to a secret which has the CA
-func WireUpWebhookSupplymentryResource(mgr manager.Manager, stop <-chan struct{}, wbhSvcName, validatorName, certDir string, caCert []byte) {
-	log.Info("entry wire up webhook")
-	defer log.Info("exit wire up webhook ")
+func (w *WireUp) WireUpWebhookSupplymentryResource(caCert []byte, gvk schema.GroupVersionKind, ops []admissionv1.OperationType) {
+	w.Logger.Info("entry wire up webhook")
+	defer w.Logger.Info("exit wire up webhook ")
 
-	podNs, err := findEnvVariable(podNamespaceEnvVar)
-	if err != nil {
-		log.Error(err, "failed to wire up webhook with kube")
+	if !w.mgr.GetCache().WaitForCacheSync(w.stop) {
+		w.Logger.Error(gerr.New("cache not started"), "failed to start up cache")
 	}
 
-	if !mgr.GetCache().WaitForCacheSync(stop) {
-		log.Error(gerr.New("cache not started"), "failed to start up cache")
-	}
+	w.Logger.Info("cache is ready to consume")
 
-	log.Info("cache is ready to consume")
-
-	clt := mgr.GetClient()
-
-	if err := createWebhookService(clt, wbhSvcName, podNs); err != nil {
-		log.Error(err, "failed to wire up webhook with kube")
+	if err := w.createWebhookService(); err != nil {
+		w.Logger.Error(err, "failed to wire up webhook with kube")
 		os.Exit(1)
 	}
 
-	if err := createOrUpdateValiatingWebhook(clt, wbhSvcName, validatorName, podNs, ValidatorPath, caCert); err != nil {
-		log.Error(err, "failed to wire up webhook with kube")
+	if err := w.createOrUpdateValiationWebhook(caCert, gvk, ops); err != nil {
+		w.Logger.Error(err, "failed to wire up webhook with kube")
 		os.Exit(1)
 	}
 }
@@ -110,77 +163,71 @@ func findEnvVariable(envName string) (string, error) {
 	return val, nil
 }
 
-func createWebhookService(c client.Client, wbhSvcName, namespace string) error {
+func (w *WireUp) createWebhookService() error {
 	service := &corev1.Service{}
-	key := types.NamespacedName{Name: wbhSvcName, Namespace: namespace}
 
-	if err := c.Get(context.TODO(), key, service); err != nil {
+	if err := w.mgr.GetClient().Get(context.TODO(), w.WebHookeSvcKey, service); err != nil {
 		if errors.IsNotFound(err) {
-			service, err := newWebhookService(wbhSvcName, namespace)
-			if err != nil {
-				return gerr.Wrap(err, "failed to create service for webhook")
-			}
+			service := newWebhookServiceTemplate(w.WebHookeSvcKey, w.WebHookPort, w.WebHookServicePort, w.DeploymentSelector)
 
-			setOwnerReferences(c, namespace, service)
+			setOwnerReferences(w.mgr.GetClient(), w.Logger, w.WebHookeSvcKey.Namespace, w.DeployLabel, service)
 
-			if err := c.Create(context.TODO(), service); err != nil {
+			if err := w.mgr.GetClient().Create(context.TODO(), service); err != nil {
 				return err
 			}
 
-			log.Info(fmt.Sprintf("Create %s/%s service", namespace, wbhSvcName))
+			w.Logger.Info(fmt.Sprintf("Create %s service", w.WebHookeSvcKey.String()))
 
 			return nil
 		}
 	}
 
-	log.Info(fmt.Sprintf("%s/%s service is found", namespace, wbhSvcName))
+	w.Logger.Info(fmt.Sprintf("%s service is found", w.WebHookeSvcKey.String()))
 
 	return nil
 }
 
-func createOrUpdateValiatingWebhook(c client.Client, wbhSvcName, validatorName, namespace, path string, ca []byte) error {
-	validator := &admissionregistration.ValidatingWebhookConfiguration{}
-	key := types.NamespacedName{Name: validatorName}
+func (w *WireUp) createOrUpdateValiationWebhook(ca []byte, gvk schema.GroupVersionKind,
+	ops []admissionv1.OperationType) error {
+	validator := &admissionv1.ValidatingWebhookConfiguration{}
+	key := types.NamespacedName{Name: GetValidatorName(w.WebhookName)}
 
-	if err := c.Get(context.TODO(), key, validator); err != nil {
+	validatorName := GetValidatorName(w.WebhookName)
+
+	if err := w.mgr.GetClient().Get(context.TODO(), key, validator); err != nil {
 		if errors.IsNotFound(err) {
-			cfg := newValidatingWebhookCfg(wbhSvcName, validatorName, namespace, path, ca)
+			cfg := newValidatingWebhookCfg(w.WebHookeSvcKey, validatorName, w.ValidtorPath, ca, gvk, ops)
 
-			setOwnerReferences(c, namespace, cfg)
+			setOwnerReferences(w.mgr.GetClient(), w.Logger, w.WebHookeSvcKey.Namespace, w.DeployLabel, cfg)
 
-			if err := c.Create(context.TODO(), cfg); err != nil {
+			if err := w.mgr.GetClient().Create(context.TODO(), cfg); err != nil {
 				return gerr.Wrap(err, fmt.Sprintf("Failed to create validating webhook %s", validatorName))
 			}
 
-			log.Info(fmt.Sprintf("Create validating webhook %s", validatorName))
+			w.Logger.Info(fmt.Sprintf("Create validating webhook %s", validatorName))
 
 			return nil
 		}
 	}
 
-	validator.Webhooks[0].ClientConfig.Service.Namespace = namespace
+	validator.Webhooks[0].ClientConfig.Service.Namespace = w.WebHookeSvcKey.Namespace
 	validator.Webhooks[0].ClientConfig.CABundle = ca
 
-	if err := c.Update(context.TODO(), validator); err != nil {
+	if err := w.mgr.GetClient().Update(context.TODO(), validator); err != nil {
 		return gerr.Wrap(err, fmt.Sprintf("Failed to update validating webhook %s", validatorName))
 	}
 
-	log.Info(fmt.Sprintf("Update validating webhook %s", validatorName))
+	w.Logger.Info(fmt.Sprintf("Update validating webhook %s", validatorName))
 
 	return nil
 }
 
-func setOwnerReferences(c client.Client, namespace string, obj metav1.Object) {
-	deployLabel, err := findEnvVariable(deployLabelEnvVar)
-	if err != nil {
-		return
-	}
-
-	key := types.NamespacedName{Name: deployLabel, Namespace: namespace}
+func setOwnerReferences(c client.Client, logger logr.Logger, deployNs string, deployLabel string, obj metav1.Object) {
+	key := types.NamespacedName{Name: deployLabel, Namespace: deployNs}
 	owner := &appsv1.Deployment{}
 
 	if err := c.Get(context.TODO(), key, owner); err != nil {
-		log.Error(err, fmt.Sprintf("Failed to set owner references for %s", obj.GetName()))
+		logger.Error(err, fmt.Sprintf("Failed to set owner references for %s", obj.GetName()))
 		return
 	}
 
@@ -188,62 +235,56 @@ func setOwnerReferences(c client.Client, namespace string, obj metav1.Object) {
 		*metav1.NewControllerRef(owner, owner.GetObjectKind().GroupVersionKind())})
 }
 
-func newWebhookService(wbhSvcName, namespace string) (*corev1.Service, error) {
-	deployLabel, err := findEnvVariable(deployLabelEnvVar)
-	if err != nil {
-		return nil, err
-	}
-
+func newWebhookServiceTemplate(svcKey types.NamespacedName, webHookPort, webHookServicePort int, deploymentSelector map[string]string) *corev1.Service {
 	return &corev1.Service{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      wbhSvcName,
-			Namespace: namespace,
+			Name:      svcKey.Name,
+			Namespace: svcKey.Namespace,
 		},
 		Spec: corev1.ServiceSpec{
 			Ports: []corev1.ServicePort{
 				{
-					Port:       443,
-					TargetPort: intstr.FromInt(WebhookPort),
+					Port:       int32(webHookServicePort),
+					TargetPort: intstr.FromInt(webHookPort),
 				},
 			},
-			Selector: map[string]string{deploySelectorName: deployLabel},
+			Selector: deploymentSelector,
 		},
-	}, nil
+	}
 }
 
-func newValidatingWebhookCfg(wbhSvcName, validatorName, namespace, path string, ca []byte) *admissionregistration.ValidatingWebhookConfiguration {
-	fail := admissionregistration.Fail
-	side := admissionregistration.SideEffectClassNone
+func newValidatingWebhookCfg(svcKey types.NamespacedName, validatorName, path string, ca []byte,
+	gvk schema.GroupVersionKind, ops []admissionv1.OperationType) *admissionv1.ValidatingWebhookConfiguration {
+	fail := admissionv1.Fail
+	side := admissionv1.SideEffectClassNone
 
-	return &admissionregistration.ValidatingWebhookConfiguration{
+	return &admissionv1.ValidatingWebhookConfiguration{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: validatorName,
 		},
 
-		Webhooks: []admissionregistration.ValidatingWebhook{{
-			Name:                    webhookName,
+		Webhooks: []admissionv1.ValidatingWebhook{{
+			Name:                    validatorName,
 			AdmissionReviewVersions: []string{"v1beta1"},
 			SideEffects:             &side,
 			FailurePolicy:           &fail,
-			ClientConfig: admissionregistration.WebhookClientConfig{
-				Service: &admissionregistration.ServiceReference{
-					Name:      wbhSvcName,
-					Namespace: namespace,
+			ClientConfig: admissionv1.WebhookClientConfig{
+				Service: &admissionv1.ServiceReference{
+					Name:      svcKey.Name,
+					Namespace: svcKey.Namespace,
 					Path:      &path,
 				},
 				CABundle: ca,
 			},
-			Rules: []admissionregistration.RuleWithOperations{{
-				Rule: admissionregistration.Rule{
-					APIGroups:   []string{chv1.SchemeGroupVersion.Group},
-					APIVersions: []string{chv1.SchemeGroupVersion.Version},
-					Resources:   []string{resourceName},
+			Rules: []admissionv1.RuleWithOperations{{
+				Rule: admissionv1.Rule{
+					APIGroups:   []string{gvk.Group},
+					APIVersions: []string{gvk.Version},
+					Resources:   []string{gvk.Kind},
 				},
-				Operations: []admissionregistration.OperationType{
-					admissionregistration.Create,
-					//update should be a ok path, admissionregistration.Update,
-				},
+				Operations: ops,
+			},
 			}},
-		}},
+		},
 	}
 }

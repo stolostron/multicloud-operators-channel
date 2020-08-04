@@ -29,8 +29,6 @@ import (
 	"os"
 	"path/filepath"
 	"time"
-
-	gerr "github.com/pkg/errors"
 )
 
 const (
@@ -46,21 +44,16 @@ type Certificate struct {
 }
 
 // GenerateWebhookCerts generate self singed CA and a signed cert pair. The
-// signed pair is stored at the certDir
-func GenerateWebhookCerts(certDir string) ([]byte, error) {
+// signed pair is stored at the certDir. The CA will respect the inCluster DNS
+func GenerateWebhookCerts(certDir, webhookServiceNs, webhookServiceName string) ([]byte, error) {
 	if len(certDir) == 0 {
 		certDir = filepath.Join(os.TempDir(), "k8s-webhook-server", "serving-certs")
 	}
 
-	podNs, err := findEnvVariable(podNamespaceEnvVar)
-	if err != nil {
-		return []byte{}, gerr.Wrap(err, "failed to generate server certs")
-	}
-
 	alternateDNS := []string{
-		fmt.Sprintf("%s.%s", WebhookServiceName, podNs),
-		fmt.Sprintf("%s.%s.svc", WebhookServiceName, podNs),
-		fmt.Sprintf("%s.%s.svc.cluster.local", WebhookServiceName, podNs),
+		fmt.Sprintf("%s.%s", webhookServiceName, webhookServiceNs),
+		fmt.Sprintf("%s.%s.svc", webhookServiceName, webhookServiceNs),
+		fmt.Sprintf("%s.%s.svc.cluster.local", webhookServiceName, webhookServiceNs),
 	}
 
 	ca, err := GenerateSelfSignedCACert(certName)
@@ -68,7 +61,7 @@ func GenerateWebhookCerts(certDir string) ([]byte, error) {
 		return nil, err
 	}
 
-	cert, err := GenerateSignedCert(WebhookServiceName, alternateDNS, ca)
+	cert, err := GenerateSignedCert(webhookServiceName, alternateDNS, ca)
 	if err != nil {
 		return nil, err
 	}
