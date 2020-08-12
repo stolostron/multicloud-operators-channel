@@ -236,8 +236,13 @@ func RunManager(sig <-chan struct{}) {
 		os.Exit(exitCode)
 	}
 
-	go wiredWebhook.WireUpWebhookSupplymentryResource(caCert,
-		chv1.SchemeGroupVersion.WithKind(kindName), []admissionv1.OperationType{admissionv1.Create})
+	go func() {
+		if err := wiredWebhook.WireUpWebhookSupplymentryResource(caCert,
+			chv1.SchemeGroupVersion.WithKind(kindName), []admissionv1.OperationType{admissionv1.Create}); err != nil {
+			logger.Error(err, "failed to set up webhook configuration")
+			os.Exit(exitCode)
+		}
+	}()
 
 	logger.Info("Starting the Cmd.")
 	// Start the Cmd
