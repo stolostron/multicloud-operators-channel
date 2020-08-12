@@ -208,7 +208,6 @@ func (w *WireUp) createOrUpdateValiationWebhook(ca []byte, gvk schema.GroupVersi
 		}
 
 		w.Logger.Info(fmt.Sprintf("Update validating webhook %s", validatorName))
-
 	}
 
 	// make sure the service of the validator exists
