@@ -143,11 +143,6 @@ func (w *WireUp) WireUpWebhookSupplymentryResource(caCert []byte, gvk schema.Gro
 
 	w.Logger.Info("cache is ready to consume")
 
-	if err := w.createWebhookService(); err != nil {
-		w.Logger.Error(err, "failed to wire up webhook with kube")
-		os.Exit(1)
-	}
-
 	if err := w.createOrUpdateValiationWebhook(caCert, gvk, ops); err != nil {
 		w.Logger.Error(err, "failed to wire up webhook with kube")
 		os.Exit(1)
@@ -163,7 +158,7 @@ func findEnvVariable(envName string) (string, error) {
 	return val, nil
 }
 
-func (w *WireUp) createWebhookService() error {
+func (w *WireUp) getOrCreateWebhookService() error {
 	service := &corev1.Service{}
 
 	if err := w.mgr.GetClient().Get(context.TODO(), w.WebHookeSvcKey, service); err != nil {
@@ -211,6 +206,7 @@ func (w *WireUp) createOrUpdateValiationWebhook(ca []byte, gvk schema.GroupVersi
 	}
 
 	validator.Webhooks[0].ClientConfig.Service.Namespace = w.WebHookeSvcKey.Namespace
+	validator.Webhooks[0].ClientConfig.Service.Name = w.WebHookeSvcKey.Name
 	validator.Webhooks[0].ClientConfig.CABundle = ca
 
 	if err := w.mgr.GetClient().Update(context.TODO(), validator); err != nil {
@@ -219,7 +215,7 @@ func (w *WireUp) createOrUpdateValiationWebhook(ca []byte, gvk schema.GroupVersi
 
 	w.Logger.Info(fmt.Sprintf("Update validating webhook %s", validatorName))
 
-	return nil
+	return w.getOrCreateWebhookService()
 }
 
 func setOwnerReferences(c client.Client, logger logr.Logger, deployNs string, deployLabel string, obj metav1.Object) {
