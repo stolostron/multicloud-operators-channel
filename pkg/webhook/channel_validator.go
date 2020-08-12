@@ -59,7 +59,7 @@ func (v *ChannelValidator) Handle(ctx context.Context, req admission.Request) ad
 
 	chList := &chv1.ChannelList{}
 	if err := v.List(ctx, chList, client.InNamespace(chn.GetNamespace())); err != nil {
-		return admission.Denied(fmt.Sprint("k8s cluster state unknow "))
+		return admission.Denied(fmt.Sprint("the hub cluster state unknown"))
 	}
 
 	if len(chList.Items) == 0 {
@@ -67,8 +67,8 @@ func (v *ChannelValidator) Handle(ctx context.Context, req admission.Request) ad
 	}
 
 	if v, ok := isAllGit(chList); !ok {
-		return admission.Denied(fmt.Sprintf("there's channel %v in the requested namespace %v",
-			v, chn.GetNamespace()))
+		return admission.Denied(fmt.Sprintf("the namespace %v already contains a channel: %v",
+			chn.GetNamespace(), v))
 	}
 
 	return admission.Allowed("")
