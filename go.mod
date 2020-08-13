@@ -1,6 +1,6 @@
 module github.com/open-cluster-management/multicloud-operators-channel
 
-go 1.13
+go 1.15
 
 require (
 	github.com/Masterminds/semver v1.5.0 // indirect
