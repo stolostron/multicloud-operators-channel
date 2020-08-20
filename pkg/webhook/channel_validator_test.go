@@ -119,9 +119,9 @@ var _ = Describe("test channel validation logic", func() {
 			}()
 		})
 
-		It("should create 2nd git channel", func() {
+		It("should create 2nd github channel", func() {
 			dupChn := chnIns.DeepCopy()
-			dupChn.Spec.Type = "GitHub"
+			dupChn.Spec.Type = chv1.ChannelTypeGitHub
 			dupChn.SetName("dup-chn1-1")
 
 			Expect(k8sClient.Create(context.TODO(), dupChn)).Should(Succeed())
