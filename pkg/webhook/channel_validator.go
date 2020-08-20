@@ -76,9 +76,11 @@ func (v *ChannelValidator) Handle(ctx context.Context, req admission.Request) ad
 
 func isAllGit(chList *chv1.ChannelList) (string, bool) {
 	for _, ch := range chList.Items {
-		if ch.Spec.Type != chv1.ChannelTypeGit && ch.Spec.Type != chv1.ChannelTypeGitHub {
-			return ch.GetName(), false
+		if strings.EqualFold(ch.Spec.Type, chv1.ChannelTypeGit) || strings.EqualFold(ch.Spec.Type, chv1.ChannelTypeGitHub) {
+			continue
 		}
+
+		return ch.GetName(), false
 	}
 
 	return "", true
