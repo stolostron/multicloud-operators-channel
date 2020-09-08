@@ -34,7 +34,7 @@ func decideHTTPClient(repoURL string, chnRefCfgMap *corev1.ConfigMap, logger log
 	logger.Info(repoURL)
 
 	// rootsCA is loading from host if not configed, https://golang.org/src/crypto/x509/root_linux.go
-	tlsConfig := &tls.Config{}
+	tlsConfig := &tls.Config{MinVersion: tls.VersionTLS12}
 
 	if chnRefCfgMap != nil && chnRefCfgMap.Data[InsecureSkipVerifyFlag] != "" {
 		b, err := strconv.ParseBool(chnRefCfgMap.Data[InsecureSkipVerifyFlag])
