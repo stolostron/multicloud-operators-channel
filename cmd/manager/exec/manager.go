@@ -238,7 +238,7 @@ func RunManager(sig <-chan struct{}) {
 
 	go func() {
 		if err := wiredWebhook.WireUpWebhookSupplymentryResource(caCert,
-			chv1.SchemeGroupVersion.WithKind(kindName), []admissionv1.OperationType{admissionv1.Create}); err != nil {
+			chv1.SchemeGroupVersion.WithKind(kindName), []admissionv1.OperationType{admissionv1.Create}, chWebhook.DelPreValiationCfg20); err != nil {
 			logger.Error(err, "failed to set up webhook configuration")
 			os.Exit(exitCode)
 		}

@@ -131,9 +131,27 @@ func (w *WireUp) Attach() ([]byte, error) {
 	return GenerateWebhookCerts(w.CertDir, w.WebHookeSvcKey.Namespace, w.WebHookeSvcKey.Name)
 }
 
+type CleanUpFunc func(client.Client) error
+
+func DelPreValiationCfg20(clt client.Client) error {
+	pCfg := &admissionv1.ValidatingWebhookConfiguration{}
+	pCfgKey := types.NamespacedName{Name: "channel-webhook-validator"}
+	ctx := context.TODO()
+
+	if err := clt.Get(ctx, pCfgKey, pCfg); err != nil {
+		if errors.IsNotFound(err) {
+			return nil
+		}
+
+		return err
+	}
+
+	return clt.Delete(ctx, pCfg)
+}
+
 //assuming we have a service set up for the webhook, and the service is linking
 //to a secret which has the CA
-func (w *WireUp) WireUpWebhookSupplymentryResource(caCert []byte, gvk schema.GroupVersionKind, ops []admissionv1.OperationType) error {
+func (w *WireUp) WireUpWebhookSupplymentryResource(caCert []byte, gvk schema.GroupVersionKind, ops []admissionv1.OperationType, cFuncs ...CleanUpFunc) error {
 	w.Logger.Info("entry wire up webhook")
 	defer w.Logger.Info("exit wire up webhook ")
 
@@ -142,6 +160,11 @@ func (w *WireUp) WireUpWebhookSupplymentryResource(caCert []byte, gvk schema.Gro
 	}
 
 	w.Logger.Info("cache is ready to consume")
+	for _, cf := range cFuncs {
+		if err := cf(w.mgr.GetClient()); err != nil {
+			return gerr.Wrap(err, "failed to clean up")
+		}
+	}
 
 	return gerr.Wrap(w.createOrUpdateValiationWebhook(caCert, gvk, ops), "failed to set up the validation webhook config")
 }
