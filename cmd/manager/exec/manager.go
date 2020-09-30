@@ -224,7 +224,11 @@ func RunManager(sig <-chan struct{}) {
 		w.Logger = logger.WithName("channel-operator-duplicate-webhook")
 	}
 
-	wiredWebhook, err := chWebhook.NewWireUp(mgr, sig, wbhCertDir, wbhLogger, chWebhook.ValidateLogic)
+	compatibleSvcName := func(w *chWebhook.WireUp) {
+		w.WebhookName = "channel-webhook-validator"
+	}
+
+	wiredWebhook, err := chWebhook.NewWireUp(mgr, sig, wbhCertDir, wbhLogger, chWebhook.ValidateLogic, compatibleSvcName)
 	if err != nil {
 		logger.Error(err, "failed to initial wire up webhook")
 		os.Exit(exitCode)
