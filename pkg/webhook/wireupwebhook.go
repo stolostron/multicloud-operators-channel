@@ -131,8 +131,6 @@ func (w *WireUp) Attach() ([]byte, error) {
 	return GenerateWebhookCerts(w.CertDir, w.WebHookeSvcKey.Namespace, w.WebHookeSvcKey.Name)
 }
 
-type CleanUpFunc func(client.Client) error
-
 //assuming we have a service set up for the webhook, and the service is linking
 //to a secret which has the CA
 func (w *WireUp) WireUpWebhookSupplymentryResource(caCert []byte, gvk schema.GroupVersionKind, ops []admissionv1.OperationType) error {
