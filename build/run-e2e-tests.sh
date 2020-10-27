@@ -80,12 +80,15 @@ kubectl cluster-info --context kind-kind
 
 
 echo "applying channel operator to kind cluster"
-kubectl apply -f deploy/standalone --kubeconfig kindconfig
+kubectl apply -f deploy/standalone
 if [ $? != 0 ]; then
     exit $?;
 fi
 
+sleep 30
 kubectl get po -A
+
+kubectl get svc -A 
 
 if [ $? != 0 ]; then
     exit $?;
