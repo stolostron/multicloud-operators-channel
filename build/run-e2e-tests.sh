@@ -19,18 +19,8 @@
 ###!!!!!!!! On travis this script is run on the .git level
 echo "E2E TESTS GO HERE!"
 
-# Download and install kubectl
-curl -LO https://storage.googleapis.com/kubernetes-release/release/$(curl -s https://storage.googleapis.com/kubernetes-release/release/stable.txt)/bin/linux/amd64/kubectl && chmod +x kubectl && sudo mv kubectl /usr/local/bin/
 
-
-# Download and install KinD
-GO111MODULE=on go get sigs.k8s.io/kind
-
-# Create a new Kubernetes cluster using KinD
-kind create cluster
-
-sleep 30
-
+echo "modify deployment to point to the PR image"
 # need to find a way to use the Makefile to set these
 REGISTRY=quay.io/open-cluster-management
 
@@ -47,6 +37,15 @@ if [ "$TRAVIS_BUILD" == 1 ]; then
 else
     echo "Build is on Travis" 
 
+echo "get kubectl binary"
+    # Download and install kubectl
+    curl -LO https://storage.googleapis.com/kubernetes-release/release/$(curl -s https://storage.googleapis.com/kubernetes-release/release/stable.txt)/bin/linux/amd64/kubectl && chmod +x kubectl && sudo mv kubectl /usr/local/bin/
+
+
+    # Download and install KinD
+    GO111MODULE=on go get sigs.k8s.io/kind
+
+
     IMG=$(cat COMPONENT_NAME 2> /dev/null)
     COMPONENT_VERSION=$(cat COMPONENT_VERSION 2> /dev/null)
     IMAGE_NAME_AND_VERSION=${REGISTRY}/${IMG}
@@ -54,16 +53,22 @@ else
 
     echo "BUILD_IMAGE tag $BUILD_IMAGE"
 
-    sed "s|image: .*:latest$|image: $BUILD_IMAGE|" deploy/standalone/operator.yaml
-fi
+    sed -i -e "s|image: .*:latest$|image: $BUILD_IMAGE|" deploy/standalone/operator.yaml
 
-kind load $BUILD_IMAGE
-
+    echo "create kind cluster"
+    # Create a new Kubernetes cluster using KinD
+    kind create cluster
 
 export KUBECONFIG=$(kind get kubeconfig)
+    sleep 30
+fi
+
+echo "load build image to kind cluster"
+kind load docker-image $BUILD_IMAGE
+
 
 echo "applying channel operator to kind cluster"
-kubectl apply -f deploy/standalone
-kubectl get po -A --kubeconfig KUBECONFIG
+kubectl apply -f deploy/standalone --kubeconfig $KUBECONFIG
+kubectl get po -A --kubeconfig $KUBECONFIG
 
 exit 0;
