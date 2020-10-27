@@ -59,6 +59,11 @@ else
     echo "create kind cluster"
     # Create a new Kubernetes cluster using KinD
     kind create cluster
+    if [ $? -eq 0 ]; then
+        exit 0;
+    else
+        exit 1;
+    fi
 
     sleep 30
 fi
@@ -67,12 +72,23 @@ kind get kubeconfig > kindconfig
 
 echo "load build image to kind cluster"
 kind load docker-image $BUILD_IMAGE
+if [ $? -eq 0 ]; then
+    exit 0;
+else
+    exit 1;
+fi
 
 kubectl cluster-info --context kind-kind
 
 
 echo "applying channel operator to kind cluster"
 kubectl apply -f deploy/standalone --kubeconfig kindconfig
+if [ $? -eq 0 ]; then
+    exit 0;
+else
+    exit 1;
+fi
+
 kubectl get po -A
 
 if [ $? -eq 0 ]; then
