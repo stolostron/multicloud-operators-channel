@@ -20,15 +20,16 @@
 echo "E2E TESTS GO HERE!"
 
 # Download and install kubectl
-#curl -LO https://storage.googleapis.com/kubernetes-release/release/$(curl -s https://storage.googleapis.com/kubernetes-release/release/stable.txt)/bin/linux/amd64/kubectl && chmod +x kubectl && sudo mv kubectl /usr/local/bin/
+curl -LO https://storage.googleapis.com/kubernetes-release/release/$(curl -s https://storage.googleapis.com/kubernetes-release/release/stable.txt)/bin/linux/amd64/kubectl && chmod +x kubectl && sudo mv kubectl /usr/local/bin/
 
 
 # Download and install KinD
-#GO111MODULE=on go get sigs.k8s.io/kind
+GO111MODULE=on go get sigs.k8s.io/kind
 
 # Create a new Kubernetes cluster using KinD
-#kind create cluster
+kind create cluster
 
+sleep 30
 
 # need to find a way to use the Makefile to set these
 REGISTRY=quay.io/open-cluster-management
@@ -56,6 +57,13 @@ else
     sed "s|image: .*:latest$|image: $BUILD_IMAGE|" deploy/standalone/operator.yaml
 fi
 
-# kubectl apply -f ../deploy/standalone
+kind load $BUILD_IMAGE
+
+
+export KUBECONFIG=$(kind get kubeconfig)
+
+echo "applying channel operator to kind cluster"
+kubectl apply -f deploy/standalone
+kubectl get po -A --kubeconfig KUBECONFIG
 
 exit 0;
