@@ -68,7 +68,8 @@ export KUBECONFIG=$(kind get kubeconfig)
 echo "load build image to kind cluster"
 kind load docker-image $BUILD_IMAGE
 
+kubectl cluster-info --context kind-kind
 
 echo "applying channel operator to kind cluster"
-kubectl apply -f deploy/standalone --kubeconfig="$KUBECONFIG"
-kubectl get po -A --kubeconfig=$KUBECONFIG
+kubectl apply -f deploy/standalone
+kubectl get po -A
