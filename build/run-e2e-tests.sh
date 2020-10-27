@@ -38,6 +38,8 @@ BUILD_IMAGE=${IMAGE_NAME_AND_VERSION}:${COMPONENT_VERSION}${COMPONENT_TAG_EXTENS
 
 echo $BUILD_IMAGE
 
+echo $PWD
+ls
 sed "s|image: .*:latest$|image: $BUILD_IMAGE|" ../deploy/standalone/operator.yaml
 
 
