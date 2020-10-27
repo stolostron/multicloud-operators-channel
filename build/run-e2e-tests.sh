@@ -73,3 +73,9 @@ kubectl cluster-info --context kind-kind
 echo "applying channel operator to kind cluster"
 kubectl apply -f deploy/standalone
 kubectl get po -A
+
+if [ $? -eq 0 ]; then
+    exit 0;
+else
+    exit 1;
+fi
