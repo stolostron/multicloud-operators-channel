@@ -28,11 +28,11 @@ echo "E2E TESTS GO HERE!"
 #kind create cluster
 
 # need to find a way to use the Makefile to set these
-IMG=$(cat ../COMPONENT_NAME 2> /dev/null)
+IMG=$(cat COMPONENT_NAME 2> /dev/null)
 REGISTRY=quay.io/open-cluster-management
 
 IMAGE_NAME_AND_VERSION=${REGISTRY}/${IMG}
-COMPONENT_VERSION=$(cat ../COMPONENT_VERSION 2> /dev/null)
+COMPONENT_VERSION=$(cat COMPONENT_VERSION 2> /dev/null)
 
 BUILD_IMAGE=${IMAGE_NAME_AND_VERSION}:${COMPONENT_VERSION}${COMPONENT_TAG_EXTENSION}
 
@@ -40,7 +40,7 @@ echo $BUILD_IMAGE
 
 echo $PWD
 ls
-sed "s|image: .*:latest$|image: $BUILD_IMAGE|" ../deploy/standalone/operator.yaml
+sed "s|image: .*:latest$|image: $BUILD_IMAGE|" ./deploy/standalone/operator.yaml
 
 
 # kubectl apply -f ../deploy/standalone
