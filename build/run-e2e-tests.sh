@@ -17,4 +17,23 @@
 
 echo "E2E TESTS GO HERE!"
 
+# Download and install kubectl
+#curl -LO https://storage.googleapis.com/kubernetes-release/release/$(curl -s https://storage.googleapis.com/kubernetes-release/release/stable.txt)/bin/linux/amd64/kubectl && chmod +x kubectl && sudo mv kubectl /usr/local/bin/
+
+
+# Download and install KinD
+#GO111MODULE=on go get sigs.k8s.io/kind
+
+# Create a new Kubernetes cluster using KinD
+#kind create cluster
+
+BUILD_IMAGE=${COMPONENT_DOCKER_REPO}/${COMPONENT_NAME}:${COMPONENT_VERSION}${COMPONENT_TAG_EXTENSION}
+
+echo $BUILD_IMAGE
+
+sed -e "s|image: *latest$|image: $BUILD_IMAGE"
+
+
+# kubectl apply -f ../deploy/standalone
+
 exit 0;
