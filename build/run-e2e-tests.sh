@@ -15,6 +15,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+
+###!!!!!!!! On travis this script is run on the .git level
 echo "E2E TESTS GO HERE!"
 
 # Download and install kubectl
@@ -27,21 +29,27 @@ echo "E2E TESTS GO HERE!"
 # Create a new Kubernetes cluster using KinD
 #kind create cluster
 
+
 # need to find a way to use the Makefile to set these
-IMG=$(cat COMPONENT_NAME 2> /dev/null)
 REGISTRY=quay.io/open-cluster-management
 
-IMAGE_NAME_AND_VERSION=${REGISTRY}/${IMG}
-COMPONENT_VERSION=$(cat COMPONENT_VERSION 2> /dev/null)
+if [ "$TRAVIS_BUILD" == 1 ]; then  
+    echo "Build is on Travis"  
+    IMG=$(cat COMPONENT_NAME 2> /dev/null)
+    COMPONENT_VERSION=$(cat COMPONENT_VERSION 2> /dev/null)
+    IMAGE_NAME_AND_VERSION=${REGISTRY}/${IMG}
 
-BUILD_IMAGE=${IMAGE_NAME_AND_VERSION}:${COMPONENT_VERSION}${COMPONENT_TAG_EXTENSION}
+    BUILD_IMAGE=${IMAGE_NAME_AND_VERSION}:${COMPONENT_VERSION}${COMPONENT_TAG_EXTENSION}
+    sed "s|image: .*:latest$|image: $BUILD_IMAGE|" ./deploy/standalone/operator.yaml
+else
+    echo "Build is on local" 
+    IMG=$(cat ../COMPONENT_NAME 2> /dev/null)
+    COMPONENT_VERSION=$(cat ../COMPONENT_VERSION 2> /dev/null)
+    IMAGE_NAME_AND_VERSION=${REGISTRY}/${IMG}
 
-echo $BUILD_IMAGE
-
-echo $PWD
-ls
-sed "s|image: .*:latest$|image: $BUILD_IMAGE|" ./deploy/standalone/operator.yaml
-
+    BUILD_IMAGE=${IMAGE_NAME_AND_VERSION}:${COMPONENT_VERSION}${COMPONENT_TAG_EXTENSION}
+    sed "s|image: .*:latest$|image: $BUILD_IMAGE|" ../deploy/standalone/operator.yaml
+fi
 
 # kubectl apply -f ../deploy/standalone
 
