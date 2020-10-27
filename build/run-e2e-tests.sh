@@ -27,11 +27,18 @@ echo "E2E TESTS GO HERE!"
 # Create a new Kubernetes cluster using KinD
 #kind create cluster
 
-BUILD_IMAGE=${COMPONENT_DOCKER_REPO}/${COMPONENT_NAME}:${COMPONENT_VERSION}${COMPONENT_TAG_EXTENSION}
+# need to find a way to use the Makefile to set these
+IMG=$(cat ../COMPONENT_NAME 2> /dev/null)
+REGISTRY=quay.io/open-cluster-management
+
+IMAGE_NAME_AND_VERSION=${REGISTRY}/${IMG}
+COMPONENT_VERSION=$(cat ../COMPONENT_VERSION 2> /dev/null)
+
+BUILD_IMAGE=${IMAGE_NAME_AND_VERSION}:${COMPONENT_VERSION}${COMPONENT_TAG_EXTENSION}
 
 echo $BUILD_IMAGE
 
-sed -e "s|image: *latest$|image: $BUILD_IMAGE"
+sed "s|image: .*:latest$|image: $BUILD_IMAGE|" ../deploy/standalone/operator.yaml
 
 
 # kubectl apply -f ../deploy/standalone
