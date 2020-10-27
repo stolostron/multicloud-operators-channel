@@ -88,6 +88,8 @@ fi
 sleep 30
 kubectl get po -A
 
+echo "check if channel deploy is created" | kubectl get deploy multicloud-operators-channel
+
 kubectl get svc -A 
 
 if [ $? != 0 ]; then
