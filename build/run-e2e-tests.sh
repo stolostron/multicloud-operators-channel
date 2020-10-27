@@ -72,5 +72,3 @@ kind load docker-image $BUILD_IMAGE
 echo "applying channel operator to kind cluster"
 kubectl apply -f deploy/standalone --kubeconfig="$KUBECONFIG"
 kubectl get po -A --kubeconfig=$KUBECONFIG
-
-exit 0;
