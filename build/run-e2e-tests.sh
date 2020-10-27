@@ -34,21 +34,26 @@ echo "E2E TESTS GO HERE!"
 REGISTRY=quay.io/open-cluster-management
 
 if [ "$TRAVIS_BUILD" == 1 ]; then  
-    echo "Build is on Travis"  
-    IMG=$(cat COMPONENT_NAME 2> /dev/null)
-    COMPONENT_VERSION=$(cat COMPONENT_VERSION 2> /dev/null)
-    IMAGE_NAME_AND_VERSION=${REGISTRY}/${IMG}
+    echo "Build is on local"  
 
-    BUILD_IMAGE=${IMAGE_NAME_AND_VERSION}:${COMPONENT_VERSION}${COMPONENT_TAG_EXTENSION}
-    sed "s|image: .*:latest$|image: $BUILD_IMAGE|" ./deploy/standalone/operator.yaml
-else
-    echo "Build is on local" 
     IMG=$(cat ../COMPONENT_NAME 2> /dev/null)
     COMPONENT_VERSION=$(cat ../COMPONENT_VERSION 2> /dev/null)
     IMAGE_NAME_AND_VERSION=${REGISTRY}/${IMG}
-
     BUILD_IMAGE=${IMAGE_NAME_AND_VERSION}:${COMPONENT_VERSION}${COMPONENT_TAG_EXTENSION}
+
+    echo "BUILD_IMAGE tag $BUILD_IMAGE"
     sed "s|image: .*:latest$|image: $BUILD_IMAGE|" ../deploy/standalone/operator.yaml
+else
+    echo "Build is on Travis" 
+
+    IMG=$(cat COMPONENT_NAME 2> /dev/null)
+    COMPONENT_VERSION=$(cat COMPONENT_VERSION 2> /dev/null)
+    IMAGE_NAME_AND_VERSION=${REGISTRY}/${IMG}
+    BUILD_IMAGE=${IMAGE_NAME_AND_VERSION}:${COMPONENT_VERSION}${COMPONENT_TAG_EXTENSION}
+
+    echo "BUILD_IMAGE tag $BUILD_IMAGE"
+
+    sed "s|image: .*:latest$|image: $BUILD_IMAGE|" deploy/standalone/operator.yaml
 fi
 
 # kubectl apply -f ../deploy/standalone
