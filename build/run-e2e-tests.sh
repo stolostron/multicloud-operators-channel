@@ -39,7 +39,9 @@ else
     echo "get kubectl binary"
     # Download and install kubectl
     curl -LO https://storage.googleapis.com/kubernetes-release/release/$(curl -s https://storage.googleapis.com/kubernetes-release/release/stable.txt)/bin/linux/amd64/kubectl && chmod +x kubectl && sudo mv kubectl /usr/local/bin/
-
+    if [ $? != 0 ]; then
+        exit $?;
+    fi
 
     # Download and install KinD
     GO111MODULE=on go get sigs.k8s.io/kind
@@ -59,10 +61,8 @@ else
     echo "create kind cluster"
     # Create a new Kubernetes cluster using KinD
     kind create cluster
-    if [ $? -eq 0 ]; then
-        exit 0;
-    else
-        exit 1;
+    if [ $? != 0 ]; then
+        exit $?;
     fi
 
     sleep 30
@@ -72,10 +72,8 @@ kind get kubeconfig > kindconfig
 
 echo "load build image to kind cluster"
 kind load docker-image $BUILD_IMAGE
-if [ $? -eq 0 ]; then
-    exit 0;
-else
-    exit 1;
+if [ $? != 0 ]; then
+    exit $?;
 fi
 
 kubectl cluster-info --context kind-kind
@@ -83,16 +81,14 @@ kubectl cluster-info --context kind-kind
 
 echo "applying channel operator to kind cluster"
 kubectl apply -f deploy/standalone --kubeconfig kindconfig
-if [ $? -eq 0 ]; then
-    exit 0;
-else
-    exit 1;
+if [ $? != 0 ]; then
+    exit $?;
 fi
 
 kubectl get po -A
 
-if [ $? -eq 0 ]; then
-    exit 0;
-else
-    exit 1;
+if [ $? != 0 ]; then
+    exit $?;
 fi
+
+exit 0;
