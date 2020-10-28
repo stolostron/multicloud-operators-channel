@@ -74,7 +74,11 @@ kubectl apply -f deploy/dependent-crds
 echo "apply channel CRDs"
 kubectl apply -f deploy/crds
 
-sleep 10
+if [ "$TRAVIS_BUILD" != 1 ]; then
+    echo "wait for pod to be ready"
+    sleep 40
+fi
+
 echo "check if channel deploy is created" 
 kubectl get deploy multicluster-operators-channel
 kubectl get po -A
