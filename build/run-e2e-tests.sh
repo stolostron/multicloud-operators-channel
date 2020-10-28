@@ -19,25 +19,29 @@
 ###!!!!!!!! On travis this script is run on the .git level
 echo "E2E TESTS GO HERE!"
 
-
+command -v
 # need to find a way to use the Makefile to set these
 REGISTRY=quay.io/open-cluster-management
 IMG=$(cat COMPONENT_NAME 2> /dev/null)
 IMAGE_NAME=${REGISTRY}/${IMG}
 BUILD_IMAGE=${IMAGE_NAME}:latest
 
-if [ "$TRAVIS_BUILD" != 1 ]; then  
-    echo "Build is on Travis" 
-
+if ! command -v kubectl &> /dev/null; then
     echo "get kubectl binary"
     # Download and install kubectl
     curl -LO https://storage.googleapis.com/kubernetes-release/release/$(curl -s https://storage.googleapis.com/kubernetes-release/release/stable.txt)/bin/linux/amd64/kubectl && chmod +x kubectl && sudo mv kubectl /usr/local/bin/
     if [ $? != 0 ]; then
         exit $?;
     fi
+fi
 
+if ! command -v kind &> /dev/null; then
     # Download and install KinD
     GO111MODULE=on go get sigs.k8s.io/kind
+fi
+
+if [ "$TRAVIS_BUILD" != 1 ]; then  
+    echo "Build is on Travis" 
 
     COMPONENT_VERSION=$(cat COMPONENT_VERSION 2> /dev/null)
     BUILD_IMAGE=${IMAGE_NAME}:${COMPONENT_VERSION}${COMPONENT_TAG_EXTENSION}
@@ -47,14 +51,17 @@ if [ "$TRAVIS_BUILD" != 1 ]; then
     echo "modify deployment to point to the PR image"
     sed -i -e "s|image: .*:latest$|image: $BUILD_IMAGE|" deploy/standalone/operator.yaml
 
+    #kind get kubeconfig > kindconfig
+    sleep 15
+fi
+
+if ! kind get clusters &> /dev/null; then
     echo "create kind cluster"
     # Create a new Kubernetes cluster using KinD
     kind create cluster
     if [ $? != 0 ]; then
             exit $?;
-        fi
-    #kind get kubeconfig > kindconfig
-    sleep 15
+    fi
 fi
 
 echo "path for container in YAML $(grep 'image: .*' deploy/standalone/operator.yaml)"
