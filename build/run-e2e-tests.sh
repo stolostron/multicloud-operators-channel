@@ -40,6 +40,15 @@ if ! command -v kind &> /dev/null; then
     GO111MODULE=on go get sigs.k8s.io/kind
 fi
 
+if ! kind get clusters &> /dev/null; then
+    echo "create kind cluster"
+    # Create a new Kubernetes cluster using KinD
+    kind create cluster
+    if [ $? != 0 ]; then
+            exit $?;
+    fi
+fi
+
 if [ "$TRAVIS_BUILD" != 1 ]; then  
     echo "Build is on Travis" 
 
@@ -53,15 +62,6 @@ if [ "$TRAVIS_BUILD" != 1 ]; then
 
     #kind get kubeconfig > kindconfig
     sleep 15
-fi
-
-if ! kind get clusters &> /dev/null; then
-    echo "create kind cluster"
-    # Create a new Kubernetes cluster using KinD
-    kind create cluster
-    if [ $? != 0 ]; then
-            exit $?;
-    fi
 fi
 
 echo "path for container in YAML $(grep 'image: .*' deploy/standalone/operator.yaml)"
@@ -95,5 +95,3 @@ kubectl get po -A
 if [ $? != 0 ]; then
     exit $?;
 fi
-
-exit 0;
