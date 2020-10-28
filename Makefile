@@ -157,6 +157,10 @@ release-community-operator:
 	docker push ${COMPONENT_DOCKER_REPO}/${COMPONENT_NAME}:community-${COMPONENT_VERSION}
 	@echo "Pushed the following image: ${COMPONENT_DOCKER_REPO}/${COMPONENT_NAME}:community-${COMPONENT_VERSION}"
 
+
+local-e2e: build build-images
+	./build/run-e2e-tests.sh
+
 ############################################################
 # clean section
 ############################################################

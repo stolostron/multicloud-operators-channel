@@ -22,18 +22,11 @@ echo "E2E TESTS GO HERE!"
 
 # need to find a way to use the Makefile to set these
 REGISTRY=quay.io/open-cluster-management
+IMG=$(cat COMPONENT_NAME 2> /dev/null)
+IMAGE_NAME=${REGISTRY}/${IMG}
+BUILD_IMAGE=${IMAGE_NAME}:latest
 
-if [ "$TRAVIS_BUILD" == 1 ]; then  
-    echo "Build is on local"  
-
-    IMG=$(cat ../COMPONENT_NAME 2> /dev/null)
-    COMPONENT_VERSION=$(cat ../COMPONENT_VERSION 2> /dev/null)
-    IMAGE_NAME_AND_VERSION=${REGISTRY}/${IMG}
-    BUILD_IMAGE=${IMAGE_NAME_AND_VERSION}:${COMPONENT_VERSION}${COMPONENT_TAG_EXTENSION}
-
-    echo "BUILD_IMAGE tag $BUILD_IMAGE"
-    sed "s|image: .*:latest$|image: $BUILD_IMAGE|" ../deploy/standalone/operator.yaml
-else
+if [ "$TRAVIS_BUILD" != 1 ]; then  
     echo "Build is on Travis" 
 
     echo "get kubectl binary"
@@ -46,38 +39,34 @@ else
     # Download and install KinD
     GO111MODULE=on go get sigs.k8s.io/kind
 
-
-    IMG=$(cat COMPONENT_NAME 2> /dev/null)
     COMPONENT_VERSION=$(cat COMPONENT_VERSION 2> /dev/null)
-    IMAGE_NAME_AND_VERSION=${REGISTRY}/${IMG}
-    BUILD_IMAGE=${IMAGE_NAME_AND_VERSION}:${COMPONENT_VERSION}${COMPONENT_TAG_EXTENSION}
+    BUILD_IMAGE=${IMAGE_NAME}:${COMPONENT_VERSION}${COMPONENT_TAG_EXTENSION}
 
     echo "BUILD_IMAGE tag $BUILD_IMAGE"
 
     echo "modify deployment to point to the PR image"
     sed -i -e "s|image: .*:latest$|image: $BUILD_IMAGE|" deploy/standalone/operator.yaml
-    grep 'image: .*' deploy/standalone/operator.yaml
 
     echo "create kind cluster"
     # Create a new Kubernetes cluster using KinD
     kind create cluster
     if [ $? != 0 ]; then
-        exit $?;
-    fi
-
-    sleep 30
+            exit $?;
+        fi
+    #kind get kubeconfig > kindconfig
+    sleep 15
 fi
 
-kind get kubeconfig > kindconfig
+echo "path for container in YAML $(grep 'image: .*' deploy/standalone/operator.yaml)"
 
-echo "load build image to kind cluster"
+echo "load build image ($BUILD_IMAGE)to kind cluster"
 kind load docker-image $BUILD_IMAGE
 if [ $? != 0 ]; then
     exit $?;
 fi
 
+echo "switch kubeconfig to kind cluster"
 kubectl cluster-info --context kind-kind
-
 
 echo "applying channel operator to kind cluster"
 kubectl apply -f deploy/standalone
@@ -85,10 +74,16 @@ if [ $? != 0 ]; then
     exit $?;
 fi
 
-sleep 30
-kubectl get po -A
+echo "apply dependent CRDs"
+kubectl apply -f deploy/dependent-crds
 
-echo "check if channel deploy is created" && kubectl get deploy multicluster-operators-channel
+echo "apply channel CRDs"
+kubectl apply -f deploy/crds
+
+sleep 10
+echo "check if channel deploy is created" 
+kubectl get deploy multicluster-operators-channel
+kubectl get po -A
 
 if [ $? != 0 ]; then
     exit $?;
