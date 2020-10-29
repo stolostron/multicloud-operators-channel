@@ -78,7 +78,7 @@ kubectl apply -f deploy/crds
 
 if [ "$TRAVIS_BUILD" != 1 ]; then
     echo -e "\nwait for pod to be ready\n"
-    sleep 40
+    sleep 35
 fi
 
 echo -e "\nCheck if channel deploy is created\n" 
@@ -103,18 +103,27 @@ kind get kubeconfig > cluster_config/hub
 
 # over here, we are build the test server on the fly since, the `go get` will
 # mess up the go.mod file when doing the local test
-echo -e "\n Get the applifecycle-backend-e2e data"
-git clone https://github.com/open-cluster-management/applifecycle-backend-e2e.git
+echo -e "\nGet the applifecycle-backend-e2e data"
+rm -rf applifecycle-backend-e2e
+git clone https://${GITHUB_USER}:${GITHUB_TOKEN}@github.com/open-cluster-management/applifecycle-backend-e2e.git
+
 
 cd applifecycle-backend-e2e && make gobuild && cd -
 
 E2E_BINARY_PATH="applifecycle-backend-e2e/build/_output/bin"
 E2E_DATA_PATH="applifecycle-backend-e2e/default-e2e-test-data"
 
+echo -e "\nTerminate the running test server\n"
+ps aux | grep 8765 | grep -v 'grep'
+
+ps aux | grep ${IMG} | grep -v 'grep' | awk '{print $2}' | xargs kill -9
+
 ${E2E_BINARY_PATH}/applifecycle-backend-e2e -cfg cluster_config -data ${E2E_DATA_PATH} &
 
 sleep 10
 curl http://localhost:8765/cluster
 
-echo -e "\nTerminate the test server"
+echo -e "\nTerminate the test server\n"
 ps aux | grep ${IMG} | grep -v 'grep' | awk '{print $2}' | xargs kill -9
+
+exit 0;
