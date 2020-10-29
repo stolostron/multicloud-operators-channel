@@ -24,13 +24,9 @@ IMG=$(cat COMPONENT_NAME 2> /dev/null)
 IMAGE_NAME=${REGISTRY}/${IMG}
 BUILD_IMAGE=${IMAGE_NAME}:latest
 
-TEST_API_SERVER_IMG="quay.io/open-cluster-management/applifecycle-backend-e2e:latest"
-
 if [ "$TRAVIS_BUILD" != 1 ]; then
     echo -e "Build is on Travis" 
 
-    echo -e "\nDownload and install KinD\n"
-    GO111MODULE=on go get sigs.k8s.io/kind
 
     echo -e "\nGet kubectl binary\n"
     # Download and install kubectl
@@ -43,10 +39,8 @@ if [ "$TRAVIS_BUILD" != 1 ]; then
     echo -e "Modify deployment to point to the PR image\n"
     sed -i -e "s|image: .*:latest$|image: $BUILD_IMAGE|" deploy/standalone/operator.yaml
 
-    TEST_API_SERVER_IMG="quay.io/open-cluster-management/applifecycle-backend-e2e:0.0.1"
-
-    echo -e "\nPull API test server image\n"
-    docker pull $TEST_API_SERVER_IMG
+    echo -e "\nDownload and install KinD\n"
+    GO111MODULE=on go get sigs.k8s.io/kind
 
     kind create cluster
     if [ $? != 0 ]; then
@@ -103,9 +97,23 @@ echo -e "\nRun API test server\n"
 mkdir -p cluster_config
 kind get kubeconfig > cluster_config/hub
 
-docker run -v $PWD/cluster_config:/go/configs -p 8765:8765 --env CONFIGS="/go/configs" --name e2e -d --rm $TEST_API_SERVER_IMG --v 0
+# over here, we are using test server binary and run it on the host instead of
+# run the server in a docker container is due to the fact that, on macOS it's
+# very hard to map the host network to container
 
-docker logs ${CONTAINER_NAME}
-docker ps
+# over here, we are build the test server on the fly since, the `go get` will
+# mess up the go.mod file when doing the local test
+echo -e "\n Get the applifecycle-backend-e2e data"
+git clone git@github.com:open-cluster-management/applifecycle-backend-e2e.git
+cd applifecycle-backend-e2e && make gobuild && cd -
+
+E2E_BINARY_PATH="applifecycle-backend-e2e/build/_output/bin"
+E2E_DATA_PATH="applifecycle-backend-e2e/default-e2e-test-data"
+
+${E2E_BINARY_PATH}/applifecycle-backend-e2e -cfg cluster_config -data ${E2E_DATA_PATH} &
+
 sleep 10
 curl http://localhost:8765/cluster
+
+echo -e "\nTerminate the test server"
+ps aux | grep ${IMG} | grep -v 'grep' | awk '{print $2}' | xargs kill -9

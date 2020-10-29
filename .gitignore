@@ -5,10 +5,12 @@ build/_test
 .build-harness
 OPENSOURCE.check
 cluster_config
+*.yaml-e
 
 !vbh/.build-harness-vendorized
 !vbh/build-harness
 !vbh/build-harness-extensions
+applifecycle-backend-e2e
 # Created by https://www.gitignore.io/api/go,vim,emacs,visualstudiocode
 ### Emacs ###
 # -*- mode: gitignore; -*-
