@@ -116,7 +116,7 @@ E2E_DATA_PATH="applifecycle-backend-e2e/default-e2e-test-data"
 echo -e "\nTerminate the running test server\n"
 ps aux | grep 8765 | grep -v 'grep'
 
-if [ "$TRAVIS_BUILD" != 1 ]; then
+if [ "$TRAVIS_BUILD" == 1 ]; then
     ps aux | grep ${IMG} | grep -v 'grep' | awk '{print $2}' | xargs kill -9
 fi
 
@@ -126,7 +126,7 @@ sleep 10
 curl http://localhost:8765/cluster
 
 echo -e "\nTerminate the test server\n"
-if [ "$TRAVIS_BUILD" != 1 ]; then
+if [ "$TRAVIS_BUILD" == 1 ]; then
     ps aux | grep ${IMG} | grep -v 'grep' | awk '{print $2}' | xargs kill -9
 fi
 
