@@ -111,7 +111,7 @@ lint: lint-all
 
 test:
 	@kubebuilder version
-	@go test ${TESTARGS} ./...
+	@go test ${TESTARGS} ./cmd/... ./pkg/...
 
 ############################################################
 # coverage section

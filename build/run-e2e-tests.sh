@@ -122,7 +122,7 @@ ${E2E_BINARY_PATH}/${E2E_BINARY_NAME} -cfg cluster_config -data ${E2E_DATA_PATH}
 sleep 10
 
 echo -e "\nStart to run e2e test(s)\n"
-go test -v ./pkg/e2e
+go test -v ./e2e
 
 echo -e "\nTerminate the test server\n"
 ps aux | grep ${E2E_BINARY_NAME} | grep -v 'grep' | awk '{print $2}' | xargs kill -9
