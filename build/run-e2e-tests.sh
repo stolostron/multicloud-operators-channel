@@ -110,24 +110,21 @@ git clone https://${GITHUB_USER}:${GITHUB_TOKEN}@github.com/open-cluster-managem
 
 cd applifecycle-backend-e2e && make gobuild && cd -
 
+E2E_BINARY_NAME="applifecycle-backend-e2e"
 E2E_BINARY_PATH="applifecycle-backend-e2e/build/_output/bin"
 E2E_DATA_PATH="applifecycle-backend-e2e/default-e2e-test-data"
 
 echo -e "\nTerminate the running test server\n"
-ps aux | grep 8765 | grep -v 'grep'
+ps aux | grep ${E2E_BINARY_NAME} | grep -v 'grep' | awk '{print $2}' | xargs kill -9
 
-if [ "$TRAVIS_BUILD" == 1 ]; then
-    ps aux | grep ${IMG} | grep -v 'grep' | awk '{print $2}' | xargs kill -9
-fi
-
-${E2E_BINARY_PATH}/applifecycle-backend-e2e -cfg cluster_config -data ${E2E_DATA_PATH} &
+${E2E_BINARY_PATH}/${E2E_BINARY_NAME} -cfg cluster_config -data ${E2E_DATA_PATH} &
 
 sleep 10
-curl http://localhost:8765/cluster
+
+echo -e "\nStart to run e2e test(s)\n"
+go test -v ./pkg/e2e
 
 echo -e "\nTerminate the test server\n"
-if [ "$TRAVIS_BUILD" == 1 ]; then
-    ps aux | grep ${IMG} | grep -v 'grep' | awk '{print $2}' | xargs kill -9
-fi
+ps aux | grep ${E2E_BINARY_NAME} | grep -v 'grep' | awk '{print $2}' | xargs kill -9
 
 exit 0;
