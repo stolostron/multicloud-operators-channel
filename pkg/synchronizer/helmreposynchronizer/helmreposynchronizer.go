@@ -115,7 +115,7 @@ func (sync *ChannelSynchronizer) syncChannel(chn *chv1.Channel, localIdxFunc uti
 		}
 	}
 	// retrieve helm chart list from helm repo
-	idx, err := utils.GetHelmRepoIndex(chn.Spec.Pathname, chnRefCfgMap, localIdxFunc, logf)
+	idx, err := utils.GetHelmRepoIndex(chn.Spec.Pathname, chn.Spec.InsecureSkipVerify, chnRefCfgMap, localIdxFunc, logf)
 	if err != nil {
 		logf.Error(err, fmt.Sprintf("error getting index for channel %v/%v", chn.Namespace, chn.Name))
 		return
