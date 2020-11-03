@@ -30,17 +30,23 @@ import (
 
 const InsecureSkipVerifyFlag = "insecureSkipVerify"
 
-func decideHTTPClient(repoURL string, chnRefCfgMap *corev1.ConfigMap, logger logr.Logger) *http.Client {
+func decideHTTPClient(repoURL string, insecureSkipVerify bool, chnRefCfgMap *corev1.ConfigMap, logger logr.Logger) *http.Client {
 	logger.Info(repoURL)
 
 	// rootsCA is loading from host if not configed, https://golang.org/src/crypto/x509/root_linux.go
 	tlsConfig := &tls.Config{MinVersion: tls.VersionTLS12}
 
+	if insecureSkipVerify {
+		logger.Info("Channel spec has insecureSkipVerify: true. Skipping server certificate verification.")
+		tlsConfig.InsecureSkipVerify = true
+	}
 	if chnRefCfgMap != nil && chnRefCfgMap.Data[InsecureSkipVerifyFlag] != "" {
 		b, err := strconv.ParseBool(chnRefCfgMap.Data[InsecureSkipVerifyFlag])
 		if err != nil {
 			logger.Error(err, "unable to parse insecureSkipVerify false, using default value: false")
 		}
+
+		logger.Info("Channel config map found with insecureSkipVerify: " + chnRefCfgMap.Data["insecureSkipVerify"] + ". Skipping server certificate verification.")
 
 		tlsConfig.InsecureSkipVerify = b
 	}
@@ -64,10 +70,10 @@ func buildRepoURL(repoURL string) string {
 	return validURL + "index.yaml"
 }
 
-func GetChartIndex(chnPathname string, chnRefCfgMap *corev1.ConfigMap, logger logr.Logger) (*http.Response, error) {
+func GetChartIndex(chnPathname string, insecureSkipVerify bool, chnRefCfgMap *corev1.ConfigMap, logger logr.Logger) (*http.Response, error) {
 	repoURL := buildRepoURL(chnPathname)
 
-	client := decideHTTPClient(repoURL, chnRefCfgMap, logger)
+	client := decideHTTPClient(repoURL, insecureSkipVerify, chnRefCfgMap, logger)
 
 	resp, err := client.Get(repoURL)
 	if err != nil {
@@ -77,9 +83,9 @@ func GetChartIndex(chnPathname string, chnRefCfgMap *corev1.ConfigMap, logger lo
 	return resp, nil
 }
 
-type LoadIndexPageFunc func(string, *corev1.ConfigMap, logr.Logger) (*http.Response, error)
+type LoadIndexPageFunc func(string, bool, *corev1.ConfigMap, logr.Logger) (*http.Response, error)
 
-func LoadLocalIdx(idxPath string, cfg *corev1.ConfigMap, lgger logr.Logger) (*http.Response, error) {
+func LoadLocalIdx(idxPath string, insecureSkipVerify bool, cfg *corev1.ConfigMap, lgger logr.Logger) (*http.Response, error) {
 	localDir := http.Dir(idxPath)
 	content, err := localDir.Open("index.yaml")
 
@@ -95,8 +101,13 @@ func LoadLocalIdx(idxPath string, cfg *corev1.ConfigMap, lgger logr.Logger) (*ht
 }
 
 // GetHelmRepoIndex get the index file from helm repository
-func GetHelmRepoIndex(channelPathName string, chnRefCfgMap *corev1.ConfigMap, loadIdx LoadIndexPageFunc, logger logr.Logger) (*repo.IndexFile, error) {
-	resp, err := loadIdx(channelPathName, chnRefCfgMap, logger)
+func GetHelmRepoIndex(
+	channelPathName string,
+	insecureSkipVerify bool,
+	chnRefCfgMap *corev1.ConfigMap,
+	loadIdx LoadIndexPageFunc,
+	logger logr.Logger) (*repo.IndexFile, error) {
+	resp, err := loadIdx(channelPathName, insecureSkipVerify, chnRefCfgMap, logger)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to get chart index")
 	}

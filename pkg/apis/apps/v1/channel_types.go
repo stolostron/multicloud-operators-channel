@@ -85,6 +85,9 @@ type ChannelSpec struct {
 	// For a `objectbucket` channel, pathname is the URL and name of the bucket.
 	Pathname string `json:"pathname"`
 
+	// Skip server TLS certificate verification for Git or Helm channel.
+	InsecureSkipVerify bool `json:"insecureSkipVerify"`
+
 	// For a `github` channel or a `helmrepo` channel on github, this
 	// can be used to reference a Secret which contains the credentials for
 	// authentication, i.e. `user` and `accessToken`.
