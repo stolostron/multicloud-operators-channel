@@ -75,7 +75,7 @@ jobs:
   
     - stage: test-e2e
       name: "Deploy the image to a cluster and run e2e tests"
-      if: type = pull_request
+      #      if: type = pull_request
       script:
         #Check out a clusterpool, set up oc, deploy, run e2e tests, and return clusterpool cluster
         - if [ "$TRAVIS_PULL_REQUEST" != "false" ]; then export COMPONENT_TAG_EXTENSION="-PR${TRAVIS_PULL_REQUEST}-${TRAVIS_COMMIT}"; fi;
@@ -83,7 +83,6 @@ jobs:
           make init
           make component/pull
           make component/test/e2e
-  
     - stage: publish
       name: "Publish the image to quay with an official version/sha tag and publish entry to integration pipeline stage"
       if: type = push AND branch =~ /^release-[0-9]+\..*$/

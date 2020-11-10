@@ -189,6 +189,12 @@ func schema_pkg_apis_apps_v1_ChannelSpec(ref common.ReferenceCallback) common.Op
 							Format: "",
 						},
 					},
+					"insecureSkipVerify": {
+						SchemaProps: spec.SchemaProps{
+							Type:   []string{"boolean"},
+							Format: "",
+						},
+					},
 					"secretRef": {
 						SchemaProps: spec.SchemaProps{
 							Ref: ref("k8s.io/api/core/v1.ObjectReference"),

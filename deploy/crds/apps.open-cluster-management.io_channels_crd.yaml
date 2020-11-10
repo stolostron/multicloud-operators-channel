@@ -138,6 +138,10 @@ spec:
                 name:
                   type: string
               type: object
+            insecureSkipVerify:
+              description: Skip server TLS certificate verification for Git or Helm
+                channel.
+              type: boolean
             pathname:
               description: For a `namespace` channel, pathname is the name of the
                 namespace; For a `helmrepo` or `github` channel, pathname is the remote
