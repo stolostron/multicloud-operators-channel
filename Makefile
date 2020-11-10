@@ -111,7 +111,7 @@ lint: lint-all
 
 test:
 	@kubebuilder version
-	@go test ${TESTARGS} ./...
+	@go test ${TESTARGS} ./cmd/... ./pkg/...
 
 ############################################################
 # coverage section
@@ -156,6 +156,10 @@ release-community-operator:
 	docker tag ${COMPONENT_DOCKER_REPO}/${COMPONENT_NAME}:${COMPONENT_VERSION}${COMPONENT_TAG_EXTENSION} ${COMPONENT_DOCKER_REPO}/${COMPONENT_NAME}:community-${COMPONENT_VERSION}
 	docker push ${COMPONENT_DOCKER_REPO}/${COMPONENT_NAME}:community-${COMPONENT_VERSION}
 	@echo "Pushed the following image: ${COMPONENT_DOCKER_REPO}/${COMPONENT_NAME}:community-${COMPONENT_VERSION}"
+
+export CONTAINER_NAME=e2e
+local-e2e: build build-images
+	build/run-e2e-tests.sh
 
 ############################################################
 # clean section
