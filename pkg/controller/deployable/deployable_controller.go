@@ -35,8 +35,10 @@ import (
 	"k8s.io/client-go/tools/record"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
+	"sigs.k8s.io/controller-runtime/pkg/event"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
+	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 	"sigs.k8s.io/controller-runtime/pkg/source"
 )
@@ -95,25 +97,6 @@ func (mapper *channelMapper) Map(obj handler.MapObject) []reconcile.Request {
 
 // add adds a new Controller to mgr with r as the reconcile.Reconciler
 func add(mgr manager.Manager, r reconcile.Reconciler, logger logr.Logger) error {
-	if err := mgr.GetFieldIndexer().IndexField(context.TODO(), &dplv1.Deployable{}, CtrlDeployableIndexer, func(rawObj runtime.Object) []string {
-		// grab the job object, extract the owner...
-		dpl := rawObj.(*dplv1.Deployable)
-		anno := dpl.GetAnnotations()
-		if len(anno) == 0 {
-			return nil
-		}
-		// this make sure the indexer will only be applied on non-generated
-		// deployable
-		if _, ok := anno[chv1.KeyChannelSource]; ok {
-			return nil
-		}
-
-		// ...and if so, return it
-		return []string{"true"}
-	}); err != nil {
-		return err
-	}
-
 	if err := mgr.GetFieldIndexer().IndexField(context.TODO(), &dplv1.Deployable{}, CtrlGenerateDeployableIndexer, func(rawObj runtime.Object) []string {
 		// grab the job object, extract the owner...
 		dpl := rawObj.(*dplv1.Deployable)
@@ -146,6 +129,33 @@ func add(mgr manager.Manager, r reconcile.Reconciler, logger logr.Logger) error 
 
 	// watch for changes to channel too
 	return c.Watch(&source.Kind{Type: &chv1.Channel{}}, &handler.EnqueueRequestsFromMapFunc{ToRequests: &channelMapper{Client: mgr.GetClient(), log: logger}})
+}
+
+func isChannelDeployable(in map[string]string) bool {
+	if len(in) == 0 {
+		return true
+	}
+
+	_, ok := in[chv1.KeyChannel]
+
+	return ok
+}
+
+// channelDeployable
+var channelDeployablePredicateFunctions = predicate.Funcs{
+	// Create returns true if the Create event should be processed
+	CreateFunc: func(e event.CreateEvent) bool {
+		return isChannelDeployable(e.Meta.GetAnnotations())
+	},
+
+	// Delete returns true if the Delete event should be processed
+	DeleteFunc: func(e event.DeleteEvent) bool {
+		return isChannelDeployable(e.Meta.GetAnnotations())
+	},
+
+	UpdateFunc: func(e event.UpdateEvent) bool {
+		return isChannelDeployable(e.MetaOld.GetAnnotations) || isChannelDeployable(e.MetaNew.GetAnnotations)
+	},
 }
 
 var _ reconcile.Reconciler = &ReconcileDeployable{}
