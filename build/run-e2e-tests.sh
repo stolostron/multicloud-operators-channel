@@ -15,6 +15,7 @@
 # See the License for the specific language governing permissions and# limitations under the License.
 
 
+set -e
 ###!!!!!!!! On travis this script is run on the .git level
 echo -e "E2E TESTS GO HERE!"
 
