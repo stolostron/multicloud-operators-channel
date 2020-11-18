@@ -24,6 +24,7 @@ REGISTRY=quay.io/open-cluster-management
 IMG=$(cat COMPONENT_NAME 2> /dev/null)
 IMAGE_NAME=${REGISTRY}/${IMG}
 BUILD_IMAGE=${IMAGE_NAME}:latest
+echo "travis parameters: event type $TRAVIS_EVENT_TYPE, pull request: $TRAVIS_PULL_REQUEST commit $TRAVIS_COMMIT\n"
 
 if [ "$TRAVIS_BUILD" != 1 ]; then
     echo -e "Build is on Travis" 
