@@ -78,8 +78,7 @@ jobs:
       #      if: type = pull_request
       script:
         #Check out a clusterpool, set up oc, deploy, run e2e tests, and return clusterpool cluster
-        - if [ "$TRAVIS_PULL_REQUEST" != "false" ]; then export COMPONENT_TAG_EXTENSION="-PR${TRAVIS_PULL_REQUEST}-${TRAVIS_COMMIT}";
-          else  export COMPONENT_TAG_EXTENSION="-PR$-${TRAVIS_COMMIT} fi;
+        - if [ "$TRAVIS_PULL_REQUEST" != "false" ]; then export COMPONENT_TAG_EXTENSION="-PR${TRAVIS_PULL_REQUEST}-${TRAVIS_COMMIT}"; fi;
         - |
           make init
           make component/pull
