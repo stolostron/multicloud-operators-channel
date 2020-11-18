@@ -24,6 +24,7 @@ REGISTRY=quay.io/open-cluster-management
 IMG=$(cat COMPONENT_NAME 2> /dev/null)
 IMAGE_NAME=${REGISTRY}/${IMG}
 BUILD_IMAGE=${IMAGE_NAME}:latest
+echo "travis parameters: event type $TRAVIS_EVENT_TYPE, pull request: $TRAVIS_PULL_REQUEST commit $TRAVIS_COMMIT\n"
 
 if [ "$TRAVIS_BUILD" != 1 ]; then
     echo -e "Build is on Travis" 
@@ -34,6 +35,11 @@ if [ "$TRAVIS_BUILD" != 1 ]; then
     curl -LO https://storage.googleapis.com/kubernetes-release/release/$(curl -s https://storage.googleapis.com/kubernetes-release/release/stable.txt)/bin/linux/amd64/kubectl && chmod +x kubectl && sudo mv kubectl /usr/local/bin/
 
     COMPONENT_VERSION=$(cat COMPONENT_VERSION 2> /dev/null)
+
+    if [ "$TRAVIS_EVENT_TYPE" == "push" ]; then
+        COMPONENT_TAG_EXTENSION="-${TRAVIS_COMMIT}"
+    fi
+
     BUILD_IMAGE=${IMAGE_NAME}:${COMPONENT_VERSION}${COMPONENT_TAG_EXTENSION}
 
     echo -e "\nBUILD_IMAGE tag $BUILD_IMAGE\n"
@@ -54,7 +60,6 @@ else
     docker kill e2e
 fi
 
-echo -e "\nPath for container in YAML $(grep 'image: .*' deploy/standalone/operator.yaml)\n"
 
 echo -e "\nLoad build image ($BUILD_IMAGE)to kind cluster\n"
 kind load docker-image $BUILD_IMAGE
