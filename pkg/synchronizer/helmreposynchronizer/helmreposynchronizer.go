@@ -114,8 +114,21 @@ func (sync *ChannelSynchronizer) syncChannel(chn *chv1.Channel, localIdxFunc uti
 			logf.Error(err, "failed to Get channel's referred configmap")
 		}
 	}
+
+	chnRefSrt := &corev1.Secret{}
+	if chn.Spec.SecretRef != nil {
+		if chn.Spec.SecretRef.Namespace == "" {
+			chn.Spec.SecretRef.Namespace = chn.GetNamespace()
+		}
+
+		chnRefSrtKey := types.NamespacedName{Name: chn.Spec.SecretRef.Name, Namespace: chn.Spec.SecretRef.Namespace}
+		if err := sync.kubeClient.Get(context.TODO(), chnRefSrtKey, chnRefSrt); err != nil {
+			logf.Error(err, "failed to Get channel's referred configmap")
+		}
+	}
+
 	// retrieve helm chart list from helm repo
-	idx, err := utils.GetHelmRepoIndex(chn.Spec.Pathname, chn.Spec.InsecureSkipVerify, chnRefCfgMap, localIdxFunc, logf)
+	idx, err := utils.GetHelmRepoIndex(chn.Spec.Pathname, chn.Spec.InsecureSkipVerify, chnRefSrt, chnRefCfgMap, localIdxFunc, logf)
 	if err != nil {
 		logf.Error(err, fmt.Sprintf("error getting index for channel %v/%v", chn.Namespace, chn.Name))
 		return

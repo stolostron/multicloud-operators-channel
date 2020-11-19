@@ -57,7 +57,7 @@ if [ "$TRAVIS_BUILD" != 1 ]; then
 
 else
     echo -e "\nBuild is on Local ENV, will delete the API container first\n"
-    docker kill e2e
+    docker kill e2e || true
 fi
 
 
