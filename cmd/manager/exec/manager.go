@@ -214,7 +214,7 @@ func RunManager(sig <-chan struct{}) {
 	placementutils.DetectClusterRegistry(mgr.GetAPIReader(), sig)
 
 	// Setup webhooks
-	if options.Debug {
+	if !options.Debug {
 		logger.Info("setting up webhook server")
 
 		wbhCertDir := func(w *chWebhook.WireUp) {
