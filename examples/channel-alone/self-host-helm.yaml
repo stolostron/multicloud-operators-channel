@@ -21,5 +21,5 @@ metadata:
   name: dev
   namespace: ch-self-host-helm
 data:
-  user: <base64 encode username>
-  accessToken: <base64 encode accessToken>
+  user: YWRtaW4= #<base64 encode username>
+  accessToken: cGFzc3dvcmRhZG1pbg== #<base64 encode password>

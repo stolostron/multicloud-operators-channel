@@ -1,3 +1,5 @@
+# this only test the channel namespace promotion logic. TODO: need to find a way
+# to test the object store got the promoted object
 --- 
 apiVersion: apps.open-cluster-management.io/v1
 kind: Deployable
@@ -41,5 +43,5 @@ metadata:
   name: dev
   namespace: ch-obj
 data:
-  AccessKeyID: <base64 encode username>
-  SecretAccessKey: <base64 encode password>
+  AccessKeyID: YWRtaW4= #<base64 encode username>
+  SecretAccessKey: cGFzc3dvcmRhZG1pbg== #<base64 encode password>
