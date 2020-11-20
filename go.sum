@@ -793,6 +793,8 @@ github.com/open-cluster-management/applifecycle-backend-e2e v0.1.0 h1:QjGV4AbAmj
 github.com/open-cluster-management/applifecycle-backend-e2e v0.1.0/go.mod h1:UzPALuj0cKPEDsb3TseXJB3pq5PnQEbEF+3YHZ75u+o=
 github.com/open-cluster-management/applifecycle-backend-e2e v0.1.1 h1:B6w+hc0mBNHxAPnWoqSIZYE10Z6SOAFf1i73ahvm5yA=
 github.com/open-cluster-management/applifecycle-backend-e2e v0.1.1/go.mod h1:UzPALuj0cKPEDsb3TseXJB3pq5PnQEbEF+3YHZ75u+o=
+github.com/open-cluster-management/applifecycle-backend-e2e v0.1.2 h1:WmFVXVK6JqlCPl0Kh7EdxVa7+QGLpNcgL33aGR5fUzo=
+github.com/open-cluster-management/applifecycle-backend-e2e v0.1.2/go.mod h1:UzPALuj0cKPEDsb3TseXJB3pq5PnQEbEF+3YHZ75u+o=
 github.com/open-cluster-management/multicloud-operators-channel v1.0.1-0.20200813201238-cf522bb8e5a9/go.mod h1:aMAmygx4m9e4CBT5hfWcguCA3IeSe5LfrQnjEYkWvoM=
 github.com/open-cluster-management/multicloud-operators-channel v1.0.1-0.20200930214554-fa55cf642642/go.mod h1:aMAmygx4m9e4CBT5hfWcguCA3IeSe5LfrQnjEYkWvoM=
 github.com/open-cluster-management/multicloud-operators-deployable v0.0.0-20200625020633-0d458afa0fc2 h1:H4Fj/E9DFHlXUZzT3GvUE0JnlASBUytc+qVPcikI6PU=

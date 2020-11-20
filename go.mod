@@ -12,7 +12,7 @@ require (
 	github.com/onsi/ginkgo v1.12.1
 	github.com/onsi/gomega v1.10.1
 	github.com/open-cluster-management/api v0.0.0-20200623215229-19a96fed707a
-	github.com/open-cluster-management/applifecycle-backend-e2e v0.1.1
+	github.com/open-cluster-management/applifecycle-backend-e2e v0.1.2
 	github.com/open-cluster-management/multicloud-operators-deployable v0.0.0-20200925154205-fc4ec3e30a4d
 	github.com/open-cluster-management/multicloud-operators-placementrule v1.0.1-2020-06-08-14-28-27.0.20201013190828-d760a392d21d
 	github.com/operator-framework/operator-sdk v0.18.0
