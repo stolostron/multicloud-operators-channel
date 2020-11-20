@@ -15,86 +15,29 @@
 package e2e
 
 import (
-	"encoding/json"
-	"fmt"
-	"io/ioutil"
-	"net/http"
 	"testing"
+
+	clt "github.com/open-cluster-management/applifecycle-backend-e2e/client"
 )
 
 const (
-	defaultAddr     = "http://localhost:8765"
+	defaultAddr     = "localhost:8765"
 	runEndpoint     = "/run"
 	clusterEndpoint = "/clusters"
 	Success         = "succeed"
 )
 
-type TResponse struct {
-	TestID  string      `json:"test_id"`
-	Name    string      `json:"name"`
-	Status  string      `json:"run_status"`
-	Error   string      `json:"error"`
-	Details interface{} `json:"details"`
-}
-
-func runner(runID string) error {
-	URL := fmt.Sprintf("%s%s?id=%s", defaultAddr, runEndpoint, runID)
-	resp, err := http.Get(URL)
-
-	if err != nil {
-		return err
-	}
-
-	defer resp.Body.Close()
-
-	if resp.StatusCode == http.StatusOK {
-		bodyBytes, err := ioutil.ReadAll(resp.Body)
-		if err != nil {
-			return err
-		}
-
-		res := &TResponse{}
-
-		if err := json.Unmarshal(bodyBytes, res); err != nil {
-			return err
-		}
-
-		if res.Status != Success {
-			return fmt.Errorf("failed test on %s, with status %s err: %s", res.TestID, res.Status, res.Status)
-		}
-
-		return nil
-	}
-
-	return fmt.Errorf("incorrect response code %v", resp.StatusCode)
-}
-
-func isSeverUp() error {
-	URL := fmt.Sprintf("%s%s", defaultAddr, clusterEndpoint)
-	resp, err := http.Get(URL)
-
-	if err != nil {
-		return err
-	}
-
-	defer resp.Body.Close()
-
-	if resp.StatusCode != http.StatusOK {
-		return fmt.Errorf("e2e server is not up")
-	}
-
-	return nil
-}
-
 func TestE2ESuite(t *testing.T) {
-	if err := isSeverUp(); err != nil {
+	if err := clt.IsSeverUp(defaultAddr, clusterEndpoint); err != nil {
 		t.Fatal(err)
 	}
+
+	runner := clt.NewRunner(defaultAddr, runEndpoint)
 
 	testIDs := []string{"chn-001", "chn-002", "chn-003", "chn-004"}
 
 	for _, tID := range testIDs {
-		if err := runner(tID); err != nil {
+		if err := runner.Run(tID); err != nil {
 			t.Fatal(err)
 		}
 	}
