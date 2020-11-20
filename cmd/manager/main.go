@@ -17,11 +17,7 @@ package main
 import (
 	"flag"
 
-	// Import all Kubernetes client auth plugins (e.g. Azure, GCP, OIDC, etc.)
-
-	_ "k8s.io/client-go/plugin/pkg/client/auth"
 	"k8s.io/klog"
-	"sigs.k8s.io/controller-runtime/pkg/manager/signals"
 
 	"github.com/spf13/pflag"
 
@@ -42,5 +38,5 @@ func main() {
 	exec.HidKlogFlag(pflag.CommandLine)
 	pflag.Parse()
 
-	exec.RunManager(signals.SetupSignalHandler())
+	exec.RunManager()
 }

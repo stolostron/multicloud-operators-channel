@@ -25,7 +25,7 @@ import (
 const (
 	defaultAddr     = "http://localhost:8765"
 	runEndpoint     = "/run"
-	clusterEndpoint = "/cluster"
+	clusterEndpoint = "/clusters"
 	Success         = "succeed"
 )
 
