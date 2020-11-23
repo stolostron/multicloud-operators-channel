@@ -21,6 +21,7 @@ import (
 	"strings"
 
 	"github.com/go-logr/logr"
+	corev1 "k8s.io/api/core/v1"
 
 	chv1 "github.com/open-cluster-management/multicloud-operators-channel/pkg/apis/apps/v1"
 
@@ -102,4 +103,30 @@ func UpdateServingChannel(servingChannel string, channelKey string, action strin
 	}
 
 	return newChannelList
+}
+
+func ParseSecertInfo(secret *corev1.Secret) (username string, password string) {
+	if secret == nil {
+		return
+	}
+
+	username = string(secret.Data[SecretMapKeyAccessKeyID])
+	if username == "" {
+		username = string(secret.Data[USERNAME])
+	}
+
+	if username == "" {
+		username = string(secret.Data["user"])
+	}
+
+	password = string(secret.Data[SecretMapKeySecretAccessKey])
+	if password == "" {
+		password = string(secret.Data[PASSWORD])
+	}
+
+	if password == "" {
+		password = string(secret.Data["accessToken"])
+	}
+
+	return
 }

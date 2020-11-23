@@ -165,35 +165,37 @@ func RunManager() {
 	placementutils.DetectClusterRegistry(mgr.GetAPIReader(), sig)
 
 	// Setup webhooks
-	logger.Info("setting up webhook server")
+	if !options.Debug {
+		logger.Info("setting up webhook server")
 
-	wbhCertDir := func(w *chWebhook.WireUp) {
-		w.CertDir = filepath.Join(os.TempDir(), "k8s-webhook-server", "serving-certs")
-	}
+		wbhCertDir := func(w *chWebhook.WireUp) {
+			w.CertDir = filepath.Join(os.TempDir(), "k8s-webhook-server", "serving-certs")
+		}
 
-	wbhLogger := func(w *chWebhook.WireUp) {
-		w.Logger = logger.WithName("channel-operator-duplicate-webhook")
-	}
+		wbhLogger := func(w *chWebhook.WireUp) {
+			w.Logger = logger.WithName("channel-operator-duplicate-webhook")
+		}
 
-	wiredWebhook, err := chWebhook.NewWireUp(mgr, sig, wbhCertDir, wbhLogger, chWebhook.ValidateLogic)
-	if err != nil {
-		logger.Error(err, "failed to initial wire up webhook")
-		os.Exit(exitCode)
-	}
-
-	caCert, err := wiredWebhook.Attach()
-	if err != nil {
-		logger.Error(err, "failed to wire up webhook")
-		os.Exit(exitCode)
-	}
-
-	go func() {
-		if err := wiredWebhook.WireUpWebhookSupplymentryResource(caCert,
-			chv1.SchemeGroupVersion.WithKind(kindName), []admissionv1.OperationType{admissionv1.Create}, chWebhook.DelPreValiationCfg20); err != nil {
-			logger.Error(err, "failed to set up webhook configuration")
+		wiredWebhook, err := chWebhook.NewWireUp(mgr, sig, wbhCertDir, wbhLogger, chWebhook.ValidateLogic)
+		if err != nil {
+			logger.Error(err, "failed to initial wire up webhook")
 			os.Exit(exitCode)
 		}
-	}()
+
+		caCert, err := wiredWebhook.Attach()
+		if err != nil {
+			logger.Error(err, "failed to wire up webhook")
+			os.Exit(exitCode)
+		}
+
+		go func() {
+			if err := wiredWebhook.WireUpWebhookSupplymentryResource(caCert,
+				chv1.SchemeGroupVersion.WithKind(kindName), []admissionv1.OperationType{admissionv1.Create}, chWebhook.DelPreValiationCfg20); err != nil {
+				logger.Error(err, "failed to set up webhook configuration")
+				os.Exit(exitCode)
+			}
+		}()
+	}
 
 	logger.Info("Starting the Cmd.")
 	// Start the Cmd

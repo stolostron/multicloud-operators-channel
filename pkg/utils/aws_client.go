@@ -41,8 +41,10 @@ var _ ObjectStore = &AWSHandler{}
 const (
 	// SecretMapKeyAccessKeyID is key of accesskeyid in secret
 	SecretMapKeyAccessKeyID = "AccessKeyID"
+	USERNAME                = "username"
 	// SecretMapKeySecretAccessKey is key of secretaccesskey in secret
 	SecretMapKeySecretAccessKey = "SecretAccessKey"
+	PASSWORD                    = "password"
 	//metadata key for stroing the deployable generatename name
 	DeployableGenerateNameMeta = "x-amz-meta-generatename"
 	//Deployable generate name key within the meta map

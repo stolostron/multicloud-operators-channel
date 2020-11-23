@@ -359,7 +359,7 @@ func (r *ReconcileDeployable) propagateDeployableToChannel(
 	if reflect.DeepEqual(exdpl.GetAnnotations(), chdpl.GetAnnotations()) &&
 		reflect.DeepEqual(exdpl.GetLabels(), chdpl.GetLabels()) &&
 		reflect.DeepEqual(exdpl.Spec, chdpl.Spec) {
-		logger.Info(fmt.Sprintf("No changes to existing deployable in channel %v ", *exdpl))
+		logger.Info(fmt.Sprintf("No changes to existing deployable in channel %v ", types.NamespacedName{Name: exdpl.GetName(), Namespace: exdpl.GetNamespace()}))
 	} else {
 		exdpl.SetLabels(chdpl.GetLabels())
 		exdpl.SetAnnotations(chdpl.GetAnnotations())

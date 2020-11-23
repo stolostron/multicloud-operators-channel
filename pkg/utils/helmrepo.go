@@ -28,7 +28,9 @@ import (
 	"k8s.io/helm/pkg/repo"
 )
 
-const InsecureSkipVerifyFlag = "insecureSkipVerify"
+const (
+	InsecureSkipVerifyFlag = "insecureSkipVerify"
+)
 
 func decideHTTPClient(repoURL string, insecureSkipVerify bool, chnRefCfgMap *corev1.ConfigMap, logger logr.Logger) *http.Client {
 	logger.Info(repoURL)
@@ -70,22 +72,36 @@ func buildRepoURL(repoURL string) string {
 	return validURL + "index.yaml"
 }
 
-func GetChartIndex(chnPathname string, insecureSkipVerify bool, chnRefCfgMap *corev1.ConfigMap, logger logr.Logger) (*http.Response, error) {
+func GetChartIndex(chnPathname string, insecureSkipVerify bool, srt *corev1.Secret, chnRefCfgMap *corev1.ConfigMap, logger logr.Logger) (*http.Response, error) {
 	repoURL := buildRepoURL(chnPathname)
 
 	client := decideHTTPClient(repoURL, insecureSkipVerify, chnRefCfgMap, logger)
 
-	resp, err := client.Get(repoURL)
+	req, err := http.NewRequest(http.MethodGet, repoURL, nil)
+
 	if err != nil {
-		return nil, errors.Wrap(err, fmt.Sprintf("failed to contact repo: %v", repoURL))
+		return nil, err
 	}
 
-	return resp, nil
+	if srt != nil && srt.Data != nil {
+		if authHeader, ok := srt.Data["authHeader"]; ok {
+			req.Header.Set("Authorization", string(authHeader))
+		}
+
+		user, password := ParseSecertInfo(srt)
+		if user == "" || password == "" {
+			return nil, fmt.Errorf("password not found in secret for basic authentication")
+		}
+
+		req.SetBasicAuth(string(user), string(password))
+	}
+
+	return client.Do(req)
 }
 
-type LoadIndexPageFunc func(string, bool, *corev1.ConfigMap, logr.Logger) (*http.Response, error)
+type LoadIndexPageFunc func(idxPath string, secureSkip bool, srt *corev1.Secret, cfg *corev1.ConfigMap, logger logr.Logger) (*http.Response, error)
 
-func LoadLocalIdx(idxPath string, insecureSkipVerify bool, cfg *corev1.ConfigMap, lgger logr.Logger) (*http.Response, error) {
+func LoadLocalIdx(idxPath string, insecureSkipVerify bool, srt *corev1.Secret, cfg *corev1.ConfigMap, lgger logr.Logger) (*http.Response, error) {
 	localDir := http.Dir(idxPath)
 	content, err := localDir.Open("index.yaml")
 
@@ -104,10 +120,11 @@ func LoadLocalIdx(idxPath string, insecureSkipVerify bool, cfg *corev1.ConfigMap
 func GetHelmRepoIndex(
 	channelPathName string,
 	insecureSkipVerify bool,
+	chnRefSrt *corev1.Secret,
 	chnRefCfgMap *corev1.ConfigMap,
 	loadIdx LoadIndexPageFunc,
 	logger logr.Logger) (*repo.IndexFile, error) {
-	resp, err := loadIdx(channelPathName, insecureSkipVerify, chnRefCfgMap, logger)
+	resp, err := loadIdx(channelPathName, insecureSkipVerify, chnRefSrt, chnRefCfgMap, logger)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to get chart index")
 	}

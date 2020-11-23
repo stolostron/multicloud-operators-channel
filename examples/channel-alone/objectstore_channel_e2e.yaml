@@ -1,3 +1,5 @@
+# this only test the channel namespace promotion logic. TODO: need to find a way
+# to test the object store got the promoted object
 --- 
 apiVersion: apps.open-cluster-management.io/v1
 kind: Deployable
@@ -8,7 +10,7 @@ metadata:
   namespace: default
 spec: 
   channels: 
-  - deva
+  - backend-test
   template: 
     apiVersion: v1
     data: 
@@ -25,11 +27,11 @@ metadata:
 apiVersion: apps.open-cluster-management.io/v1
 kind: Channel
 metadata:
-  name: deva
+  name: backend-test
   namespace: ch-obj
 spec:
   type: ObjectBucket
-  pathname: http://52.90.18.11:9000/deva
+  pathname: http://ec2-34-227-89-198.compute-1.amazonaws.com:9000/backend-test
   sourceNamespaces:
     - default
   secretRef:
@@ -41,5 +43,5 @@ metadata:
   name: dev
   namespace: ch-obj
 data:
-  AccessKeyID: YWRtaW4=
-  SecretAccessKey: cGFzc3dvcmRhZG1pbg==
+  AccessKeyID: YWRtaW4= #<base64 encode username>
+  SecretAccessKey: cGFzc3dvcmRhZG1pbg== #<base64 encode password>

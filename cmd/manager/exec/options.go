@@ -24,12 +24,14 @@ type ChannelCMDOptions struct {
 	MetricsAddr  string
 	SyncInterval int
 	LeaderElect  bool
+	Debug        bool
 }
 
 var (
 	options = ChannelCMDOptions{
 		MetricsAddr:  "",
 		SyncInterval: defaultSyncInterval,
+		Debug:        false,
 	}
 )
 
@@ -72,5 +74,12 @@ func ProcessFlags() {
 		"sync-interval",
 		options.SyncInterval,
 		"Setting up the cache sync time.",
+	)
+
+	flag.BoolVar(
+		&options.Debug,
+		"debug",
+		false,
+		"if debug is true, then webhooks will be created",
 	)
 }
