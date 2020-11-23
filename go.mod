@@ -3,6 +3,7 @@ module github.com/open-cluster-management/multicloud-operators-channel
 go 1.15
 
 require (
+	github.com/Masterminds/semver v1.5.0 // indirect
 	github.com/aws/aws-sdk-go-v2 v0.18.0
 	github.com/cyphar/filepath-securejoin v0.2.2 // indirect
 	github.com/ghodss/yaml v1.0.1-0.20190212211648-25d852aebe32

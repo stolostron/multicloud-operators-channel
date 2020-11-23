@@ -101,7 +101,7 @@ func GetChartIndex(chnPathname string, insecureSkipVerify bool, srt *corev1.Secr
 
 type LoadIndexPageFunc func(idxPath string, secureSkip bool, srt *corev1.Secret, cfg *corev1.ConfigMap, logger logr.Logger) (*http.Response, error)
 
-func LoadLocalIdx(idxPath string, insecureSkipVerify bool, cfg *corev1.ConfigMap, lgger logr.Logger) (*http.Response, error) {
+func LoadLocalIdx(idxPath string, insecureSkipVerify bool, srt *corev1.Secret, cfg *corev1.ConfigMap, lgger logr.Logger) (*http.Response, error) {
 	localDir := http.Dir(idxPath)
 	content, err := localDir.Open("index.yaml")
 
