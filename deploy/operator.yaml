@@ -19,6 +19,8 @@ spec:
           image: REPLACE_IMAGE
           command:
           - multicloud-operators-channel
+          - --debug=true
+          - --zap-devel=development
           imagePullPolicy: Always
           env:
             - name: WATCH_NAMESPACE

@@ -23,11 +23,40 @@ import (
 )
 
 const (
-	defaultAddr     = "http://localhost:8765"
+	defaultAddr     = "localhost:8765"
 	runEndpoint     = "/run"
-	clusterEndpoint = "/cluster"
-	Success         = "succeed"
+	clusterEndpoint = "/clusters"
+	Succeed         = "succeed"
 )
+
+func IsSeverUp(addr, cluster string) error {
+	URL := fmt.Sprintf("http://%s%s", addr, cluster)
+	resp, err := http.Get(URL)
+
+	if err != nil {
+		return err
+	}
+
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		return fmt.Errorf("e2e server is not up")
+	}
+
+	return nil
+}
+
+type Runner struct {
+	Addr     string
+	Endpoint string
+}
+
+func NewRunner(url, endpoint string) *Runner {
+	return &Runner{
+		Addr:     url,
+		Endpoint: endpoint,
+	}
+}
 
 type TResponse struct {
 	TestID  string      `json:"test_id"`
@@ -37,8 +66,17 @@ type TResponse struct {
 	Details interface{} `json:"details"`
 }
 
-func runner(runID string) error {
-	URL := fmt.Sprintf("%s%s?id=%s", defaultAddr, runEndpoint, runID)
+func (tr *TResponse) String() string {
+	o, err := json.MarshalIndent(tr, "", "\t")
+	if err != nil {
+		return ""
+	}
+
+	return string(o)
+}
+
+func (r *Runner) Run(runID string) error {
+	URL := fmt.Sprintf("http://%s%s?id=%s", r.Addr, r.Endpoint, runID)
 	resp, err := http.Get(URL)
 
 	if err != nil {
@@ -59,7 +97,7 @@ func runner(runID string) error {
 			return err
 		}
 
-		if res.Status != Success {
+		if res.Status != Succeed {
 			return fmt.Errorf("failed test on %s, with status %s err: %s", res.TestID, res.Status, res.Status)
 		}
 
@@ -68,33 +106,17 @@ func runner(runID string) error {
 
 	return fmt.Errorf("incorrect response code %v", resp.StatusCode)
 }
-
-func isSeverUp() error {
-	URL := fmt.Sprintf("%s%s", defaultAddr, clusterEndpoint)
-	resp, err := http.Get(URL)
-
-	if err != nil {
-		return err
-	}
-
-	defer resp.Body.Close()
-
-	if resp.StatusCode != http.StatusOK {
-		return fmt.Errorf("e2e server is not up")
-	}
-
-	return nil
-}
-
 func TestE2ESuite(t *testing.T) {
-	if err := isSeverUp(); err != nil {
+	if err := IsSeverUp(defaultAddr, clusterEndpoint); err != nil {
 		t.Fatal(err)
 	}
+
+	runner := NewRunner(defaultAddr, runEndpoint)
 
 	testIDs := []string{"chn-001", "chn-002", "chn-003", "chn-004"}
 
 	for _, tID := range testIDs {
-		if err := runner(tID); err != nil {
+		if err := runner.Run(tID); err != nil {
 			t.Fatal(err)
 		}
 	}

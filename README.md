@@ -15,13 +15,12 @@
   - [Setting up a channel to sync resourcese between your hub cluster and a object bucket](#setting-up-a-channel-to-sync-resourcese-between-your-hub-cluster-and-a-object-bucket)
   - [Trouble shooting](#trouble-shooting)
 - [Community, discussion, contribution, and support](#community-discussion-contribution-and-support)
+- [Security Response](#security-response)
 - [References](#references)
   - [multicloud-operators repositories](#multicloud-operators-repositories)
 
 <!-- END doctoc generated TOC please keep comment here to allow auto update -->
 ## Overview
-
-------
 
 Channel controller sync and promote resources from the target source to a channel namespace on your hub cluster or to a host(such as object bucket). Then your subscription can consume these resources from the channel directly.
 
@@ -96,8 +95,6 @@ Resouces got moved to it destination, and `subscription` can take over from here
 NAME                                  TEMPLATE-KIND   TEMPLATE-APIVERSION   AGE   STATUS
 payload-cfg-namespace-channel-gt47s   ConfigMap       v1                    37s
 ```
-
-Check the [Getting Started](docs/getting_started.md) doc for more details
 
 ### Trouble shooting
 
@@ -174,12 +171,7 @@ I0225 16:00:19.424095       1 deployable_controller.go:293] Creating deployable 
 
 ```
 
-
-Please refer to [Trouble shooting documentation](docs/trouble_shooting.md) for further info.
-
 ## Community, discussion, contribution, and support
-
-------
 
 Check the [DEVELOPMENT Doc](docs/development.md) for how to build and make changes.
 
@@ -187,19 +179,17 @@ Check the [CONTRIBUTING Doc](CONTRIBUTING.md) for how to contribute to the repo.
 
 You can reach the maintainers of this by raising issues. Slack communication is coming soon
 
-## References
+## Security Response
 
-------
+Check the [Security Doc](SECURITY.md) if you've found a security issue.
+
+## References
 
 ### multicloud-operators repositories
 
+- [multicloud-operators-application](https://github.com/open-cluster-management/multicloud-operators-application)
+- [multicloud-operators-channel](https://github.com/open-cluster-management/multicloud-operators-channel)
 - [multicloud-operators-deployable](https://github.com/open-cluster-management/multicloud-operators-deployable)
 - [multicloud-operators-placementrule](https://github.com/open-cluster-management/multicloud-operators-placementrule)
-- [multicloud-operators-channel](https://github.com/open-cluster-management/multicloud-operators-channel)
 - [multicloud-operators-subscription](https://github.com/open-cluster-management/multicloud-operators-subscription)
 - [multicloud-operators-subscription-release](https://github.com/open-cluster-management/multicloud-operators-subscription-release)
-
-------
-
-If you have any further questions, please refer to
-[help documentation](docs/help.md) for further information.

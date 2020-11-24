@@ -22,7 +22,6 @@ import (
 
 	"github.com/go-logr/logr"
 	"github.com/pkg/errors"
-	"gopkg.in/yaml.v2"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -134,16 +133,7 @@ func getCredentialFromKube(secretRef *corev1.ObjectReference, defaultNs string, 
 		return "", "", errors.Wrap(err, "unable to get secret")
 	}
 
-	err = yaml.Unmarshal(secret.Data[SecretMapKeyAccessKeyID], &accessKeyID)
-	if err != nil {
-		return "", "", errors.Wrap(err, "unable to unmarshal secret")
-	}
-
-	err = yaml.Unmarshal(secret.Data[SecretMapKeySecretAccessKey], &secretAccessKey)
-	if err != nil {
-		return "", "", errors.Wrap(err, "unable to unmarshal secret")
-	}
-
+	accessKeyID, secretAccessKey = ParseSecertInfo(secret)
 	return accessKeyID, secretAccessKey, nil
 }
 

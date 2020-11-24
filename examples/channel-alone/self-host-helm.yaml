@@ -1,0 +1,25 @@
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: ch-self-host-helm
+---
+apiVersion: apps.open-cluster-management.io/v1
+kind: Channel
+metadata:
+  name: self-host-helm
+  namespace: ch-self-host-helm
+spec:
+  type: HelmRepo
+  pathname: https://raw.githubusercontent.com/open-cluster-management/app-ui-e2e-private-helm/master
+  secretRef:
+    name: dev
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: dev
+  namespace: ch-self-host-helm
+data:
+  user: YWRtaW4= #<base64 encode username>
+  accessToken: cGFzc3dvcmRhZG1pbg== #<base64 encode password>
