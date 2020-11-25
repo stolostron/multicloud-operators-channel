@@ -13,7 +13,7 @@
 - [Overview](#overview)
 - [Quick Start](#quick-start)
   - [Setting up a channel to sync resourcese between your hub cluster and a object bucket](#setting-up-a-channel-to-sync-resourcese-between-your-hub-cluster-and-a-object-bucket)
-  - [Trouble shooting](#trouble-shooting)
+  - [Troubleshooting](#troubleshooting)
 - [Community, discussion, contribution, and support](#community-discussion-contribution-and-support)
 - [Security Response](#security-response)
 - [References](#references)
@@ -96,7 +96,7 @@ NAME                                  TEMPLATE-KIND   TEMPLATE-APIVERSION   AGE 
 payload-cfg-namespace-channel-gt47s   ConfigMap       v1                    37s
 ```
 
-### Trouble shooting
+### Troubleshooting
 
 - Check operator availability
 
