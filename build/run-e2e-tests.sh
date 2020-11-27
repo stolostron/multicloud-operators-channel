@@ -48,18 +48,22 @@ if [ "$TRAVIS_BUILD" != 1 ]; then
 
     echo -e "\nDownload and install KinD\n"
     GO111MODULE=on go get sigs.k8s.io/kind
-
-    kind create cluster
-    if [ $? != 0 ]; then
-            exit $?;
-    fi
-    sleep 15
-
 else
     echo -e "\nBuild is on Local ENV, will delete the API container first\n"
     docker kill e2e || true
 fi
 
+kind delete cluster
+if [ $? != 0 ]; then
+        exit $?;
+fi
+
+kind create cluster
+if [ $? != 0 ]; then
+        exit $?;
+fi
+
+sleep 15
 
 echo -e "\nLoad build image ($BUILD_IMAGE)to kind cluster\n"
 kind load docker-image $BUILD_IMAGE
@@ -70,17 +74,17 @@ fi
 echo -e "\nSwitch kubeconfig to kind cluster\n"
 kubectl cluster-info --context kind-kind
 
-echo -e "\nApplying channel operator to kind cluster\n"
-kubectl apply -f deploy/standalone
-if [ $? != 0 ]; then
-    exit $?;
-fi
-
 echo -e "\nApply dependent CRDs\n"
 kubectl apply -f deploy/dependent-crds
 
 echo -e "\nApply channel CRDs\n"
 kubectl apply -f deploy/crds
+
+echo -e "\nApplying channel operator to kind cluster\n"
+kubectl apply -f deploy/standalone
+if [ $? != 0 ]; then
+    exit $?;
+fi
 
 if [ "$TRAVIS_BUILD" != 1 ]; then
     echo -e "\nWait for pod to be ready\n"
@@ -88,13 +92,11 @@ if [ "$TRAVIS_BUILD" != 1 ]; then
 fi
 
 echo -e "\nCheck if channel deploy is created\n" 
-kubectl get deploy multicluster-operators-channel
-kubectl get po -A
-
+kubectl rollout status deployment/multicluster-operators-channel
 if [ $? != 0 ]; then
+    echo "failed to deploy the channel operator"
     exit $?;
 fi
-
 
 echo -e "\ndelete the running container: ${CONTAINER_NAME} if exist"
 docker rm -f ${CONTAINER_NAME} || true
@@ -111,19 +113,19 @@ kind get kubeconfig > cluster_config/hub
 # mess up the go.mod file when doing the local test
 echo -e "\nGet the applifecycle-backend-e2e data"
 rm -rf applifecycle-backend-e2e
-git clone https://${GITHUB_USER}:${GITHUB_TOKEN}@github.com/open-cluster-management/applifecycle-backend-e2e.git
+git clone --branch v0.1.5 https://${GITHUB_USER}:${GITHUB_TOKEN}@github.com/open-cluster-management/applifecycle-backend-e2e.git
+go get github.com/open-cluster-management/applifecycle-backend-e2e@v0.1.5
 
 
 cd applifecycle-backend-e2e && make gobuild && cd -
 
 E2E_BINARY_NAME="applifecycle-backend-e2e"
-E2E_BINARY_PATH="applifecycle-backend-e2e/build/_output/bin"
 E2E_DATA_PATH="applifecycle-backend-e2e/default-e2e-test-data"
 
 echo -e "\nTerminate the running test server\n"
 ps aux | grep ${E2E_BINARY_NAME} | grep -v 'grep' | awk '{print $2}' | xargs kill -9
 
-${E2E_BINARY_PATH}/${E2E_BINARY_NAME} -cfg cluster_config -data ${E2E_DATA_PATH} &
+${E2E_BINARY_NAME} -cfg cluster_config -data ${E2E_DATA_PATH} &
 
 sleep 10
 
