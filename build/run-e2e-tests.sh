@@ -114,14 +114,8 @@ kind get kubeconfig > cluster_config/hub
 echo -e "\nGet the applifecycle-backend-e2e data"
 go get github.com/open-cluster-management/applifecycle-backend-e2e@v0.1.6
 
-
-cd applifecycle-backend-e2e && make gobuild && cd -
-
 E2E_BINARY_NAME="applifecycle-backend-e2e"
-E2E_DATA_PATH="applifecycle-backend-e2e/default-e2e-test-data"
 
-echo -e "\nTerminate the running test server\n"
-ps aux | grep ${E2E_BINARY_NAME} | grep -v 'grep' | awk '{print $2}' | xargs kill -9
 
 ${E2E_BINARY_NAME} -cfg cluster_config &
 
@@ -129,8 +123,5 @@ sleep 10
 
 echo -e "\nStart to run e2e test(s)\n"
 go test -v ./e2e
-
-echo -e "\nTerminate the test server\n"
-ps aux | grep ${E2E_BINARY_NAME} | grep -v 'grep' | awk '{print $2}' | xargs kill -9
 
 exit 0;
