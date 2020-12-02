@@ -35,8 +35,10 @@ import (
 	"k8s.io/client-go/tools/record"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
+	"sigs.k8s.io/controller-runtime/pkg/event"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
+	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 	"sigs.k8s.io/controller-runtime/pkg/source"
 )
@@ -46,6 +48,11 @@ const (
 	controllerSetup               = "deployable-setup"
 	CtrlDeployableIndexer         = "origin-deployable"
 	CtrlGenerateDeployableIndexer = "generated-deployable"
+)
+
+var (
+	// AnnotationHosting defines the subscription hosting the resource
+	AnnotationHosting = chv1.SchemeGroupVersion.Group + "/hosting-subscription"
 )
 
 /**
@@ -91,6 +98,35 @@ func (mapper *channelMapper) Map(obj handler.MapObject) []reconcile.Request {
 	}
 
 	return requests
+}
+
+func isChannelDeployable(in map[string]string) bool {
+	if len(in) == 0 {
+		return true
+	}
+
+	// if there's hosting subscription, it means the deployable is coming from
+	// subscription controller
+	_, ok := in[AnnotationHosting]
+
+	return !ok
+}
+
+// channelDeployable
+var channelDeployablePredicateFunctions = predicate.Funcs{
+	// Create returns true if the Create event should be processed
+	CreateFunc: func(e event.CreateEvent) bool {
+		return isChannelDeployable(e.Meta.GetAnnotations())
+	},
+
+	// Delete returns true if the Delete event should be processed
+	DeleteFunc: func(e event.DeleteEvent) bool {
+		return isChannelDeployable(e.Meta.GetAnnotations())
+	},
+
+	UpdateFunc: func(e event.UpdateEvent) bool {
+		return isChannelDeployable(e.MetaOld.GetAnnotations()) || isChannelDeployable(e.MetaNew.GetAnnotations())
+	},
 }
 
 // add adds a new Controller to mgr with r as the reconcile.Reconciler
@@ -139,7 +175,7 @@ func add(mgr manager.Manager, r reconcile.Reconciler, logger logr.Logger) error 
 	}
 
 	// Watch for changes to Deployable
-	err = c.Watch(&source.Kind{Type: &dplv1.Deployable{}}, &handler.EnqueueRequestForObject{})
+	err = c.Watch(&source.Kind{Type: &dplv1.Deployable{}}, &handler.EnqueueRequestForObject{}, channelDeployablePredicateFunctions)
 	if err != nil {
 		return err
 	}

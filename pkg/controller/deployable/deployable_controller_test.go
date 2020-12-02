@@ -306,6 +306,7 @@ var _ = Describe("promote deployables to channel namespace without considering c
 			dpl := deployableInstance.DeepCopy()
 			dpl.SetName(dpl.GetName() + randStr)
 			dpl.Annotations = map[string]string{"test": "pass"}
+
 			Expect(k8sClient.Create(context.TODO(), dpl)).NotTo(HaveOccurred())
 			defer func() {
 				Expect(k8sClient.Delete(context.TODO(), dpl)).Should(Succeed())
