@@ -50,6 +50,11 @@ const (
 	CtrlGenerateDeployableIndexer = "generated-deployable"
 )
 
+var (
+	// AnnotationHosting defines the subscription hosting the resource
+	AnnotationHosting = chv1.SchemeGroupVersion.Group + "/hosting-subscription"
+)
+
 /**
 * USER ACTION REQUIRED: This is a scaffold file intended for the user to modify with their own Controller
 * business logic.  Delete these comments after modifying this file.*
@@ -100,9 +105,11 @@ func isChannelDeployable(in map[string]string) bool {
 		return true
 	}
 
-	_, ok := in[chv1.KeyChannel]
+	// if there's hosting subscription, it means the deployable is coming from
+	// subscription controller
+	_, ok := in[AnnotationHosting]
 
-	return ok
+	return !ok
 }
 
 // channelDeployable

@@ -98,9 +98,6 @@ if [ $? != 0 ]; then
     exit $?;
 fi
 
-echo -e "\ndelete the running container: ${CONTAINER_NAME} if exist"
-docker rm -f ${CONTAINER_NAME} || true
-
 echo -e "\nRun API test server\n"
 mkdir -p cluster_config
 kind get kubeconfig > cluster_config/hub
@@ -121,7 +118,13 @@ ${E2E_BINARY_NAME} -cfg cluster_config &
 
 sleep 10
 
+echo -e "\nTerminate the running test server\n"
+ps aux | grep ${E2E_BINARY_NAME} | grep -v 'grep' | awk '{print $2}' | xargs kill -9
+
 echo -e "\nStart to run e2e test(s)\n"
 go test -v ./e2e
+
+echo -e "\nTerminate the running test server\n"
+ps aux | grep ${E2E_BINARY_NAME} | grep -v 'grep' | awk '{print $2}' | xargs kill -9
 
 exit 0;
