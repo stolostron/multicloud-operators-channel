@@ -181,7 +181,7 @@ You can reach the maintainers of this by raising issues. Slack communication is 
 
 ## Security Response
 
-Check the [Security Doc](SECURITY.md) if you've found a security issue.
+Check the [Security Doc](SECURITY.md) if you've found a security issue. 
 
 ## References
 
