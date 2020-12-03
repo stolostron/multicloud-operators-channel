@@ -55,7 +55,7 @@ var (
 	// AnnotationHosting defines the subscription hosting the resource
 	AnnotationSubHosting = chv1.SchemeGroupVersion.Group + "/hosting-subscription"
 	AnnotationDplHosting = chv1.SchemeGroupVersion.Group + "/hosting-deployable"
-	LableHosting         = chv1.SchemeGroupVersion.Group + "/subscription"
+	LabelHosting         = chv1.SchemeGroupVersion.Group + "/subscription"
 )
 
 /**
@@ -117,7 +117,7 @@ func isSubDeployable(in metav1.Object) bool {
 
 	lab := in.GetLabels()
 
-	if _, ok := lab[LableHosting]; ok {
+	if _, ok := lab[LabelHosting]; ok {
 		return true
 	}
 
