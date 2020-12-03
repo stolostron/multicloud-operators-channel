@@ -30,6 +30,7 @@ import (
 	v1 "k8s.io/api/core/v1"
 
 	"k8s.io/apimachinery/pkg/api/errors"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/tools/record"
@@ -53,6 +54,7 @@ const (
 var (
 	// AnnotationHosting defines the subscription hosting the resource
 	AnnotationHosting = chv1.SchemeGroupVersion.Group + "/hosting-subscription"
+	LableHosting      = chv1.SchemeGroupVersion.Group + "subscription"
 )
 
 /**
@@ -100,32 +102,37 @@ func (mapper *channelMapper) Map(obj handler.MapObject) []reconcile.Request {
 	return requests
 }
 
-func isChannelDeployable(in map[string]string) bool {
-	if len(in) == 0 {
+//check if a map has a given key
+func isSubDeployable(in metav1.Object) bool {
+	anno := in.GetAnnotations()
+
+	if _, ok := anno[AnnotationHosting]; ok {
 		return true
 	}
 
-	// if there's hosting subscription, it means the deployable is coming from
-	// subscription controller
-	_, ok := in[AnnotationHosting]
+	lab := in.GetLabels()
 
-	return !ok
+	if _, ok := lab[LableHosting]; ok {
+		return true
+	}
+
+	return false
 }
 
 // channelDeployable
 var channelDeployablePredicateFunctions = predicate.Funcs{
 	// Create returns true if the Create event should be processed
 	CreateFunc: func(e event.CreateEvent) bool {
-		return isChannelDeployable(e.Meta.GetAnnotations())
+		return !isSubDeployable(e.Meta)
 	},
 
 	// Delete returns true if the Delete event should be processed
 	DeleteFunc: func(e event.DeleteEvent) bool {
-		return isChannelDeployable(e.Meta.GetAnnotations())
+		return !isSubDeployable(e.Meta)
 	},
 
 	UpdateFunc: func(e event.UpdateEvent) bool {
-		return isChannelDeployable(e.MetaOld.GetAnnotations()) || isChannelDeployable(e.MetaNew.GetAnnotations())
+		return !isSubDeployable(e.MetaOld) || !isSubDeployable(e.MetaNew)
 	},
 }
 
