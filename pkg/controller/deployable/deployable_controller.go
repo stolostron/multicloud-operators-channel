@@ -53,8 +53,9 @@ const (
 
 var (
 	// AnnotationHosting defines the subscription hosting the resource
-	AnnotationHosting = chv1.SchemeGroupVersion.Group + "/hosting-subscription"
-	LableHosting      = chv1.SchemeGroupVersion.Group + "subscription"
+	AnnotationSubHosting = chv1.SchemeGroupVersion.Group + "/hosting-subscription"
+	AnnotationDplHosting = chv1.SchemeGroupVersion.Group + "/hosting-deployable"
+	LableHosting         = chv1.SchemeGroupVersion.Group + "/subscription"
 )
 
 /**
@@ -106,7 +107,11 @@ func (mapper *channelMapper) Map(obj handler.MapObject) []reconcile.Request {
 func isSubDeployable(in metav1.Object) bool {
 	anno := in.GetAnnotations()
 
-	if _, ok := anno[AnnotationHosting]; ok {
+	if _, ok := anno[AnnotationSubHosting]; ok {
+		return true
+	}
+
+	if _, ok := anno[AnnotationDplHosting]; ok {
 		return true
 	}
 
