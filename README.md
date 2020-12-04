@@ -10,34 +10,38 @@
 <!-- DON'T EDIT THIS SECTION, INSTEAD RE-RUN doctoc TO UPDATE -->
 **Table of Contents**  *generated with [DocToc](https://github.com/thlorenz/doctoc)*
 
-- [Overview](#overview)
-- [Quick Start](#quick-start)
-  - [Setting up a channel to sync resourcese between your hub cluster and a object bucket](#setting-up-a-channel-to-sync-resourcese-between-your-hub-cluster-and-a-object-bucket)
-  - [Trouble shooting](#trouble-shooting)
-- [Community, discussion, contribution, and support](#community-discussion-contribution-and-support)
-- [Security Response](#security-response)
-- [References](#references)
-  - [multicloud-operators repositories](#multicloud-operators-repositories)
+- [multicloud-operators-application](#multicloud-operators-application)
+    - [What is the multicloud-operators-application](#what-is-the-multicloud-operators-application)
+    - [Getting started](#getting-started)
+    - [References](#references)
 
 <!-- END doctoc generated TOC please keep comment here to allow auto update -->
-## Overview
 
-Channel controller sync and promote resources from the target source to a channel namespace on your hub cluster or to a host(such as object bucket). Then your subscription can consume these resources from the channel directly.
+## What is the multicloud-operators-channel
 
-## Quick Start
+The `multicloud-operators-channel` controller syncs and promotes resources from the target source to a channel namespace on your hub cluster, or to a host, such as object bucket. Your subscription can then consume these resources from the channel directly.
 
-Keep in mind, if you were using this operator before, you might need to migrate your resource api-group and version from `app.ibm.com/v1alpha1` to `apps.open-cluster-management.io/v1`. Example can be found under the `examples` folder.
+Go to the [Contributing guide](CONTRIBUTING.md) to learn how to get involved.
 
-For a quick start, we are going to create a namespace channel, meaning you can put the resouce to a namespace, which is watching by our channel operator, then the operator will promote this resoucre to the channel namespace, which should be the namesapce the channel operator sits.
+## Getting started
 
-The following example is tested on a minikube, so that you can play with this operator with out worrying too much extra stuff, such as secrity for a real cluster.
+- Clone and build an image with the [Development guide](docs/development.md).
 
-------
+- View the [Deployment guide](docs/deployment.md) to learn how to deploy the operator.
 
-### Setting up a channel to sync resourcese between your hub cluster and a object bucket
+- Check the [Security guide](SECURITY.md) if you need to report a security issue.
 
-- Clone the channel operator repository
+### Setting up a channel to sync resources between your hub cluster and an object bucket
 
+Keep in mind, if you were using this operator before, you might need to migrate your resource api-group and version from `app.ibm.com/v1alpha1` to `apps.open-cluster-management.io/v1`. 
+
+An example can be found under the `examples` folder.
+
+To get started quickly, create a namespace channel. What does this mean? You need to assign the resource to a namespace, which is watched by our channel operator. The operator promotes this resource to the channel namespace, which should be the namespace the where the channel operator sits.
+
+The following example is tested on a minikube so that you can play with this operator without worrying about things like security for a real cluster.
+
+1. Clone the channel operator repository with the following command:
 
 ```shell
 % mkdir -p "$GOPATH"/src/github.com/open-cluster-management
@@ -49,7 +53,7 @@ The following example is tested on a minikube, so that you can play with this op
 % cd "$GOPATH"/src/github.com/open-cluster-management/multicloud-operators-channel
 ```
 
-- Setup environment and deploy channel operator
+2. Set up the environment and deploy the channel operator:
 
 ```shell
 # apply all the necessary CRDs
@@ -62,7 +66,7 @@ The following example is tested on a minikube, so that you can play with this op
 % kubectl apply -f ./deploy/standalone
 ```
 
-- Create a Channel and deploy the payload(the resource you want channel operator to help you move/promote around)
+3. Create a channel and deploy the payload. The payload is the resource that you want the channel operator to help you move around or promote:
 
 ```shell
 # a simple namespace type channel example
@@ -70,7 +74,6 @@ The following example is tested on a minikube, so that you can play with this op
 ```
 
 As a result, a config map wrapped by `deployable`,  at default namespace. At the meantime, it will also deploy a `channel` resource at the `ch-ns` namespace.
-
 
 ```
 % kubectl get deployables.apps.open-cluster-management.io
@@ -87,7 +90,7 @@ NAME   TYPE        PATHNAME   AGE
 ns     Namespace   ch-ns      20s
 ```
 
-Resouces got moved to it destination, and `subscription` can take over from here, deploying this resource(it will be the configmap deployed) to your managed cluster. 
+Resources got moved to it destination, and `subscription` can take over from here, deploying this resource (it will be the configmap deployed) to your managed cluster. 
 
 ```shell
 % kubectl get deployables.apps.open-cluster-management.io -n ch-ns
@@ -96,9 +99,11 @@ NAME                                  TEMPLATE-KIND   TEMPLATE-APIVERSION   AGE 
 payload-cfg-namespace-channel-gt47s   ConfigMap       v1                    37s
 ```
 
-### Trouble shooting
+### Troubleshooting
 
-- Check operator availability
+Try the following methods if you need to troubleshoot:
+
+- Check operator availability:
 
 ```shell
 % kubectl get deploy,pods
@@ -109,7 +114,7 @@ NAME                                                READY   STATUS    RESTARTS  
 pod/multicloud-operators-channel-7cbd9fbd55-kjkpc   1/1     Running   0          2m
 ```
 
-- Check Channel and its status
+- Check the channel and its status:
 
 ```shell
 % kubectl describe channel ns -n ch-ns
@@ -138,9 +143,7 @@ Events:
   Normal  Deploy  117s  channel  Depolyable ch-ns/payload-cfg-namespace-channel-kglr8 created in the channel, Status: Success, Channel: ch-ns/ns
 
 ```
-- Check Channel operator log
-
-Normally, we care the reconcile trace. For each flow, it should at least have a valid reconcile log for the deployable.
+- Check the channel operator log. Usually you want to check the reconcile trace. For each flow, it should at least have a valid reconcile log for the deployable:
 
 ```shell
 % kubectl logs multicloud-operators-channel-f4fbbb9d9-6mcql
@@ -171,25 +174,15 @@ I0225 16:00:19.424095       1 deployable_controller.go:293] Creating deployable 
 
 ```
 
-## Community, discussion, contribution, and support
-
-Check the [DEVELOPMENT Doc](docs/development.md) for how to build and make changes.
-
-Check the [CONTRIBUTING Doc](CONTRIBUTING.md) for how to contribute to the repo.
-
-You can reach the maintainers of this by raising issues. Slack communication is coming soon
-
-## Security Response
-
-Check the [Security Doc](SECURITY.md) if you've found a security issue. 
-
 ## References
 
 ### multicloud-operators repositories
 
-- [multicloud-operators-application](https://github.com/open-cluster-management/multicloud-operators-application)
-- [multicloud-operators-channel](https://github.com/open-cluster-management/multicloud-operators-channel)
-- [multicloud-operators-deployable](https://github.com/open-cluster-management/multicloud-operators-deployable)
-- [multicloud-operators-placementrule](https://github.com/open-cluster-management/multicloud-operators-placementrule)
-- [multicloud-operators-subscription](https://github.com/open-cluster-management/multicloud-operators-subscription)
-- [multicloud-operators-subscription-release](https://github.com/open-cluster-management/multicloud-operators-subscription-release)
+- Access the following multicloud-operators repositories:
+
+  - [multicloud-operators-application](https://github.com/open-cluster-management/multicloud-operators-application)
+  - [multicloud-operators-channel](https://github.com/open-cluster-management/multicloud-operators-channel)
+  - [multicloud-operators-deployable](https://github.com/open-cluster-management/multicloud-operators-deployable)
+  - [multicloud-operators-placementrule](https://github.com/open-cluster-management/multicloud-operators-placementrule)
+  - [multicloud-operators-subscription](https://github.com/open-cluster-management/multicloud-operators-subscription)
+  - [multicloud-operators-subscription-release](https://github.com/open-cluster-management/multicloud-operators-subscription-release)
