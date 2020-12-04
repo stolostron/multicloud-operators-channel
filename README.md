@@ -27,8 +27,6 @@ Go to the [Contributing guide](CONTRIBUTING.md) to learn how to get involved.
 
 - Clone and build an image with the [Development guide](docs/development.md).
 
-- View the [Deployment guide](docs/deployment.md) to learn how to deploy the operator.
-
 - Check the [Security guide](SECURITY.md) if you need to report a security issue.
 
 ### Setting up a channel to sync resources between your hub cluster and an object bucket
