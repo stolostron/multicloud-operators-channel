@@ -85,7 +85,7 @@ func RunManager() {
 		MetricsBindAddress:      fmt.Sprintf("%s:%d", metricsHost, metricsPort),
 		Port:                    operatorMetricsPort,
 		LeaderElection:          enableLeaderElection,
-		LeaderElectionID:        "multicloud-operators-placementrule-leader.open-cluster-management.io",
+		LeaderElectionID:        "multicloud-operators-channel-leader.open-cluster-management.io",
 		LeaderElectionNamespace: "kube-system",
 	})
 
