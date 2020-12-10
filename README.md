@@ -11,33 +11,32 @@
 **Table of Contents**  *generated with [DocToc](https://github.com/thlorenz/doctoc)*
 
 - [Overview](#overview)
-- [Quick Start](#quick-start)
+- [Quick start](#quick-start)
   - [Setting up a channel to sync resourcese between your hub cluster and a object bucket](#setting-up-a-channel-to-sync-resourcese-between-your-hub-cluster-and-a-object-bucket)
-  - [Trouble shooting](#trouble-shooting)
+  - [Troubleshooting](#troubleshooting)
 - [Community, discussion, contribution, and support](#community-discussion-contribution-and-support)
-- [Security Response](#security-response)
+- [Security response](#security-response)
 - [References](#references)
-  - [multicloud-operators repositories](#multicloud-operators-repositories)
+  - [Multicloud-operators repositories](#multicloud-operators-repositories)
 
 <!-- END doctoc generated TOC please keep comment here to allow auto update -->
 ## Overview
 
-Channel controller sync and promote resources from the target source to a channel namespace on your hub cluster or to a host(such as object bucket). Then your subscription can consume these resources from the channel directly.
+Channel controller synchronizes and promote resources from the target source to a channel namespace on your hub cluster, or to a host like object bucket. After that process, your subscription can consume these resources from the channel directly.
 
-## Quick Start
+## Quick start
 
-Keep in mind, if you were using this operator before, you might need to migrate your resource api-group and version from `app.ibm.com/v1alpha1` to `apps.open-cluster-management.io/v1`. Example can be found under the `examples` folder.
+Keep in mind, if you were using this operator before, you might need to migrate your resource api-group and version from `app.ibm.com/v1alpha1` to `apps.open-cluster-management.io/v1`. You can find examples in the `examples` folder.
 
-For a quick start, we are going to create a namespace channel, meaning you can put the resouce to a namespace, which is watching by our channel operator, then the operator will promote this resoucre to the channel namespace, which should be the namesapce the channel operator sits.
+For a quick start, we are going to create a namespace channel. This means you can put the resource into a namespace, which is watched by the channel operator. The channel operator promotes this resource to the channel namespace, which should be the namespace where the channel operator is located.
 
-The following example is tested on a minikube, so that you can play with this operator with out worrying too much extra stuff, such as secrity for a real cluster.
+The following example is tested on a minikube, so you can experiment with this operator without the security concerns of using a real cluster.
 
 ------
 
-### Setting up a channel to sync resourcese between your hub cluster and a object bucket
+### Setting up a channel to synchronize resources between your hub cluster and an object bucket
 
-- Clone the channel operator repository
-
+- Clone the [multicloud-operators-channel GitHub repository](https://github.com/open-cluster-management/multicloud-operators-channel).
 
 ```shell
 % mkdir -p "$GOPATH"/src/github.com/open-cluster-management
@@ -49,7 +48,7 @@ The following example is tested on a minikube, so that you can play with this op
 % cd "$GOPATH"/src/github.com/open-cluster-management/multicloud-operators-channel
 ```
 
-- Setup environment and deploy channel operator
+- Set up your environment, and deploy the channel operator.
 
 ```shell
 # apply all the necessary CRDs
@@ -62,15 +61,14 @@ The following example is tested on a minikube, so that you can play with this op
 % kubectl apply -f ./deploy/standalone
 ```
 
-- Create a Channel and deploy the payload(the resource you want channel operator to help you move/promote around)
+- Create a channel, and deploy the payload (the resource you want the channel operator to help you move or promote).
 
 ```shell
 # a simple namespace type channel example
 % kubectl apply -f ./examples/channel-alone
 ```
 
-As a result, a config map wrapped by `deployable`,  at default namespace. At the meantime, it will also deploy a `channel` resource at the `ch-ns` namespace.
-
+The result is a config map wrapped by `deployable` in the default namespace. It will also deploy a `channel` resource to the `ch-ns` namespace.
 
 ```
 % kubectl get deployables.apps.open-cluster-management.io
@@ -87,7 +85,7 @@ NAME   TYPE        PATHNAME   AGE
 ns     Namespace   ch-ns      20s
 ```
 
-Resouces got moved to it destination, and `subscription` can take over from here, deploying this resource(it will be the configmap deployed) to your managed cluster. 
+Resources are moved to their destination, and the `subscription` deploys this resource to your managed cluster. The resource will be the `configmap` that is deployed. 
 
 ```shell
 % kubectl get deployables.apps.open-cluster-management.io -n ch-ns
@@ -96,9 +94,9 @@ NAME                                  TEMPLATE-KIND   TEMPLATE-APIVERSION   AGE 
 payload-cfg-namespace-channel-gt47s   ConfigMap       v1                    37s
 ```
 
-### Trouble shooting
+### Troubleshooting
 
-- Check operator availability
+- Check the operator availability.
 
 ```shell
 % kubectl get deploy,pods
@@ -109,7 +107,7 @@ NAME                                                READY   STATUS    RESTARTS  
 pod/multicloud-operators-channel-7cbd9fbd55-kjkpc   1/1     Running   0          2m
 ```
 
-- Check Channel and its status
+- Check the channel and its status.
 
 ```shell
 % kubectl describe channel ns -n ch-ns
@@ -138,9 +136,9 @@ Events:
   Normal  Deploy  117s  channel  Depolyable ch-ns/payload-cfg-namespace-channel-kglr8 created in the channel, Status: Success, Channel: ch-ns/ns
 
 ```
-- Check Channel operator log
+- Check the channel operator log.
 
-Normally, we care the reconcile trace. For each flow, it should at least have a valid reconcile log for the deployable.
+Normally, the reconcile trace is the most important piece. For each flow, it should at least have a valid reconcile log for the deployable.
 
 ```shell
 % kubectl logs multicloud-operators-channel-f4fbbb9d9-6mcql
@@ -175,13 +173,13 @@ I0225 16:00:19.424095       1 deployable_controller.go:293] Creating deployable 
 
 Check the [DEVELOPMENT Doc](docs/development.md) for how to build and make changes.
 
-Check the [CONTRIBUTING Doc](CONTRIBUTING.md) for how to contribute to the repo.
+Check the [CONTRIBUTING Doc](CONTRIBUTING.md) for how to contribute to the repository.
 
-You can reach the maintainers of this by raising issues. Slack communication is coming soon
+You can reach the maintainers of this project by raising issues.
 
-## Security Response
+## Security response
 
-Check the [Security Doc](SECURITY.md) if you've found a security issue. 
+Check the [Security Doc](SECURITY.md) if you find a security issue. 
 
 ## References
 
