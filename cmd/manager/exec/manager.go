@@ -16,17 +16,19 @@ package exec
 
 import (
 	"fmt"
+	"log"
 	"os"
 	"path/filepath"
 
+	v1 "k8s.io/api/core/v1"
 	"k8s.io/client-go/kubernetes"
+	typedcorev1 "k8s.io/client-go/kubernetes/typed/core/v1"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/record"
-	"k8s.io/klog"
-
-	v1 "k8s.io/api/core/v1"
-	typedcorev1 "k8s.io/client-go/kubernetes/typed/core/v1"
 	ctrl "sigs.k8s.io/controller-runtime"
+
+	"github.com/go-logr/zapr"
+	uzap "go.uber.org/zap"
 
 	admissionv1 "k8s.io/api/admissionregistration/v1"
 
@@ -38,7 +40,6 @@ import (
 
 	"github.com/open-cluster-management/multicloud-operators-channel/pkg/apis"
 	"github.com/open-cluster-management/multicloud-operators-channel/pkg/controller"
-	"github.com/open-cluster-management/multicloud-operators-channel/pkg/log/zap"
 	"github.com/open-cluster-management/multicloud-operators-channel/pkg/utils"
 	chWebhook "github.com/open-cluster-management/multicloud-operators-channel/pkg/webhook"
 
@@ -52,7 +53,6 @@ var (
 	metricsHost             = "0.0.0.0"
 	metricsPort         int = 8384
 	operatorMetricsPort int = 8687
-	setupLog                = logf.Log.WithName("setup")
 )
 
 const (
@@ -62,9 +62,24 @@ const (
 
 //RunManager initial controller, synchronizer and start manager
 func RunManager() {
-	logf.SetLogger(zap.Logger())
+	var err error
 
-	logger := logf.Log
+	var zapLog *uzap.Logger
+
+	zapLog, err = uzap.NewProduction()
+	if options.LogLevel == 2 {
+		zapLog, err = uzap.NewDevelopment()
+	}
+
+	if err != nil {
+		log.Fatal(err)
+		os.Exit(exitCode)
+	}
+
+	logf.SetLogger(zapr.NewLogger(zapLog))
+
+	logger := logf.Log.WithName("set up manager")
+
 	// Get a config to talk to the apiserver
 	cfg, err := config.GetConfig()
 	if err != nil {
@@ -73,11 +88,13 @@ func RunManager() {
 	}
 
 	enableLeaderElection := false
+
 	if _, err := rest.InClusterConfig(); err == nil {
-		klog.Info("LeaderElection enabled as running in a cluster")
+		logger.Info("LeaderElection enabled as running in a cluster")
+
 		enableLeaderElection = true
 	} else {
-		klog.Info("LeaderElection disabled as not running in a cluster")
+		logger.Info("LeaderElection disabled as not running in a cluster")
 	}
 
 	// Create a new Cmd to provide shared dependencies and start components
@@ -90,7 +107,7 @@ func RunManager() {
 	})
 
 	if err != nil {
-		klog.Error(err, "")
+		logger.Error(err, "failed to start manager")
 		os.Exit(1)
 	}
 
@@ -147,14 +164,14 @@ func RunManager() {
 	}
 
 	eventBroadcaster := record.NewBroadcaster()
-	eventBroadcaster.StartLogging(klog.Infof)
+	eventBroadcaster.StartLogging(logger.Info)
 	eventBroadcaster.StartRecordingToSink(&typedcorev1.EventSinkImpl{Interface: hubClientSet.CoreV1().Events("")})
 	recorder := eventBroadcaster.NewRecorder(mgr.GetScheme(), v1.EventSource{Component: "channel"})
 
 	// Setup all Controllers
 	logger.Info("Setting up controller")
 
-	if err := controller.AddToManager(mgr, recorder, logger.WithName("controllers"), chdesc, hsync); err != nil {
+	if err := controller.AddToManager(mgr, recorder, logf.Log.WithName("controllers"), chdesc, hsync); err != nil {
 		logger.Error(err, "unable to register controllers to the manager")
 		os.Exit(exitCode)
 	}
@@ -173,7 +190,7 @@ func RunManager() {
 		}
 
 		wbhLogger := func(w *chWebhook.WireUp) {
-			w.Logger = logger.WithName("channel-operator-duplicate-webhook")
+			w.Logger = logf.Log.WithName("channel-operator-duplicate-webhook")
 		}
 
 		wiredWebhook, err := chWebhook.NewWireUp(mgr, sig, wbhCertDir, wbhLogger, chWebhook.ValidateLogic)

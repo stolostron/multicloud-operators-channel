@@ -22,11 +22,17 @@ import (
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+
+	"github.com/go-logr/zapr"
+	"github.com/onsi/ginkgo/config"
+	"github.com/onsi/ginkgo/reporters"
+	"github.com/onsi/ginkgo/reporters/stenographer"
 	"github.com/onsi/gomega/gexec"
+	uzap "go.uber.org/zap"
 	"k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/client-go/rest"
+	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/envtest"
-	"sigs.k8s.io/controller-runtime/pkg/envtest/printer"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	"github.com/open-cluster-management/multicloud-operators-channel/pkg/apis"
@@ -41,9 +47,12 @@ var cCfg *rest.Config
 func TestChannelDeployableReconcile(t *testing.T) {
 	RegisterFailHandler(Fail)
 
-	RunSpecsWithDefaultAndCustomReporters(t,
-		"Deployable Controller Suite",
-		[]Reporter{printer.NewlineReporter{}})
+	noColor := true
+	gCfg := config.DefaultReporterConfigType{NoColor: noColor, Verbose: true}
+	//make sure the debug log is printed to he test env
+	rep := reporters.NewDefaultReporter(gCfg, stenographer.New(!noColor, false, os.Stdout))
+	RunSpecsWithCustomReporters(t,
+		"Deployable Controller Suite", []Reporter{rep})
 }
 
 var _ = BeforeSuite(func(done Done) {
@@ -74,6 +83,12 @@ var _ = BeforeSuite(func(done Done) {
 	cCfg, err = testEnv.Start()
 	Expect(err).ToNot(HaveOccurred())
 	Expect(cCfg).ToNot(BeNil())
+
+	//initialize the logger for test suit use
+	zapLog, err := uzap.NewDevelopment()
+	//zapLog, err := uzap.NewProduction()
+	Expect(err).ToNot(HaveOccurred())
+	ctrl.SetLogger(zapr.NewLogger(zapLog))
 
 	err = apis.AddToScheme(scheme.Scheme)
 	Expect(err).NotTo(HaveOccurred())

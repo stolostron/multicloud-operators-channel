@@ -22,12 +22,17 @@ import (
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+
+	"github.com/go-logr/zapr"
+	"github.com/onsi/ginkgo/config"
+	"github.com/onsi/ginkgo/reporters"
+	"github.com/onsi/ginkgo/reporters/stenographer"
 	"github.com/onsi/gomega/gexec"
+	uzap "go.uber.org/zap"
 	"k8s.io/client-go/kubernetes/scheme"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/envtest"
-	"sigs.k8s.io/controller-runtime/pkg/envtest/printer"
 	mgr "sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
@@ -43,9 +48,12 @@ var k8sClient client.Client
 func TestObjectBucketChannelReconcile(t *testing.T) {
 	RegisterFailHandler(Fail)
 
-	RunSpecsWithDefaultAndCustomReporters(t,
-		"Object Bucket Controller Suite",
-		[]Reporter{printer.NewlineReporter{}})
+	noColor := false
+	gCfg := config.DefaultReporterConfigType{NoColor: noColor, Verbose: true}
+	//make sure the debug log is printed to he test env
+	rep := reporters.NewDefaultReporter(gCfg, stenographer.New(!noColor, false, os.Stdout))
+	RunSpecsWithCustomReporters(t,
+		"Object Bucket Controller Suite", []Reporter{rep})
 }
 
 var _ = BeforeSuite(func(done Done) {
@@ -83,6 +91,13 @@ var _ = BeforeSuite(func(done Done) {
 
 	k8sManager, err = mgr.New(cfg, mgr.Options{MetricsBindAddress: "0"})
 	Expect(err).ToNot(HaveOccurred())
+
+	zapLog, err := uzap.NewDevelopment()
+
+	//zapLog, err := uzap.NewProduction()
+	Expect(err).ToNot(HaveOccurred())
+
+	ctrl.SetLogger(zapr.NewLogger(zapLog))
 
 	go func() {
 		err = k8sManager.Start(ctrl.SetupSignalHandler())

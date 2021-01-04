@@ -116,6 +116,7 @@ func (sync *ChannelSynchronizer) syncChannel(chn *chv1.Channel, localIdxFunc uti
 	}
 
 	chnRefSrt := &corev1.Secret{}
+
 	if chn.Spec.SecretRef != nil {
 		if chn.Spec.SecretRef.Namespace == "" {
 			chn.Spec.SecretRef.Namespace = chn.GetNamespace()
