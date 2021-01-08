@@ -29,6 +29,7 @@ import (
 
 	"github.com/go-logr/zapr"
 	uzap "go.uber.org/zap"
+	"go.uber.org/zap/zapcore"
 
 	admissionv1 "k8s.io/api/admissionregistration/v1"
 
@@ -66,7 +67,12 @@ func RunManager() {
 
 	var zapLog *uzap.Logger
 
-	zapLog, err = uzap.NewProduction()
+	logConfig := uzap.NewProductionConfig()
+
+	//making sure the time format in production is human readable
+	logConfig.EncoderConfig.EncodeTime = zapcore.ISO8601TimeEncoder
+	zapLog, err = logConfig.Build()
+
 	if options.LogLevel == 2 {
 		zapLog, err = uzap.NewDevelopment()
 	}

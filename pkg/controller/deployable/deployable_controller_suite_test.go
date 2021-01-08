@@ -24,6 +24,8 @@ import (
 	. "github.com/onsi/gomega"
 
 	"github.com/go-logr/zapr"
+	"go.uber.org/zap/zapcore"
+
 	"github.com/onsi/ginkgo/config"
 	"github.com/onsi/ginkgo/reporters"
 	"github.com/onsi/ginkgo/reporters/stenographer"
@@ -85,8 +87,13 @@ var _ = BeforeSuite(func(done Done) {
 	Expect(cCfg).ToNot(BeNil())
 
 	//initialize the logger for test suit use
-	zapLog, err := uzap.NewDevelopment()
+	//zapLog, err := uzap.NewDevelopment()
 	//zapLog, err := uzap.NewProduction()
+
+	logConfig := uzap.NewProductionConfig()
+	logConfig.EncoderConfig.EncodeTime = zapcore.ISO8601TimeEncoder
+	zapLog, err := logConfig.Build()
+
 	Expect(err).ToNot(HaveOccurred())
 	ctrl.SetLogger(zapr.NewLogger(zapLog))
 
