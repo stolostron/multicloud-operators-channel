@@ -27,7 +27,7 @@ BUILD_IMAGE=${IMAGE_NAME}:latest
 echo "travis parameters: event type $TRAVIS_EVENT_TYPE, pull request: $TRAVIS_PULL_REQUEST commit $TRAVIS_COMMIT\n"
 
 if [ "$TRAVIS_BUILD" != 1 ]; then
-    echo -e "Build is on Travis" 
+    echo -e "Build is on Travis"
 
 
     echo -e "\nGet kubectl binary\n"
@@ -91,7 +91,7 @@ if [ "$TRAVIS_BUILD" != 1 ]; then
     sleep 35
 fi
 
-echo -e "\nCheck if channel deploy is created\n" 
+echo -e "\nCheck if channel deploy is created\n"
 kubectl rollout status deployment/multicluster-operators-channel
 if [ $? != 0 ]; then
     echo "failed to deploy the channel operator"
@@ -109,7 +109,7 @@ kind get kubeconfig > cluster_config/hub
 # over here, we are build the test server on the fly since, the `go get` will
 # mess up the go.mod file when doing the local test
 echo -e "\nGet the applifecycle-backend-e2e data"
-go get github.com/open-cluster-management/applifecycle-backend-e2e@v0.1.6
+go get github.com/open-cluster-management/applifecycle-backend-e2e@v0.1.8
 
 E2E_BINARY_NAME="applifecycle-backend-e2e"
 
