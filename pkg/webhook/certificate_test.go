@@ -27,7 +27,7 @@ import (
 	k8scertutil "k8s.io/client-go/util/cert"
 )
 
-var _ = FDescribe("self-signed cert", func() {
+var _ = Describe("self-signed cert", func() {
 	var (
 		podNamespaceEnvVar = "POD_NAMESPACE"
 		webhookServiceName = "default"
