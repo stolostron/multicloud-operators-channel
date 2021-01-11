@@ -16,44 +16,37 @@ package webhook
 
 import (
 	"os"
-	"testing"
 
+	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/gomega"
 	k8scertutil "k8s.io/client-go/util/cert"
 )
 
-func TestGenerateSignedWebhookCertificates(t *testing.T) {
-	podNamespaceEnvVar := "POD_NAMESPACE"
-	webhookServiceName := "default"
+var _ = FDescribe("self-signed cert", func() {
+	var (
+		podNamespaceEnvVar = "POD_NAMESPACE"
+		webhookServiceName = "default"
+		certDir            = "/tmp/tmp-cert"
+	)
 
-	os.Setenv(podNamespaceEnvVar, "test")
+	It("should create CA and store it in secret, private key pairs should be created as well", func() {
+		os.Setenv(podNamespaceEnvVar, "test")
+		defer func() {
+			os.RemoveAll(certDir)
+			os.Unsetenv(podNamespaceEnvVar)
+		}()
 
-	certDir := "/tmp/tmp-cert"
+		podNs, err := findEnvVariable(podNamespaceEnvVar)
+		Expect(err).Should(Succeed())
 
-	defer func() {
-		os.RemoveAll(certDir)
-		os.Unsetenv(podNamespaceEnvVar)
-	}()
+		ca, err := GenerateWebhookCerts(k8sClient, certDir, podNs, webhookServiceName)
+		Expect(err).Should(Succeed())
+		Expect(ca).ShouldNot(BeNil())
 
-	podNs, err := findEnvVariable(podNamespaceEnvVar)
-	if err != nil {
-		t.Errorf("failed to get the pod namespace, %v", err)
-	}
+		isReadCertAndKey, err := k8scertutil.CanReadCertAndKey("/tmp/tmp-cert/tls.crt", "/tmp/tmp-cert/tls.key")
+		Expect(err).Should(Succeed())
+		Expect(isReadCertAndKey).Should(BeTrue())
 
-	ca, err := GenerateWebhookCerts(certDir, podNs, webhookServiceName)
-	if err != nil {
-		t.Errorf("Generate signed certificate failed, %v", err)
-	}
+	})
 
-	if ca == nil {
-		t.Errorf("Generate signed certificate failed")
-	}
-
-	canReadCertAndKey, err := k8scertutil.CanReadCertAndKey("/tmp/tmp-cert/tls.crt", "/tmp/tmp-cert/tls.key")
-	if err != nil {
-		t.Errorf("Generate signed certificate failed, %v", err)
-	}
-
-	if !canReadCertAndKey {
-		t.Errorf("Generate signed certificate failed")
-	}
-}
+})

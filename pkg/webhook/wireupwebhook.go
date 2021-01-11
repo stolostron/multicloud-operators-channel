@@ -128,7 +128,7 @@ func (w *WireUp) Attach() ([]byte, error) {
 	w.Logger.Info("registering webhooks to the webhook server")
 	w.Server.Register(w.ValidtorPath, &webhook.Admission{Handler: w.Handler})
 
-	return GenerateWebhookCerts(w.CertDir, w.WebHookeSvcKey.Namespace, w.WebHookeSvcKey.Name)
+	return GenerateWebhookCerts(w.mgr.GetClient(), w.CertDir, w.WebHookeSvcKey.Namespace, w.WebHookeSvcKey.Name)
 }
 
 type CleanUpFunc func(client.Client) error
@@ -160,6 +160,7 @@ func (w *WireUp) WireUpWebhookSupplymentryResource(caCert []byte, gvk schema.Gro
 	}
 
 	w.Logger.Info("cache is ready to consume")
+
 	for _, cf := range cFuncs {
 		if err := cf(w.mgr.GetClient()); err != nil {
 			return gerr.Wrap(err, "failed to clean up")

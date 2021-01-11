@@ -59,7 +59,7 @@ func (v *ChannelValidator) Handle(ctx context.Context, req admission.Request) ad
 
 	chList := &chv1.ChannelList{}
 	if err := v.List(ctx, chList, client.InNamespace(chn.GetNamespace())); err != nil {
-		return admission.Denied(fmt.Sprint("the hub cluster state is unknown"))
+		return admission.Denied("the hub cluster state is unknown")
 	}
 
 	if len(chList.Items) == 0 {
