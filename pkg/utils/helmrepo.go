@@ -40,8 +40,10 @@ func decideHTTPClient(repoURL string, insecureSkipVerify bool, chnRefCfgMap *cor
 
 	if insecureSkipVerify {
 		logger.Info("Channel spec has insecureSkipVerify: true. Skipping server certificate verification.")
+
 		tlsConfig.InsecureSkipVerify = true
 	}
+
 	if chnRefCfgMap != nil && chnRefCfgMap.Data[InsecureSkipVerifyFlag] != "" {
 		b, err := strconv.ParseBool(chnRefCfgMap.Data[InsecureSkipVerifyFlag])
 		if err != nil {
@@ -72,7 +74,8 @@ func buildRepoURL(repoURL string) string {
 	return validURL + "index.yaml"
 }
 
-func GetChartIndex(chnPathname string, insecureSkipVerify bool, srt *corev1.Secret, chnRefCfgMap *corev1.ConfigMap, logger logr.Logger) (*http.Response, error) {
+func GetChartIndex(chnPathname string, insecureSkipVerify bool, srt *corev1.Secret,
+	chnRefCfgMap *corev1.ConfigMap, logger logr.Logger) (*http.Response, error) {
 	repoURL := buildRepoURL(chnPathname)
 
 	client := decideHTTPClient(repoURL, insecureSkipVerify, chnRefCfgMap, logger)
@@ -93,7 +96,7 @@ func GetChartIndex(chnPathname string, insecureSkipVerify bool, srt *corev1.Secr
 			return nil, fmt.Errorf("password not found in secret for basic authentication")
 		}
 
-		req.SetBasicAuth(string(user), string(password))
+		req.SetBasicAuth(user, password)
 	}
 
 	return client.Do(req)

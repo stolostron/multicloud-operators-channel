@@ -134,6 +134,7 @@ func getCredentialFromKube(secretRef *corev1.ObjectReference, defaultNs string, 
 	}
 
 	accessKeyID, secretAccessKey = ParseSecertInfo(secret)
+
 	return accessKeyID, secretAccessKey, nil
 }
 

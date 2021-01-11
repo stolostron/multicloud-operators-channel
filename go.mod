@@ -16,7 +16,7 @@ require (
 	github.com/onsi/ginkgo v1.12.1
 	github.com/onsi/gomega v1.10.1
 	github.com/open-cluster-management/api v0.0.0-20201007180356-41d07eee4294
-	github.com/open-cluster-management/applifecycle-backend-e2e v0.1.6 // indirect
+	github.com/open-cluster-management/applifecycle-backend-e2e v0.1.8 // indirect
 	github.com/open-cluster-management/multicloud-operators-deployable v1.2.2-2-20201130-7bc3c
 	github.com/open-cluster-management/multicloud-operators-placementrule v1.2.2-2-20201130-98cfd
 	github.com/pkg/errors v0.9.1
@@ -27,9 +27,9 @@ require (
 	golang.org/x/sys v0.0.0-20200814200057-3d37ad5750ed // indirect
 	google.golang.org/protobuf v1.25.0 // indirect
 	gopkg.in/yaml.v3 v3.0.0-20200615113413-eeeca48fe776 // indirect
-	k8s.io/api v0.19.3
+	k8s.io/api v0.19.4
 	k8s.io/apiextensions-apiserver v0.19.3
-	k8s.io/apimachinery v0.19.3
+	k8s.io/apimachinery v0.19.4
 	k8s.io/client-go v12.0.0+incompatible
 	k8s.io/helm v2.17.0+incompatible
 	k8s.io/klog v1.0.0
