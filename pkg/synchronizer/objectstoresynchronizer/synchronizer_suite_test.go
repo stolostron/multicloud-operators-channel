@@ -22,6 +22,14 @@ import (
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+
+	"github.com/go-logr/zapr"
+
+	"github.com/onsi/ginkgo/config"
+	"github.com/onsi/ginkgo/reporters"
+	"github.com/onsi/ginkgo/reporters/stenographer"
+	uzap "go.uber.org/zap"
+
 	"github.com/onsi/gomega/gexec"
 	ctrl "sigs.k8s.io/controller-runtime"
 	mgr "sigs.k8s.io/controller-runtime/pkg/manager"
@@ -29,7 +37,6 @@ import (
 	"k8s.io/client-go/kubernetes/scheme"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/envtest"
-	"sigs.k8s.io/controller-runtime/pkg/envtest/printer"
 
 	chv1 "github.com/open-cluster-management/multicloud-operators-channel/pkg/apis/apps/v1"
 	"github.com/open-cluster-management/multicloud-operators-deployable/pkg/apis"
@@ -43,9 +50,12 @@ var k8sClient client.Client
 func TestGitHubChannelReconcile(t *testing.T) {
 	RegisterFailHandler(Fail)
 
-	RunSpecsWithDefaultAndCustomReporters(t,
-		"Controller Suite",
-		[]Reporter{printer.NewlineReporter{}})
+	noColor := true
+	gCfg := config.DefaultReporterConfigType{NoColor: noColor, Verbose: true}
+
+	rep := reporters.NewDefaultReporter(gCfg, stenographer.New(!noColor, false, os.Stdout))
+	RunSpecsWithCustomReporters(t,
+		"Object Synchronizer Suite", []Reporter{rep})
 }
 
 var _ = BeforeSuite(func(done Done) {
@@ -83,6 +93,13 @@ var _ = BeforeSuite(func(done Done) {
 
 	k8sManager, err = mgr.New(cfg, mgr.Options{MetricsBindAddress: "0"})
 	Expect(err).ToNot(HaveOccurred())
+
+	//initialize the logger for test suit use
+	zapLog, err := uzap.NewDevelopment()
+	//zapLog, err := uzap.NewProduction()
+	Expect(err).ToNot(HaveOccurred())
+
+	ctrl.SetLogger(zapr.NewLogger(zapLog))
 
 	go func() {
 		err = k8sManager.Start(ctrl.SetupSignalHandler())
