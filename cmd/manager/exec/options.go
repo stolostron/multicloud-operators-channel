@@ -25,7 +25,7 @@ type ChannelCMDOptions struct {
 	SyncInterval int
 	LeaderElect  bool
 	Debug        bool
-	LogLevel     int
+	LogLevel     bool
 }
 
 var (
@@ -33,7 +33,7 @@ var (
 		MetricsAddr:  "",
 		SyncInterval: defaultSyncInterval,
 		Debug:        false,
-		LogLevel:     1,
+		LogLevel:     false,
 	}
 )
 
@@ -85,10 +85,10 @@ func ProcessFlags() {
 		"if debug is true, then webhooks will be created",
 	)
 
-	flag.IntVar(
+	flag.BoolVar(
 		&options.LogLevel,
-		"loglevel",
-		1,
-		"log level, default only log INFO, set to 2 for debugging",
+		"zap-devel",
+		false,
+		"zap-devel, default only log INFO(fasle), set to true for debugging",
 	)
 }

@@ -123,7 +123,7 @@ sleep 10
 
 
 echo -e "\nStart to run e2e test(s)\n"
-go test -v ./e2e
+go test -v -count=1 ./e2e
 
 echo -e "\nTerminate the running test server\n"
 ps aux | grep ${E2E_BINARY_NAME} | grep -v 'grep' | awk '{print $2}' | xargs kill -9

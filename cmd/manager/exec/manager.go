@@ -73,7 +73,7 @@ func RunManager() {
 	logConfig.EncoderConfig.EncodeTime = zapcore.ISO8601TimeEncoder
 	zapLog, err = logConfig.Build()
 
-	if options.LogLevel == 2 {
+	if options.LogLevel {
 		zapLog, err = uzap.NewDevelopment()
 	}
 
