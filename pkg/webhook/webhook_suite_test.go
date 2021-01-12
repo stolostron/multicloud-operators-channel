@@ -20,9 +20,16 @@ import (
 	"testing"
 	"time"
 
+	"github.com/go-logr/zapr"
+
 	. "github.com/onsi/ginkgo"
+	"github.com/onsi/ginkgo/config"
+	"github.com/onsi/ginkgo/reporters"
+	"github.com/onsi/ginkgo/reporters/stenographer"
 	. "github.com/onsi/gomega"
+
 	"github.com/onsi/gomega/gexec"
+	uzap "go.uber.org/zap"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/kubernetes/scheme"
@@ -35,7 +42,6 @@ import (
 
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/envtest"
-	"sigs.k8s.io/controller-runtime/pkg/envtest/printer"
 
 	"github.com/open-cluster-management/multicloud-operators-channel/pkg/apis"
 	chv1 "github.com/open-cluster-management/multicloud-operators-channel/pkg/apis/apps/v1"
@@ -60,9 +66,12 @@ var (
 func TestChannelWebhook(t *testing.T) {
 	RegisterFailHandler(Fail)
 
-	RunSpecsWithDefaultAndCustomReporters(t,
-		"Channel webhook",
-		[]Reporter{printer.NewlineReporter{}})
+	noColor := true
+	gCfg := config.DefaultReporterConfigType{NoColor: noColor, Verbose: true}
+
+	rep := reporters.NewDefaultReporter(gCfg, stenographer.New(!noColor, false, os.Stdout))
+	RunSpecsWithCustomReporters(t,
+		"Channel webhook Suite", []Reporter{rep})
 }
 
 var _ = BeforeSuite(func(done Done) {
@@ -107,6 +116,13 @@ var _ = BeforeSuite(func(done Done) {
 	})
 
 	Expect(err).NotTo(HaveOccurred())
+
+	zapLog, err := uzap.NewDevelopment()
+
+	//zapLog, err := uzap.NewProduction()
+	Expect(err).ToNot(HaveOccurred())
+
+	ctrl.SetLogger(zapr.NewLogger(zapLog))
 
 	hookServer := k8sManager.GetWebhookServer()
 
