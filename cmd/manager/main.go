@@ -21,8 +21,6 @@ import (
 
 	"github.com/spf13/pflag"
 
-	"github.com/open-cluster-management/multicloud-operators-channel/pkg/log/zap"
-
 	"github.com/open-cluster-management/multicloud-operators-channel/cmd/manager/exec"
 )
 
@@ -31,7 +29,6 @@ func main() {
 	exec.ProcessFlags()
 
 	klog.InitFlags(nil)
-	pflag.CommandLine.AddFlagSet(zap.FlagSet())
 
 	pflag.CommandLine.AddGoFlagSet(flag.CommandLine)
 

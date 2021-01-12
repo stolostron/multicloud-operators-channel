@@ -160,6 +160,7 @@ func (w *WireUp) WireUpWebhookSupplymentryResource(caCert []byte, gvk schema.Gro
 	}
 
 	w.Logger.Info("cache is ready to consume")
+
 	for _, cf := range cFuncs {
 		if err := cf(w.mgr.GetClient()); err != nil {
 			return gerr.Wrap(err, "failed to clean up")

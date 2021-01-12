@@ -52,7 +52,7 @@ const (
 )
 
 var (
-	// AnnotationHosting defines the subscription hosting the resource
+	// AnnotationSubHosting defines the subscription hosting the resource
 	AnnotationSubHosting = chv1.SchemeGroupVersion.Group + "/hosting-subscription"
 	AnnotationDplHosting = chv1.SchemeGroupVersion.Group + "/hosting-deployable"
 	LabelHosting         = chv1.SchemeGroupVersion.Group + "/subscription"
