@@ -51,8 +51,10 @@ else
 endif
 
 .PHONY: fmt lint test coverage build build-images
-ifneq ("$(realpath $(DEST))", "$(realpath $(PWD))")
-    $(error Please run 'make' from $(DEST). Current directory is $(PWD))
+ifeq ($(TRAVIS_BUILD),1)
+	ifneq ("$(realpath $(DEST))", "$(realpath $(PWD))")
+	    $(error Please run 'make' from $(DEST). Current directory is $(PWD))
+	endif
 endif
 
 # GITHUB_USER containing '@' char must be escaped with '%40'

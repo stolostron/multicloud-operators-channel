@@ -61,7 +61,7 @@ func getSelfSignedCACert(clt client.Client, certName string, srtKey types.Namesp
 	//can't find the secret
 	if err := clt.Get(ctx, srtKey, srtIns); err != nil {
 		if !kerr.IsNotFound(err) {
-			return Certificate{}, err
+			return Certificate{}, fmt.Errorf("failed to get CA secret %w", err)
 		}
 
 		ca, err := GenerateSelfSignedCACert(certName)
@@ -75,7 +75,7 @@ func getSelfSignedCACert(clt client.Client, certName string, srtKey types.Namesp
 		srtIns.Data = map[string][]byte{"crt": []byte(ca.Cert), "key": []byte(ca.Key)}
 
 		if err := clt.Create(ctx, srtIns); err != nil {
-			return Certificate{}, err
+			return Certificate{}, fmt.Errorf("failed to create CA secret %w", err)
 		}
 
 		return ca, nil

@@ -18,7 +18,6 @@ import (
 	"fmt"
 	"log"
 	"os"
-	"path/filepath"
 
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/client-go/kubernetes"
@@ -33,6 +32,7 @@ import (
 
 	admissionv1 "k8s.io/api/admissionregistration/v1"
 
+	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/config"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/manager/signals"
@@ -191,29 +191,27 @@ func RunManager() {
 	if !options.Debug {
 		logger.Info("setting up webhook server")
 
-		wbhCertDir := func(w *chWebhook.WireUp) {
-			w.CertDir = filepath.Join(os.TempDir(), "k8s-webhook-server", "serving-certs")
-		}
-
-		wbhLogger := func(w *chWebhook.WireUp) {
-			w.Logger = logf.Log.WithName("channel-operator-duplicate-webhook")
-		}
-
-		wiredWebhook, err := chWebhook.NewWireUp(mgr, sig, wbhCertDir, wbhLogger, chWebhook.ValidateLogic)
+		wiredWebhook, err := chWebhook.NewWireUp(mgr, sig, chWebhook.ValidateLogic)
 		if err != nil {
 			logger.Error(err, "failed to initial wire up webhook")
 			os.Exit(exitCode)
 		}
 
-		caCert, err := wiredWebhook.Attach()
+		clt, err := client.New(ctrl.GetConfigOrDie(), client.Options{})
 		if err != nil {
-			logger.Error(err, "failed to wire up webhook")
+			logger.Error(err, "failed to create a client for webhook to get CA cert secret")
+			os.Exit(exitCode)
+		}
+
+		caCert, err := wiredWebhook.Attach(clt)
+		if err != nil {
+			logger.Error(err, "failed to attach webhook")
 			os.Exit(exitCode)
 		}
 
 		go func() {
-			if err := wiredWebhook.WireUpWebhookSupplymentryResource(caCert,
-				chv1.SchemeGroupVersion.WithKind(kindName), []admissionv1.OperationType{admissionv1.Create}, chWebhook.DelPreValiationCfg20); err != nil {
+			if err := wiredWebhook.WireUpWebhookSupplymentryResource(caCert, chv1.SchemeGroupVersion.WithKind(kindName),
+				[]admissionv1.OperationType{admissionv1.Create}, chWebhook.DelPreValiationCfg20); err != nil {
 				logger.Error(err, "failed to set up webhook configuration")
 				os.Exit(exitCode)
 			}

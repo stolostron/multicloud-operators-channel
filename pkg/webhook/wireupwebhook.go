@@ -93,7 +93,7 @@ func NewWireUp(mgr manager.Manager, stop <-chan struct{},
 		mgr:    mgr,
 		stop:   stop,
 		Server: mgr.GetWebhookServer(),
-		Logger: logf.Log,
+		Logger: logf.Log.WithName("webhook"),
 
 		WebhookName:        WebhookName,
 		WebHookPort:        9443,
@@ -122,13 +122,16 @@ func GetWebHookServiceName(wbhName string) string {
 	return wbhName + "-svc"
 }
 
-func (w *WireUp) Attach() ([]byte, error) {
+func (w *WireUp) Attach(clt client.Client) ([]byte, error) {
+	w.Logger.Info("entry Attach webhook")
+	defer w.Logger.Info("exit Attach webhook")
+
 	w.Server.Port = w.WebHookPort
 
 	w.Logger.Info("registering webhooks to the webhook server")
 	w.Server.Register(w.ValidtorPath, &webhook.Admission{Handler: w.Handler})
 
-	return GenerateWebhookCerts(w.mgr.GetClient(), w.CertDir, w.WebHookeSvcKey.Namespace, w.WebHookeSvcKey.Name)
+	return GenerateWebhookCerts(clt, w.CertDir, w.WebHookeSvcKey.Namespace, w.WebHookeSvcKey.Name)
 }
 
 type CleanUpFunc func(client.Client) error
@@ -152,8 +155,8 @@ func DelPreValiationCfg20(clt client.Client) error {
 //assuming we have a service set up for the webhook, and the service is linking
 //to a secret which has the CA
 func (w *WireUp) WireUpWebhookSupplymentryResource(caCert []byte, gvk schema.GroupVersionKind, ops []admissionv1.OperationType, cFuncs ...CleanUpFunc) error {
-	w.Logger.Info("entry wire up webhook")
-	defer w.Logger.Info("exit wire up webhook ")
+	w.Logger.Info("entry wire up webhook resources")
+	defer w.Logger.Info("exit wire up webhook resources")
 
 	if !w.mgr.GetCache().WaitForCacheSync(w.stop) {
 		w.Logger.Error(gerr.New("cache not started"), "failed to start up cache")
