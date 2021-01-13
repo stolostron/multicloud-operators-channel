@@ -16,6 +16,7 @@ package webhook
 
 import (
 	"bytes"
+	"context"
 	"crypto/rand"
 	"crypto/rsa"
 	"crypto/x509"
@@ -29,6 +30,14 @@ import (
 	"os"
 	"path/filepath"
 	"time"
+
+	corev1 "k8s.io/api/core/v1"
+
+	"k8s.io/apimachinery/pkg/types"
+
+	kerr "k8s.io/apimachinery/pkg/api/errors"
+
+	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 const (
@@ -43,9 +52,46 @@ type Certificate struct {
 	Key  string
 }
 
+//getSelfSignedCACert will try to get the CA from the secret, if it doesn't exit, then
+// it will generate a self singed CA cert and store it to the secret.
+func getSelfSignedCACert(clt client.Client, certName string, srtKey types.NamespacedName) (Certificate, error) {
+	srtIns := &corev1.Secret{}
+	ctx := context.TODO()
+
+	//can't find the secret
+	if err := clt.Get(ctx, srtKey, srtIns); err != nil {
+		if !kerr.IsNotFound(err) {
+			return Certificate{}, fmt.Errorf("failed to get CA secret %w", err)
+		}
+
+		ca, err := GenerateSelfSignedCACert(certName)
+		if err != nil {
+			return ca, err
+		}
+
+		srtIns.Name = srtKey.Name
+		srtIns.Namespace = srtKey.Namespace
+		//this will be base64 encode on when viewing via kubectl
+		srtIns.Data = map[string][]byte{"crt": []byte(ca.Cert), "key": []byte(ca.Key)}
+
+		if err := clt.Create(ctx, srtIns); err != nil {
+			return Certificate{}, fmt.Errorf("failed to create CA secret %w", err)
+		}
+
+		return ca, nil
+	}
+
+	ca := Certificate{
+		Cert: string(srtIns.Data["crt"]),
+		Key:  string(srtIns.Data["key"]),
+	}
+
+	return ca, nil
+}
+
 // GenerateWebhookCerts generate self singed CA and a signed cert pair. The
 // signed pair is stored at the certDir. The CA will respect the inCluster DNS
-func GenerateWebhookCerts(certDir, webhookServiceNs, webhookServiceName string) ([]byte, error) {
+func GenerateWebhookCerts(clt client.Client, certDir, webhookServiceNs, webhookServiceName string) ([]byte, error) {
 	if len(certDir) == 0 {
 		certDir = filepath.Join(os.TempDir(), "k8s-webhook-server", "serving-certs")
 	}
@@ -56,7 +102,9 @@ func GenerateWebhookCerts(certDir, webhookServiceNs, webhookServiceName string) 
 		fmt.Sprintf("%s.%s.svc.cluster.local", webhookServiceName, webhookServiceNs),
 	}
 
-	ca, err := GenerateSelfSignedCACert(certName)
+	srtKey := types.NamespacedName{Name: webhookServiceName, Namespace: webhookServiceNs}
+
+	ca, err := getSelfSignedCACert(clt, certName, srtKey)
 	if err != nil {
 		return nil, err
 	}

@@ -25,7 +25,10 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 	mgr "sigs.k8s.io/controller-runtime/pkg/manager"
+
+	ctrl "sigs.k8s.io/controller-runtime"
 )
 
 var _ = PDescribe("test if webhook's supplymentryResource create properly", func() {
@@ -62,7 +65,10 @@ var _ = PDescribe("test if webhook's supplymentryResource create properly", func
 			wireUp, err := NewWireUp(lMgr, sstop, wbhNameSetUp)
 			Expect(err).NotTo(HaveOccurred())
 
-			caCert, err := wireUp.Attach()
+			clt, err := client.New(ctrl.GetConfigOrDie(), client.Options{})
+			Expect(err).NotTo(HaveOccurred())
+
+			caCert, err := wireUp.Attach(clt)
 			Expect(err).NotTo(HaveOccurred())
 
 			wireUp.WireUpWebhookSupplymentryResource(caCert,

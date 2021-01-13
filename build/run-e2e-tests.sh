@@ -51,6 +51,8 @@ if [ "$TRAVIS_BUILD" != 1 ]; then
 else
     echo -e "\nBuild is on Local ENV, will delete the API container first\n"
     docker kill e2e || true
+     BUILD_IMAGE=${IMAGE_NAME}:latest
+    sed -i -e "s|image: .*:community-latest$|image: $BUILD_IMAGE|" deploy/standalone/operator.yaml
 fi
 
 kind delete cluster
@@ -101,7 +103,7 @@ fi
 echo -e "\nRun API test server\n"
 mkdir -p cluster_config
 kind get kubeconfig > cluster_config/hub
-
+kubectl get po -A
 # over here, we are using test server binary and run it on the host instead of
 # run the server in a docker container is due to the fact that, on macOS it's
 # very hard to map the host network to container
@@ -121,11 +123,18 @@ ${E2E_BINARY_NAME} -cfg cluster_config &
 
 sleep 10
 
+function cleanup()
+{
+    echo -e "\nTerminate the running test server\n"
+	ps aux | grep ${E2E_BINARY_NAME} | grep -v 'grep' | awk '{print $2}' | xargs kill -9
+
+	kubectl get po -A
+}
+
+trap cleanup EXIT
 
 echo -e "\nStart to run e2e test(s)\n"
 go test -v -count=1 ./e2e
 
-echo -e "\nTerminate the running test server\n"
-ps aux | grep ${E2E_BINARY_NAME} | grep -v 'grep' | awk '{print $2}' | xargs kill -9
 
 exit 0;
