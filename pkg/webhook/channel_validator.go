@@ -20,6 +20,7 @@ import (
 	"net/http"
 	"strings"
 
+	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
 
@@ -66,7 +67,8 @@ func (v *ChannelValidator) Handle(ctx context.Context, req admission.Request) ad
 		return admission.Allowed("")
 	}
 
-	if v, ok := isAllGit(chList); !ok {
+	inKey := types.NamespacedName{Name: chn.GetName(), Namespace: chn.GetNamespace()}
+	if v, ok := isGitOrSameKey(chList, inKey); !ok {
 		return admission.Denied(fmt.Sprintf("the namespace %v already contains a channel: %v",
 			chn.GetNamespace(), v))
 	}
@@ -74,11 +76,21 @@ func (v *ChannelValidator) Handle(ctx context.Context, req admission.Request) ad
 	return admission.Allowed("")
 }
 
-func isAllGit(chList *chv1.ChannelList) (string, bool) {
+//isGitOrSameKey will check: 1, if the exist channel in the request namespace
+// is a git git channel, if so, pass the request
+// 2. if the exist channel has the same name as the request channel, if so,
+// pass the request and let the k8s api server handle it(eventually reject
+//the request with 409)
+// 3. request all the requesting channel, that doesnt meet the above rule
+func isGitOrSameKey(chList *chv1.ChannelList, inReq types.NamespacedName) (string, bool) {
 	for _, chn := range chList.Items {
 		chnType := string(chn.Spec.Type)
 		if strings.EqualFold(chnType, chv1.ChannelTypeGit) || strings.EqualFold(chnType, chv1.ChannelTypeGitHub) {
 			continue
+		}
+
+		if chn.GetName() == inReq.Name {
+			return "", true
 		}
 
 		return chn.GetName(), false

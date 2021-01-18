@@ -19,9 +19,9 @@ import (
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-	"k8s.io/apimachinery/pkg/types"
-
+	kerr "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/types"
 
 	chv1 "github.com/open-cluster-management/multicloud-operators-channel/pkg/apis/apps/v1"
 )
@@ -281,6 +281,25 @@ var _ = Describe("test channel validation logic", func() {
 
 			Expect(k8sClient.Create(context.TODO(), dupChn)).ShouldNot(Succeed())
 		})
-	})
 
+		It("shouldn't create 2nd namespace type channel(same name) when , with 409(AlreadyExists)", func() {
+			dupChn := chnIns.DeepCopy()
+			dupChn.Spec.Type = chv1.ChannelTypeNamespace
+			err := k8sClient.Create(context.TODO(), dupChn)
+			Expect(kerr.IsAlreadyExists(err)).Should(BeTrue())
+		})
+
+		It("shouldn't create 2nd objectbucket type channel(same name) when , with 409(AlreadyExists)", func() {
+			dupChn := chnIns.DeepCopy()
+			dupChn.Spec.Type = chv1.ChannelTypeObjectBucket
+			err := k8sClient.Create(context.TODO(), dupChn)
+			Expect(kerr.IsAlreadyExists(err)).Should(BeTrue())
+		})
+
+		It("shouldn't create 2nd helm(same name) channel when , with 409(AlreadyExists)", func() {
+			dupChn := chnIns.DeepCopy()
+			err := k8sClient.Create(context.TODO(), dupChn)
+			Expect(kerr.IsAlreadyExists(err)).Should(BeTrue())
+		})
+	})
 })
