@@ -128,7 +128,7 @@ func getSignedCert(clt client.Client, whKey types.NamespacedName,
 		srtIns.Name = persistSrtKey.Name
 		srtIns.Namespace = persistSrtKey.Namespace
 		srtIns.Type = corev1.SecretTypeTLS
-		srtIns.Data = map[string][]byte{tlsCrt: []byte(ca.Cert), tlsKey: []byte(ca.Key)}
+		srtIns.Data = map[string][]byte{tlsCrt: []byte(cert.Cert), tlsKey: []byte(cert.Key)}
 
 		if err := clt.Create(ctx, srtIns); err != nil {
 			return Certificate{}, fmt.Errorf("failed to create CA secret %w", err)
