@@ -36,7 +36,7 @@ var _ = Describe("self-signed cert", func() {
 		certName           = "test-cert-name"
 	)
 
-	It("should create CA and store it in secret if secret doesn't exist, private key pairs should be created as well", func() {
+	It("should create CA and store it in secret if secret doesn't exist, private key pairs should be created and put into a secret as well", func() {
 		os.Setenv(podNamespaceEnvVar, "test")
 		defer func() {
 			os.RemoveAll(certDir)
@@ -54,36 +54,81 @@ var _ = Describe("self-signed cert", func() {
 		Expect(err).Should(Succeed())
 		Expect(isReadCertAndKey).Should(BeTrue())
 
-		srtKey := types.NamespacedName{Name: webhookServiceName, Namespace: podNs}
+		whKey := types.NamespacedName{Name: webhookServiceName, Namespace: podNs}
 
 		srtIns := &corev1.Secret{}
-		Expect(k8sClient.Get(context.TODO(), srtKey, srtIns)).Should(Succeed())
+		Expect(k8sClient.Get(context.TODO(), getCASecretKey(whKey), srtIns)).Should(Succeed())
 		defer func() {
 			Expect(k8sClient.Delete(context.TODO(), srtIns)).Should(Succeed())
 		}()
 
-		Expect(srtIns.Data["crt"]).ShouldNot(HaveLen(0))
-		Expect(srtIns.Data["key"]).ShouldNot(HaveLen(0))
+		Expect(srtIns.Data[tlsCrt]).ShouldNot(HaveLen(0))
+		Expect(srtIns.Data[tlsKey]).ShouldNot(HaveLen(0))
+
+		signedSrtIns := &corev1.Secret{}
+		Expect(k8sClient.Get(context.TODO(), getSignedCASecretKey(whKey), signedSrtIns)).Should(Succeed())
+		defer func() {
+			Expect(k8sClient.Delete(context.TODO(), signedSrtIns)).Should(Succeed())
+		}()
+
+		Expect(signedSrtIns.Data[tlsCrt]).ShouldNot(HaveLen(0))
+		Expect(signedSrtIns.Data[tlsKey]).ShouldNot(HaveLen(0))
 	})
 
 	It("should get self-signed CA cert from exist secret", func() {
 		cert := "my cert"
 		key := "my key"
+		whKey := types.NamespacedName{
+			Name:      webhookServiceName,
+			Namespace: webhookServiceNs,
+		}
+
+		srtKey := getCASecretKey(whKey)
 		srtIns := &corev1.Secret{
 			ObjectMeta: metav1.ObjectMeta{
-				Name:      webhookServiceName,
-				Namespace: webhookServiceNs,
+				Name:      srtKey.Name,
+				Namespace: srtKey.Namespace,
 			},
 
 			Data: map[string][]byte{
-				"crt": []byte(cert),
-				"key": []byte(key),
+				tlsCrt: []byte(cert),
+				tlsKey: []byte(key),
 			},
 		}
 
 		Expect(k8sClient.Create(context.TODO(), srtIns)).Should(Succeed())
 
-		ca, err := getSelfSignedCACert(k8sClient, certName, types.NamespacedName{Name: srtIns.Name, Namespace: srtIns.Namespace})
+		ca, err := getSelfSignedCACert(k8sClient, certName, whKey)
+		Expect(err).Should(Succeed())
+
+		Expect(ca.Cert).Should(Equal(cert))
+		Expect(ca.Key).Should(Equal(key))
+	})
+
+	It("should get signed cert from exist secret", func() {
+		cert := "my cert"
+		key := "my key"
+		whKey := types.NamespacedName{
+			Name:      webhookServiceName,
+			Namespace: webhookServiceNs,
+		}
+
+		srtKey := getSignedCASecretKey(whKey)
+		srtIns := &corev1.Secret{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      srtKey.Name,
+				Namespace: srtKey.Namespace,
+			},
+
+			Data: map[string][]byte{
+				tlsCrt: []byte(cert),
+				tlsKey: []byte(key),
+			},
+		}
+
+		Expect(k8sClient.Create(context.TODO(), srtIns)).Should(Succeed())
+
+		ca, err := getSignedCert(k8sClient, whKey, []string{}, Certificate{})
 		Expect(err).Should(Succeed())
 
 		Expect(ca.Cert).Should(Equal(cert))

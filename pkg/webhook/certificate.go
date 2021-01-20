@@ -44,6 +44,8 @@ const (
 	rsaKeySize   = 2048
 	duration365d = time.Hour * 24 * 365
 	certName     = "multicluster-channel-webhook"
+	tlsCrt       = "tls.crt"
+	tlsKey       = "tls.key"
 )
 
 // Certificate defines a typical cert structure
@@ -52,14 +54,29 @@ type Certificate struct {
 	Key  string
 }
 
+func getCASecretKey(whKey types.NamespacedName) types.NamespacedName {
+	return types.NamespacedName{
+		Name:      fmt.Sprintf("%s-ca", whKey.Name),
+		Namespace: whKey.Namespace,
+	}
+}
+
+func getSignedCASecretKey(whKey types.NamespacedName) types.NamespacedName {
+	return types.NamespacedName{
+		Name:      fmt.Sprintf("%s-signed-ca", whKey.Name),
+		Namespace: whKey.Namespace,
+	}
+}
+
 //getSelfSignedCACert will try to get the CA from the secret, if it doesn't exit, then
 // it will generate a self singed CA cert and store it to the secret.
-func getSelfSignedCACert(clt client.Client, certName string, srtKey types.NamespacedName) (Certificate, error) {
+func getSelfSignedCACert(clt client.Client, certName string, whKey types.NamespacedName) (Certificate, error) {
 	srtIns := &corev1.Secret{}
 	ctx := context.TODO()
 
+	persistSrtKey := getCASecretKey(whKey)
 	//can't find the secret
-	if err := clt.Get(ctx, srtKey, srtIns); err != nil {
+	if err := clt.Get(ctx, persistSrtKey, srtIns); err != nil {
 		if !kerr.IsNotFound(err) {
 			return Certificate{}, fmt.Errorf("failed to get CA secret %w", err)
 		}
@@ -69,10 +86,11 @@ func getSelfSignedCACert(clt client.Client, certName string, srtKey types.Namesp
 			return ca, err
 		}
 
-		srtIns.Name = srtKey.Name
-		srtIns.Namespace = srtKey.Namespace
+		srtIns.Name = persistSrtKey.Name
+		srtIns.Namespace = persistSrtKey.Namespace
 		//this will be base64 encode on when viewing via kubectl
-		srtIns.Data = map[string][]byte{"crt": []byte(ca.Cert), "key": []byte(ca.Key)}
+		srtIns.Type = corev1.SecretTypeTLS
+		srtIns.Data = map[string][]byte{tlsCrt: []byte(ca.Cert), tlsKey: []byte(ca.Key)}
 
 		if err := clt.Create(ctx, srtIns); err != nil {
 			return Certificate{}, fmt.Errorf("failed to create CA secret %w", err)
@@ -82,11 +100,49 @@ func getSelfSignedCACert(clt client.Client, certName string, srtKey types.Namesp
 	}
 
 	ca := Certificate{
-		Cert: string(srtIns.Data["crt"]),
-		Key:  string(srtIns.Data["key"]),
+		Cert: string(srtIns.Data[tlsCrt]),
+		Key:  string(srtIns.Data[tlsKey]),
 	}
 
 	return ca, nil
+}
+
+func getSignedCert(clt client.Client, whKey types.NamespacedName,
+	alternateDNS []string, ca Certificate) (Certificate, error) {
+	srtIns := &corev1.Secret{}
+	ctx := context.TODO()
+
+	persistSrtKey := getSignedCASecretKey(whKey)
+
+	//can't find the secret
+	if err := clt.Get(ctx, persistSrtKey, srtIns); err != nil {
+		if !kerr.IsNotFound(err) {
+			return Certificate{}, fmt.Errorf("failed to get CA secret %w", err)
+		}
+
+		cert, err := GenerateSignedCert(whKey.Name, alternateDNS, ca)
+		if err != nil {
+			return cert, err
+		}
+
+		srtIns.Name = persistSrtKey.Name
+		srtIns.Namespace = persistSrtKey.Namespace
+		srtIns.Type = corev1.SecretTypeTLS
+		srtIns.Data = map[string][]byte{tlsCrt: []byte(ca.Cert), tlsKey: []byte(ca.Key)}
+
+		if err := clt.Create(ctx, srtIns); err != nil {
+			return Certificate{}, fmt.Errorf("failed to create CA secret %w", err)
+		}
+
+		return cert, nil
+	}
+
+	cert := Certificate{
+		Cert: string(srtIns.Data[tlsCrt]),
+		Key:  string(srtIns.Data[tlsKey]),
+	}
+
+	return cert, nil
 }
 
 // GenerateWebhookCerts generate self singed CA and a signed cert pair. The
@@ -96,20 +152,20 @@ func GenerateWebhookCerts(clt client.Client, certDir, webhookServiceNs, webhookS
 		certDir = filepath.Join(os.TempDir(), "k8s-webhook-server", "serving-certs")
 	}
 
+	whKey := types.NamespacedName{Name: webhookServiceName, Namespace: webhookServiceNs}
+
+	ca, err := getSelfSignedCACert(clt, certName, whKey)
+	if err != nil {
+		return nil, err
+	}
+
 	alternateDNS := []string{
 		fmt.Sprintf("%s.%s", webhookServiceName, webhookServiceNs),
 		fmt.Sprintf("%s.%s.svc", webhookServiceName, webhookServiceNs),
 		fmt.Sprintf("%s.%s.svc.cluster.local", webhookServiceName, webhookServiceNs),
 	}
 
-	srtKey := types.NamespacedName{Name: webhookServiceName, Namespace: webhookServiceNs}
-
-	ca, err := getSelfSignedCACert(clt, certName, srtKey)
-	if err != nil {
-		return nil, err
-	}
-
-	cert, err := GenerateSignedCert(webhookServiceName, alternateDNS, ca)
+	cert, err := getSignedCert(clt, whKey, alternateDNS, ca)
 	if err != nil {
 		return nil, err
 	}

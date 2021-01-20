@@ -41,11 +41,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/webhook"
 )
 
-const (
-	tlsCrt = "tls.crt"
-	tlsKey = "tls.key"
-)
-
 type WireUp struct {
 	mgr  manager.Manager
 	stop <-chan struct{}
