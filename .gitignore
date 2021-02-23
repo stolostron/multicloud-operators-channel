@@ -1,6 +1,8 @@
 # Temporary Build Files
 build/_output
 build/_test
+build-harness-extensions
+build-harness
 .build-harness-bootstrap
 .build-harness
 OPENSOURCE.check
