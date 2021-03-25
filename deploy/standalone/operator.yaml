@@ -16,7 +16,7 @@ spec:
       containers:
         - name: multicluster-operators-channel
           imagePullPolicy: IfNotPresent
-          image: quay.io/open-cluster-management/multicluster-operators-channel:community-latest
+          image: quay.io/open-cluster-management/multicluster-operators-channel:latest
           ports:
           - containerPort: 9443
             name: chn-whk-server
