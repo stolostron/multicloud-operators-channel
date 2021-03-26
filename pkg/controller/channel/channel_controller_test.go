@@ -24,7 +24,7 @@ import (
 	"golang.org/x/net/context"
 	corev1 "k8s.io/api/core/v1"
 	rbac "k8s.io/api/rbac/v1"
-	apiextensionsv1beta1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1beta1"
+	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/kubernetes"
@@ -196,7 +196,7 @@ func TestChannelAnnotateReferredSecertAndConfigMap(t *testing.T) {
 
 	assertRoleBinding(t, mgr.GetClient(), expectedChn, expectedRolebinding)
 
-	clusterCRD := &apiextensionsv1beta1.CustomResourceDefinition{
+	clusterCRD := &apiextensionsv1.CustomResourceDefinition{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: clusterCRDName,
 		},

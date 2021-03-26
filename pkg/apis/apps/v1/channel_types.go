@@ -86,7 +86,7 @@ type ChannelSpec struct {
 	Pathname string `json:"pathname"`
 
 	// Skip server TLS certificate verification for Git or Helm channel.
-	InsecureSkipVerify bool `json:"insecureSkipVerify"`
+	InsecureSkipVerify bool `json:"insecureSkipVerify,omitempty"`
 
 	// For a `github` channel or a `helmrepo` channel on github, this
 	// can be used to reference a Secret which contains the credentials for
