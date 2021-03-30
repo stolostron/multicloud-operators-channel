@@ -60,7 +60,7 @@ if [ $? != 0 ]; then
         exit $?;
 fi
 
-kind create cluster
+kind create cluster --image=kindest/node:v1.19.1
 if [ $? != 0 ]; then
         exit $?;
 fi
@@ -113,11 +113,15 @@ kubectl get po -A
 echo -e "\nGet the applifecycle-backend-e2e data"
 go get github.com/open-cluster-management/applifecycle-backend-e2e@v0.2.1
 
+export PATH=$PATH:~/go/bin
 E2E_BINARY_NAME="applifecycle-backend-e2e"
 
 
 echo -e "\nTerminate the running test server\n"
-ps aux | grep ${E2E_BINARY_NAME} | grep -v 'grep' | awk '{print $2}' | xargs kill -9
+E2E_PS=$(ps aux | grep ${E2E_BINARY_NAME} | grep -v 'grep' | awk '{print $2}')
+if [ "$E2E_PS" != "" ]; then
+    kill -9 $E2E_PS
+fi
 
 ${E2E_BINARY_NAME} -cfg cluster_config &
 
