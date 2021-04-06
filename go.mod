@@ -9,7 +9,6 @@ require (
 	github.com/go-logr/logr v0.1.0
 	github.com/go-logr/zapr v0.1.1
 	github.com/go-openapi/spec v0.19.4
-	github.com/golangci/golangci-lint v1.20.0 // indirect
 	github.com/google/go-cmp v0.4.0
 	github.com/onsi/ginkgo v1.12.0
 	github.com/onsi/gomega v1.9.0
@@ -35,6 +34,7 @@ require (
 
 replace (
 	github.com/Azure/go-autorest => github.com/Azure/go-autorest v13.3.2+incompatible // Required by OLM
+	golang.org/x/text => golang.org/x/text v0.3.5 // CVE-2020-14040
 	k8s.io/client-go => k8s.io/client-go v0.18.2
 )
 
