@@ -140,7 +140,7 @@ Events:
 ```
 - Check Channel operator log
 
-Normally, we care the reconcile trace. For each flow, it should at least have a valid reconcile log for the deployable.
+Normally, we care about the reconcile trace. For each flow, it should at least have a valid reconcile log for the deployable.
 
 ```shell
 % kubectl logs multicloud-operators-channel-f4fbbb9d9-6mcql
