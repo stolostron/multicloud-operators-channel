@@ -43,5 +43,5 @@ metadata:
   name: dev
   namespace: ch-obj
 data:
-  AccessKeyID: 8WzMANMhF1DNwfBxl52q #<base64 encode username>
-  SecretAccessKey: J8UQo0s5VY8cZmFw4u5DdC47ufB7XvMvDjT5Sg0q #<base64 encode password>
+  AccessKeyID: OFd6TUFOTWhGMUROd2ZCeGw1MnEK #<base64 encode username>
+  SecretAccessKey: SjhVUW8wczVWWThjWm1GdzR1NURkQzQ3dWZCN1h2TXZEalQ1U2cwcQo= #<base64 encode password>
