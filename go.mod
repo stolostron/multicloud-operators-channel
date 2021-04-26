@@ -1,6 +1,6 @@
 module github.com/open-cluster-management/multicloud-operators-channel
 
-go 1.15
+go 1.16
 
 require (
 	github.com/Masterminds/semver v1.5.0 // indirect
@@ -16,7 +16,6 @@ require (
 	github.com/onsi/ginkgo v1.12.1
 	github.com/onsi/gomega v1.10.1
 	github.com/open-cluster-management/api v0.0.0-20201007180356-41d07eee4294
-	github.com/open-cluster-management/applifecycle-backend-e2e v0.1.8 // indirect
 	github.com/open-cluster-management/multicloud-operators-deployable v1.2.2-2-20201130-7bc3c
 	github.com/open-cluster-management/multicloud-operators-placementrule v1.2.2-2-20201130-98cfd
 	github.com/pkg/errors v0.9.1
