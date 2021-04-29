@@ -50,7 +50,7 @@ else
     $(error "This system's OS $(LOCAL_OS) isn't recognized/supported")
 endif
 
-.PHONY: fmt lint test coverage build build-images
+.PHONY: fmt lint test build build-images
 ifeq ($(TRAVIS_BUILD),1)
 	ifneq ("$(realpath $(DEST))", "$(realpath $(PWD))")
 	    $(error Please run 'make' from $(DEST). Current directory is $(PWD))
@@ -116,10 +116,6 @@ test:
 ############################################################
 # coverage section
 ############################################################
-
-coverage:
-	@common/scripts/codecov.sh
-
 
 openapi-gen:
 	which build/_output/bin/openapi-gen > /dev/null || go build -o build/_output/bin/openapi-gen k8s.io/kube-openapi/cmd/openapi-gen
