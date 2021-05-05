@@ -105,7 +105,7 @@ func UpdateServingChannel(servingChannel string, channelKey string, action strin
 	return newChannelList
 }
 
-func ParseSecertInfo(secret *corev1.Secret) (username string, password string) {
+func ParseSecertInfo(secret *corev1.Secret) (username string, password string, region string) {
 	if secret == nil {
 		return
 	}
@@ -127,6 +127,8 @@ func ParseSecertInfo(secret *corev1.Secret) (username string, password string) {
 	if password == "" {
 		password = string(secret.Data["accessToken"])
 	}
+
+	region = string(secret.Data[SecretMapKeyRegion])
 
 	return
 }

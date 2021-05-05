@@ -23,7 +23,7 @@ type FakeObjectStore struct {
 	Clt map[string]map[string]DeployableObject
 }
 
-func (m *FakeObjectStore) InitObjectStoreConnection(endpoint, accessKeyID, secretAccessKey string) error {
+func (m *FakeObjectStore) InitObjectStoreConnection(endpoint, accessKeyID, secretAccessKey, region string) error {
 	if len(m.Clt) == 0 {
 		m.Clt = make(map[string]map[string]DeployableObject)
 	}
