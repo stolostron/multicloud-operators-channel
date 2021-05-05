@@ -194,13 +194,22 @@ func (sync *ChannelSynchronizer) deleteOrUpdateDeployableBasedOnHostResMap(chn *
 	return nil
 }
 
+// In aws s3 bucket, key could contain folder name. e.g. subfolder1/configmap3.yaml
+// As a result, the hosting deployable annotation (NamespacedName) will be <namespace>/subfolder1/configmap3.yaml
+// The invalid hosting deployable annotation will break the synchronizer
+
+func generateDplNameFromKey(key string) string {
+	return strings.ReplaceAll(key, "/", "-")
+}
+
 func (sync *ChannelSynchronizer) addNewResourceFromHostResMap(chn *chv1.Channel, hostResMap map[string]*unstructured.Unstructured) {
 	if len(hostResMap) == 0 {
 		return
 	}
 	// Add new resources to channel namespace
 	for tplname, tpl := range hostResMap {
-		if tpl == nil {
+		if tpl == nil || len(tpl.Object) == 0 {
+			syncLog.Info(fmt.Sprintf("Skip empty object  %v in channel %v", tplname, chn.GetName()))
 			continue
 		}
 
@@ -229,7 +238,7 @@ func (sync *ChannelSynchronizer) addNewResourceFromHostResMap(chn *chv1.Channel,
 		var err error
 
 		dpl := &dplv1.Deployable{}
-		dpl.Name = tplname
+		dpl.Name = generateDplNameFromKey(tplname)
 		dpl.Namespace = chn.Namespace
 		dpl.Spec.Template = &runtime.RawExtension{}
 		dpl.Spec.Template.Raw, err = json.Marshal(tpl)

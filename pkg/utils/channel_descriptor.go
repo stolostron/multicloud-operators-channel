@@ -92,19 +92,19 @@ func (desc *ChannelDescriptor) ConnectWithResourceHost(chn *chv1.Channel, kubeCl
 		storageHanler = &AWSHandler{}
 	}
 
-	var accessID, secretAccessKey string
+	var accessID, secretAccessKey, region string
 
 	var err error
 
 	if chn.Spec.SecretRef != nil {
-		accessID, secretAccessKey, err = getCredentialFromKube(chn.Spec.SecretRef, chn.GetNamespace(), kubeClient)
+		accessID, secretAccessKey, region, err = getCredentialFromKube(chn.Spec.SecretRef, chn.GetNamespace(), kubeClient)
 		if err != nil {
 			log.Error(err, "failed to fetch the reference secret")
 			return err
 		}
 	}
 	// Add new channel to the map
-	if err := desc.updateChannelRegistry(chn, accessID, secretAccessKey, storageHanler, log); err != nil {
+	if err := desc.updateChannelRegistry(chn, accessID, secretAccessKey, region, storageHanler, log); err != nil {
 		log.Error(err, "unable to initialize channel ObjectStore description")
 		return err
 	}
@@ -112,13 +112,14 @@ func (desc *ChannelDescriptor) ConnectWithResourceHost(chn *chv1.Channel, kubeCl
 	return nil
 }
 
-func getCredentialFromKube(secretRef *corev1.ObjectReference, defaultNs string, kubeClient client.Client) (string, string, error) {
+func getCredentialFromKube(secretRef *corev1.ObjectReference, defaultNs string, kubeClient client.Client) (string, string, string, error) {
 	if secretRef == nil {
-		return "", "", errors.New("failed to get access info to objectstore due to missing referred secret")
+		return "", "", "", errors.New("failed to get access info to objectstore due to missing referred secret")
 	}
 
 	accessKeyID := ""
 	secretAccessKey := ""
+	region := ""
 
 	secret := &corev1.Secret{}
 	secns := secretRef.Namespace
@@ -130,12 +131,12 @@ func getCredentialFromKube(secretRef *corev1.ObjectReference, defaultNs string, 
 	err := kubeClient.Get(context.TODO(), types.NamespacedName{Name: secretRef.Name, Namespace: secns}, secret)
 
 	if err != nil {
-		return "", "", errors.Wrap(err, "unable to get secret")
+		return "", "", "", errors.Wrap(err, "unable to get secret")
 	}
 
-	accessKeyID, secretAccessKey = ParseSecertInfo(secret)
+	accessKeyID, secretAccessKey, region = ParseSecertInfo(secret)
 
-	return accessKeyID, secretAccessKey, nil
+	return accessKeyID, secretAccessKey, region, nil
 }
 
 func parseBucketAndEndpoint(pathName string) (string, string) {
@@ -155,7 +156,7 @@ func parseBucketAndEndpoint(pathName string) (string, string) {
 	return endpoint, bucket
 }
 
-func (desc *ChannelDescriptor) updateChannelRegistry(chn *chv1.Channel, accessKeyID, secretAccessKey string,
+func (desc *ChannelDescriptor) updateChannelRegistry(chn *chv1.Channel, accessKeyID, secretAccessKey, region string,
 	objStoreHandler ObjectStore, log logr.Logger) error {
 	chndesc := &ChannelDescription{}
 
@@ -165,7 +166,7 @@ func (desc *ChannelDescriptor) updateChannelRegistry(chn *chv1.Channel, accessKe
 
 	log.Info(fmt.Sprintf("trying to connect to object bucket %v|%v", endpoint, chndesc.Bucket))
 
-	if err := objStoreHandler.InitObjectStoreConnection(endpoint, accessKeyID, secretAccessKey); err != nil {
+	if err := objStoreHandler.InitObjectStoreConnection(endpoint, accessKeyID, secretAccessKey, region); err != nil {
 		log.Error(err, "unable to initialize object store settings")
 		return err
 	}

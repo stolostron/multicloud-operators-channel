@@ -265,7 +265,7 @@ var _ = Describe("object bucket controller", func() {
 			Expect(err).NotTo(HaveOccurred())
 
 			myStoreage := &utils.FakeObjectStore{}
-			myStoreage.InitObjectStoreConnection("", "", "")
+			myStoreage.InitObjectStoreConnection("", "", "", "")
 
 			chReg.SetObjectStorageForChannel(chn, myStoreage)
 

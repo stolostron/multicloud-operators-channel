@@ -4,7 +4,9 @@ go 1.16
 
 require (
 	github.com/Masterminds/semver v1.5.0 // indirect
-	github.com/aws/aws-sdk-go-v2 v0.18.0
+	github.com/aws/aws-sdk-go-v2 v1.3.2
+	github.com/aws/aws-sdk-go-v2/config v1.1.5
+	github.com/aws/aws-sdk-go-v2/service/s3 v1.5.0
 	github.com/cyphar/filepath-securejoin v0.2.2 // indirect
 	github.com/emicklei/go-restful v2.11.1+incompatible // indirect
 	github.com/ghodss/yaml v1.0.1-0.20190212211648-25d852aebe32
@@ -12,7 +14,7 @@ require (
 	github.com/go-logr/zapr v0.3.0
 	github.com/go-openapi/spec v0.19.5
 	github.com/gobwas/glob v0.2.3 // indirect
-	github.com/google/go-cmp v0.5.1
+	github.com/google/go-cmp v0.5.4
 	github.com/onsi/ginkgo v1.12.1
 	github.com/onsi/gomega v1.10.1
 	github.com/open-cluster-management/api v0.0.0-20201007180356-41d07eee4294

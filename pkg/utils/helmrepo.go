@@ -91,7 +91,7 @@ func GetChartIndex(chnPathname string, insecureSkipVerify bool, srt *corev1.Secr
 			req.Header.Set("Authorization", string(authHeader))
 		}
 
-		user, password := ParseSecertInfo(srt)
+		user, password, _ := ParseSecertInfo(srt)
 		if user == "" || password == "" {
 			return nil, fmt.Errorf("password not found in secret for basic authentication")
 		}
