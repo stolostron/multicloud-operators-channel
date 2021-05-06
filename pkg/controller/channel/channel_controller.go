@@ -229,13 +229,25 @@ func (r *ReconcileChannel) Reconcile(request reconcile.Request) (reconcile.Resul
 		return reconcile.Result{}, nil
 	}
 
-	err = r.validateClusterRBAC(instance, log)
+	// find the channel controller pod namespace, it is running in the ACM namespece
+	podNamespace, err := utils.FindEnvVariable("POD_NAMESPACE")
+	if err != nil {
+		return reconcile.Result{}, gerr.Wrapf(err, "Failed to find ACM Namespace. err: %v", err)
+	}
+
+	err = r.validateClusterRBAC(instance, log, podNamespace)
 	if err != nil {
 		log.Error(err, fmt.Sprintf("failed to validate RBAC for clusters for channel %v", instance.Name))
 		return reconcile.Result{}, err
 	}
 
 	r.handleReferencedObjects(instance, request, log)
+
+	err = r.cleanRoleFromAcmNS(instance, log, podNamespace)
+	if err != nil {
+		log.Error(err, "failed to clean up channel role/rolebinding in the ACM system NameSpace")
+		return reconcile.Result{}, err
+	}
 
 	return reconcile.Result{}, nil
 }
@@ -372,7 +384,13 @@ func (r *ReconcileChannel) syncReferredObjAnnotation(
 	return nil
 }
 
-func (r *ReconcileChannel) validateClusterRBAC(instance *chv1.Channel, logger logr.Logger) error {
+func (r *ReconcileChannel) validateClusterRBAC(instance *chv1.Channel, logger logr.Logger, podNamespace string) error {
+	if instance.Namespace == podNamespace {
+		logger.Info(fmt.Sprintf("Don't create role and rolebinding as the channel %v/%v is in the ACM Namespace %v",
+			instance.Namespace, instance.Name, podNamespace))
+		return nil
+	}
+
 	role := &rbac.Role{}
 
 	if err := r.setupRole(instance, role); err != nil {
@@ -482,6 +500,37 @@ func (r *ReconcileChannel) setupRole(instance *chv1.Channel, role *rbac.Role) er
 
 		if err := r.Update(context.TODO(), role); err != nil {
 			return gerr.Wrapf(err, "failed to update role %v", role.Name)
+		}
+	}
+
+	return nil
+}
+
+// Clean up channel role/rolebinding if the channel is located in the ACM system Namespace,
+// so the ACM NameSpace Secrets won't be exposed to managed clusters.
+// The channels created in the ACM system NS are only used by hub standalone subscriptions.
+func (r *ReconcileChannel) cleanRoleFromAcmNS(instance *chv1.Channel, logger logr.Logger, podNamespace string) error {
+	if instance.Namespace != podNamespace {
+		logger.Info(fmt.Sprintf("The channel %v/%v is not in the ACM Namespace %v, skipping...",
+			instance.Namespace, instance.Name, podNamespace))
+		return nil
+	}
+
+	role := &rbac.Role{}
+	err := r.Get(context.TODO(), types.NamespacedName{Name: instance.Name, Namespace: instance.Namespace}, role)
+
+	if err == nil {
+		if err = r.Delete(context.TODO(), role); err != nil {
+			return gerr.Wrapf(err, "failed to delete role %v/%v", role.Namespace, role.Name)
+		}
+	}
+
+	rolebinding := &rbac.RoleBinding{}
+	err = r.Get(context.TODO(), types.NamespacedName{Name: instance.Name, Namespace: instance.Namespace}, rolebinding)
+
+	if err == nil {
+		if err = r.Delete(context.TODO(), rolebinding); err != nil {
+			return gerr.Wrapf(err, "failed to delete rolebinding %v/%v", rolebinding.Namespace, rolebinding.Name)
 		}
 	}
 

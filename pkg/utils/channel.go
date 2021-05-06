@@ -17,6 +17,7 @@ package utils
 import (
 	"context"
 	"fmt"
+	"os"
 
 	"strings"
 
@@ -131,4 +132,13 @@ func ParseSecertInfo(secret *corev1.Secret) (username string, password string, r
 	region = string(secret.Data[SecretMapKeyRegion])
 
 	return
+}
+
+func FindEnvVariable(envName string) (string, error) {
+	val, found := os.LookupEnv(envName)
+	if !found {
+		return "", fmt.Errorf("%s env var is not set", envName)
+	}
+
+	return val, nil
 }
