@@ -17,13 +17,13 @@ package webhook
 import (
 	"context"
 	"fmt"
+	"os"
 	"strings"
 
 	gerr "github.com/pkg/errors"
 
 	appsv1 "k8s.io/api/apps/v1"
 
-	"github.com/open-cluster-management/multicloud-operators-channel/pkg/utils"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
@@ -67,7 +67,7 @@ func NewWireUp(mgr manager.Manager, stop <-chan struct{},
 	WebhookName := "channels-apps-open-cluster-management-webhook"
 
 	deployLabelEnvVar := "DEPLOYMENT_LABEL"
-	deploymentLabel, err := utils.FindEnvVariable(deployLabelEnvVar)
+	deploymentLabel, err := findEnvVariable(deployLabelEnvVar)
 
 	if err != nil {
 		return nil, gerr.Wrap(err, "failed to create a new webhook wireup")
@@ -79,7 +79,7 @@ func NewWireUp(mgr manager.Manager, stop <-chan struct{},
 
 	podNamespaceEnvVar := "POD_NAMESPACE"
 
-	podNamespace, err := utils.FindEnvVariable(podNamespaceEnvVar)
+	podNamespace, err := findEnvVariable(podNamespaceEnvVar)
 	if err != nil {
 		return nil, gerr.Wrap(err, "failed to create a new webhook wireup")
 	}
@@ -166,6 +166,15 @@ func (w *WireUp) WireUpWebhookSupplymentryResource(caCert []byte, gvk schema.Gro
 	}
 
 	return gerr.Wrap(w.createOrUpdateValiationWebhook(caCert, gvk, ops), "failed to set up the validation webhook config")
+}
+
+func findEnvVariable(envName string) (string, error) {
+	val, found := os.LookupEnv(envName)
+	if !found {
+		return "", fmt.Errorf("%s env var is not set", envName)
+	}
+
+	return val, nil
 }
 
 func (w *WireUp) getOrCreateWebhookService() error {

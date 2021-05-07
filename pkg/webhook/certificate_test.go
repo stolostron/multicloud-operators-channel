@@ -22,7 +22,6 @@ import (
 	. "github.com/onsi/gomega"
 	corev1 "k8s.io/api/core/v1"
 
-	"github.com/open-cluster-management/multicloud-operators-channel/pkg/utils"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	k8scertutil "k8s.io/client-go/util/cert"
@@ -44,7 +43,7 @@ var _ = Describe("self-signed cert", func() {
 			os.Unsetenv(podNamespaceEnvVar)
 		}()
 
-		podNs, err := utils.FindEnvVariable(podNamespaceEnvVar)
+		podNs, err := findEnvVariable(podNamespaceEnvVar)
 		Expect(err).Should(Succeed())
 
 		ca, err := GenerateWebhookCerts(k8sClient, certDir, podNs, webhookServiceName)
