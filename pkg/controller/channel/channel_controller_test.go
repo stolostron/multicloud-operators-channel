@@ -27,6 +27,7 @@ import (
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/client-go/dynamic"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/kubernetes/scheme"
 	typedcorev1 "k8s.io/client-go/kubernetes/typed/core/v1"
@@ -71,11 +72,14 @@ func TestChannelControllerReconcile(t *testing.T) {
 	//create events handler on hub cluster. All the deployable events will be written to the root deployable on hub cluster.
 	hubClientSet, _ := kubernetes.NewForConfig(cfg)
 
+	// Create dynamic client
+	dynamicClient := dynamic.NewForConfigOrDie(cfg)
+
 	eventBroadcaster := record.NewBroadcaster()
 	eventBroadcaster.StartRecordingToSink(&typedcorev1.EventSinkImpl{Interface: hubClientSet.CoreV1().Events("")})
 	recorder := eventBroadcaster.NewRecorder(scheme.Scheme, corev1.EventSource{Component: "channel"})
 
-	recFn, requests := SetupTestReconcile(newReconciler(mgr, recorder, tlog.NullLogger{}))
+	recFn, requests := SetupTestReconcile(newReconciler(mgr, dynamicClient, recorder, tlog.NullLogger{}))
 	g.Expect(add(mgr, recFn, tlog.NullLogger{})).NotTo(gomega.HaveOccurred())
 
 	stopMgr, mgrStopped := StartTestManager(mgr, g)
@@ -142,7 +146,10 @@ func TestChannelAnnotateReferredSecertAndConfigMap(t *testing.T) {
 		mgrStopped.Wait()
 	}()
 
-	rec := newReconciler(mgr, tRecorder, tlog.NullLogger{})
+	// Create dynamic client
+	dynamicClient := dynamic.NewForConfigOrDie(cfg)
+
+	rec := newReconciler(mgr, dynamicClient, tRecorder, tlog.NullLogger{})
 
 	defer c.Delete(context.TODO(), refSrt)
 	g.Expect(c.Create(context.TODO(), refSrt)).NotTo(gomega.HaveOccurred())
@@ -294,7 +301,10 @@ func TestChannelReconcileWithoutClusterCRD(t *testing.T) {
 		mgrStopped.Wait()
 	}()
 
-	rec := newReconciler(mgr, tRecorder, tlog.NullLogger{})
+	// Create dynamic client
+	dynamicClient := dynamic.NewForConfigOrDie(cfg)
+
+	rec := newReconciler(mgr, dynamicClient, tRecorder, tlog.NullLogger{})
 
 	defer c.Delete(context.TODO(), refSrt)
 	g.Expect(c.Create(context.TODO(), refSrt)).NotTo(gomega.HaveOccurred())

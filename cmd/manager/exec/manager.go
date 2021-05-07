@@ -20,6 +20,7 @@ import (
 	"os"
 
 	v1 "k8s.io/api/core/v1"
+	"k8s.io/client-go/dynamic"
 	"k8s.io/client-go/kubernetes"
 	typedcorev1 "k8s.io/client-go/kubernetes/typed/core/v1"
 	"k8s.io/client-go/rest"
@@ -117,6 +118,9 @@ func RunManager() {
 		os.Exit(1)
 	}
 
+	// Create dynamic client
+	dynamicClient := dynamic.NewForConfigOrDie(ctrl.GetConfigOrDie())
+
 	// Create channel descriptor is user for the object bucket
 	chdesc, err := utils.CreateObjectStorageChannelDescriptor()
 	if err != nil {
@@ -177,7 +181,7 @@ func RunManager() {
 	// Setup all Controllers
 	logger.Info("Setting up controller")
 
-	if err := controller.AddToManager(mgr, recorder, logf.Log.WithName("controllers"), chdesc, hsync); err != nil {
+	if err := controller.AddToManager(mgr, dynamicClient, recorder, logf.Log.WithName("controllers"), chdesc, hsync); err != nil {
 		logger.Error(err, "unable to register controllers to the manager")
 		os.Exit(exitCode)
 	}

@@ -42,6 +42,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/client-go/dynamic"
 	"k8s.io/client-go/tools/record"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
@@ -85,18 +86,20 @@ const (
 
 // Add creates a new Channel Controller and adds it to the Manager with default RBAC. The Manager will set fields on the Controller
 // and Start it when the Manager is Started.
-func Add(mgr manager.Manager, recorder record.EventRecorder, logger logr.Logger,
+func Add(mgr manager.Manager, dynamicClient dynamic.Interface, recorder record.EventRecorder, logger logr.Logger,
 	channelDescriptor *utils.ChannelDescriptor, sync *helmsync.ChannelSynchronizer) error {
-	return add(mgr, newReconciler(mgr, recorder, logger.WithName(controllerName)), logger.WithName(controllerSetup))
+	return add(mgr, newReconciler(mgr, dynamicClient, recorder, logger.WithName(controllerName)), logger.WithName(controllerSetup))
 }
 
 // newReconciler returns a new reconcile.Reconciler
-func newReconciler(mgr manager.Manager, recorder record.EventRecorder, logger logr.Logger) reconcile.Reconciler {
+func newReconciler(mgr manager.Manager, dynamicClient dynamic.Interface, recorder record.EventRecorder,
+	logger logr.Logger) reconcile.Reconciler {
 	return &ReconcileChannel{
-		Client:   mgr.GetClient(),
-		scheme:   mgr.GetScheme(),
-		Recorder: recorder,
-		Log:      logger,
+		Client:        mgr.GetClient(),
+		DynamicClient: dynamicClient,
+		scheme:        mgr.GetScheme(),
+		Recorder:      recorder,
+		Log:           logger,
 	}
 }
 
@@ -169,9 +172,10 @@ var _ reconcile.Reconciler = &ReconcileChannel{}
 // ReconcileChannel reconciles a Channel object
 type ReconcileChannel struct {
 	client.Client
-	scheme   *runtime.Scheme
-	Recorder record.EventRecorder
-	Log      logr.Logger
+	DynamicClient dynamic.Interface
+	scheme        *runtime.Scheme
+	Recorder      record.EventRecorder
+	Log           logr.Logger
 }
 
 // Reconcile reads that state of the cluster for a Channel object and makes changes based on the state read
@@ -229,13 +233,22 @@ func (r *ReconcileChannel) Reconcile(request reconcile.Request) (reconcile.Resul
 		return reconcile.Result{}, nil
 	}
 
-	err = r.validateClusterRBAC(instance, log)
+	// find the channel controller pod namespace, it is running in the ACM namespece
+	mchNamespace := r.FindMultiClusterHubNS(log)
+
+	err = r.validateClusterRBAC(instance, log, mchNamespace)
 	if err != nil {
 		log.Error(err, fmt.Sprintf("failed to validate RBAC for clusters for channel %v", instance.Name))
 		return reconcile.Result{}, err
 	}
 
 	r.handleReferencedObjects(instance, request, log)
+
+	err = r.cleanRoleFromAcmNS(instance, log, mchNamespace)
+	if err != nil {
+		log.Error(err, "failed to clean up channel role/rolebinding in the ACM system NameSpace")
+		return reconcile.Result{}, err
+	}
 
 	return reconcile.Result{}, nil
 }
@@ -372,7 +385,13 @@ func (r *ReconcileChannel) syncReferredObjAnnotation(
 	return nil
 }
 
-func (r *ReconcileChannel) validateClusterRBAC(instance *chv1.Channel, logger logr.Logger) error {
+func (r *ReconcileChannel) validateClusterRBAC(instance *chv1.Channel, logger logr.Logger, mchNamespace string) error {
+	if instance.Namespace == mchNamespace {
+		logger.Info(fmt.Sprintf("Don't create role and rolebinding as the channel %v/%v is in the ACM Namespace %v",
+			instance.Namespace, instance.Name, mchNamespace))
+		return nil
+	}
+
 	role := &rbac.Role{}
 
 	if err := r.setupRole(instance, role); err != nil {
@@ -486,4 +505,61 @@ func (r *ReconcileChannel) setupRole(instance *chv1.Channel, role *rbac.Role) er
 	}
 
 	return nil
+}
+
+// Clean up channel role/rolebinding if the channel is located in the ACM system Namespace,
+// so the ACM NameSpace Secrets won't be exposed to managed clusters.
+// The channels created in the ACM system NS are only used by hub standalone subscriptions.
+func (r *ReconcileChannel) cleanRoleFromAcmNS(instance *chv1.Channel, logger logr.Logger, mchNamespace string) error {
+	if instance.Namespace != mchNamespace {
+		logger.Info(fmt.Sprintf("The channel %v/%v is not in the ACM Namespace %v, skipping...",
+			instance.Namespace, instance.Name, mchNamespace))
+		return nil
+	}
+
+	role := &rbac.Role{}
+	err := r.Get(context.TODO(), types.NamespacedName{Name: instance.Name, Namespace: instance.Namespace}, role)
+
+	if err == nil {
+		if err = r.Delete(context.TODO(), role); err != nil {
+			return gerr.Wrapf(err, "failed to delete role %v/%v", role.Namespace, role.Name)
+		}
+	}
+
+	rolebinding := &rbac.RoleBinding{}
+	err = r.Get(context.TODO(), types.NamespacedName{Name: instance.Name, Namespace: instance.Namespace}, rolebinding)
+
+	if err == nil {
+		if err = r.Delete(context.TODO(), rolebinding); err != nil {
+			return gerr.Wrapf(err, "failed to delete rolebinding %v/%v", rolebinding.Namespace, rolebinding.Name)
+		}
+	}
+
+	return nil
+}
+
+func (r *ReconcileChannel) FindMultiClusterHubNS(logger logr.Logger) string {
+	mchGVR := schema.GroupVersionResource{
+		Group:    "operator.open-cluster-management.io",
+		Version:  "v1",
+		Resource: "multiclusterhubs",
+	}
+
+	objlist, _ := r.DynamicClient.Resource(mchGVR).List(context.TODO(), metav1.ListOptions{})
+
+	if objlist == nil {
+		logger.Info("No MultiClusterHub Resource found")
+		return ""
+	}
+
+	if len(objlist.Items) == 1 {
+		mchNS := objlist.Items[0].GetNamespace()
+		logger.Info(fmt.Sprintf("ACM system Namespace found: %v", mchNS))
+
+		return mchNS
+	}
+
+	logger.Info("There should be ONLY one MultiClusterHub object")
+
+	return ""
 }

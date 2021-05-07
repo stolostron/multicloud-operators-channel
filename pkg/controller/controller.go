@@ -15,6 +15,7 @@
 package controller
 
 import (
+	"k8s.io/client-go/dynamic"
 	"k8s.io/client-go/tools/record"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 
@@ -25,15 +26,14 @@ import (
 )
 
 // AddToManagerFuncs is a list of functions to add all Controllers to the Manager
-var AddToManagerFuncs []func(manager.Manager, record.EventRecorder, logr.Logger,
+var AddToManagerFuncs []func(manager.Manager, dynamic.Interface, record.EventRecorder, logr.Logger,
 	*utils.ChannelDescriptor, *helmsync.ChannelSynchronizer) error
 
 // AddToManager adds all Controllers to the Manager
-func AddToManager(m manager.Manager, recorder record.EventRecorder,
-	logger logr.Logger,
-	chdesc *utils.ChannelDescriptor, sync *helmsync.ChannelSynchronizer) error {
+func AddToManager(m manager.Manager, dynamicClient dynamic.Interface, recorder record.EventRecorder,
+	logger logr.Logger, chdesc *utils.ChannelDescriptor, sync *helmsync.ChannelSynchronizer) error {
 	for _, f := range AddToManagerFuncs {
-		if err := f(m, recorder, logger, chdesc, sync); err != nil {
+		if err := f(m, dynamicClient, recorder, logger, chdesc, sync); err != nil {
 			return err
 		}
 	}
