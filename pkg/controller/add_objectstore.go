@@ -14,9 +14,9 @@
 
 package controller
 
-import "github.com/open-cluster-management/multicloud-operators-channel/pkg/controller/objectstore"
-
 func init() {
+	// stop object store channel controller, which is for syncing local objects back to online object bucket
+	// There is no need to do this sync up as the onine object bucket is the only source of truth now.
 	// AddToManagerFuncs is a list of functions to create controllers and add them to a manager.
-	AddToManagerFuncs = append(AddToManagerFuncs, objectstore.Add)
+	//AddToManagerFuncs = append(AddToManagerFuncs, objectstore.Add)
 }

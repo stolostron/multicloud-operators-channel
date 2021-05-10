@@ -14,9 +14,9 @@
 
 package controller
 
-import "github.com/open-cluster-management/multicloud-operators-channel/pkg/controller/helmrepo"
-
 func init() {
+	// stop helmrepo channel controller, which is for creating local helm deployables for the helm repo
+	// The local helm deployables are not used any more as the helm repo subscription generates its own topology list by helm release dry run
 	// AddToManagerFuncs is a list of functions to create controllers and add them to a manager.
-	AddToManagerFuncs = append(AddToManagerFuncs, helmrepo.Add)
+	// AddToManagerFuncs = append(AddToManagerFuncs, helmrepo.Add)
 }
