@@ -111,7 +111,7 @@ kubectl get po -A
 # over here, we are build the test server on the fly since, the `go get` will
 # mess up the go.mod file when doing the local test
 echo -e "\nGet the applifecycle-backend-e2e data"
-go get github.com/open-cluster-management/applifecycle-backend-e2e@v0.2.1
+go get github.com/open-cluster-management/applifecycle-backend-e2e
 
 export PATH=$PATH:~/go/bin
 E2E_BINARY_NAME="applifecycle-backend-e2e"
