@@ -31,7 +31,7 @@ metadata:
   namespace: ch-obj
 spec:
   type: ObjectBucket
-  pathname: http://ec2-34-227-89-198.compute-1.amazonaws.com:9000/backend-test
+  pathname: http://minio-minio.apps.hivemind-b.aws.red-chesterfield.com/backend-test
   sourceNamespaces:
     - default
   secretRef:
@@ -43,5 +43,5 @@ metadata:
   name: dev
   namespace: ch-obj
 data:
-  AccessKeyID: YWRtaW4= #<base64 encode username>
-  SecretAccessKey: cGFzc3dvcmRhZG1pbg== #<base64 encode password>
+  AccessKeyID: N1dmRGNNcnBwemVucEFkTG5SeDg= #<base64 encode username>
+  SecretAccessKey: cVh3Y2hieFJobjd6YWVNU1hNSloyTjhQQTdvN1AwRk03OGNzcUR5Ng== #<base64 encode password>
