@@ -47,7 +47,7 @@ if [ "$TRAVIS_BUILD" != 1 ]; then
     sed -i -e "s|image: .*:community-latest$|image: $BUILD_IMAGE|" deploy/standalone/operator.yaml
 
     echo -e "\nDownload and install KinD\n"
-    GO111MODULE=on go get sigs.k8s.io/kind
+    GO111MODULE=on go get sigs.k8s.io/kind@v0.9.0
 else
     echo -e "\nBuild is on Local ENV, will delete the API container first\n"
     docker kill e2e || true
@@ -60,7 +60,7 @@ if [ $? != 0 ]; then
         exit $?;
 fi
 
-kind create cluster
+kind create cluster --image=kindest/node:v1.19.1
 if [ $? != 0 ]; then
         exit $?;
 fi
@@ -121,7 +121,7 @@ ps aux | grep ${E2E_BINARY_NAME} | grep -v 'grep' | awk '{print $2}' | xargs kil
 
 ${E2E_BINARY_NAME} -cfg cluster_config &
 
-sleep 40
+sleep 10
 
 function cleanup()
 {
