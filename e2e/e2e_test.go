@@ -113,7 +113,7 @@ func TestE2ESuite(t *testing.T) {
 
 	runner := NewRunner(defaultAddr, runEndpoint)
 
-	testIDs := []string{"chn-001", "chn-002"}
+	testIDs := []string{"chn-001", "chn-002", "chn-003", "chn-004"}
 
 	for _, tID := range testIDs {
 		if err := runner.Run(tID); err != nil {
