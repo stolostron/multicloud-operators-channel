@@ -121,7 +121,7 @@ ps aux | grep ${E2E_BINARY_NAME} | grep -v 'grep' | awk '{print $2}' | xargs kil
 
 ${E2E_BINARY_NAME} -cfg cluster_config &
 
-sleep 10
+sleep 40
 
 function cleanup()
 {
