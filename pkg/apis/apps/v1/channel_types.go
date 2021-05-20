@@ -132,7 +132,7 @@ type Channel struct {
 
 	metav1.ObjectMeta `json:"metadata,omitempty"`
 
-	Spec ChannelSpec `json:"spec,omitempty"`
+	Spec ChannelSpec `json:"spec"`
 
 	// Specification for the Channel.
 	metav1.TypeMeta `json:",inline"`
