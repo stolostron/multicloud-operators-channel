@@ -28,7 +28,7 @@ Channel controller sync and promote resources from the target source to a channe
 
 Keep in mind, if you were using this operator before, you might need to migrate your resource api-group and version from `app.ibm.com/v1alpha1` to `apps.open-cluster-management.io/v1`. Example can be found under the `examples` folder.
 
-For a quick start, we are going to create a namespace channel, meaning you can put the resouce to a namespace, which is watching by our channel operator, then the operator will promote this resoucre to the channel namespace, which should be the namesapce the channel operator sits.
+For a quick start, we are going to create a namespace channel, meaning you can put the resouce to a namespace, which is watched by our channel operator. Then, the operator will promote this resoucre to the channel namespace, which should be the namesapce the channel operator sits.
 
 The following example is tested on a minikube, so that you can play with this operator with out worrying too much extra stuff, such as secrity for a real cluster.
 
