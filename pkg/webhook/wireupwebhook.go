@@ -180,23 +180,31 @@ func findEnvVariable(envName string) (string, error) {
 func (w *WireUp) getOrCreateWebhookService() error {
 	service := &corev1.Service{}
 
-	if err := w.mgr.GetClient().Get(context.TODO(), w.WebHookeSvcKey, service); err != nil {
-		if errors.IsNotFound(err) {
-			service := newWebhookServiceTemplate(w.WebHookeSvcKey, w.WebHookPort, w.WebHookServicePort, w.DeploymentSelector)
+	err := w.mgr.GetClient().Get(context.TODO(), w.WebHookeSvcKey, service)
 
-			setOwnerReferences(w.mgr.GetClient(), w.Logger, w.WebHookeSvcKey.Namespace, w.DeployLabel, service)
+	if err == nil {
+		// This channel container could be running in a different pod. Delete and re-create the service
+		// to ensure that the service always points to the correct target pod.
+		deleteErr := w.mgr.GetClient().Delete(context.TODO(), service)
 
-			if err := w.mgr.GetClient().Create(context.TODO(), service); err != nil {
-				return err
-			}
-
-			w.Logger.Info(fmt.Sprintf("Create %s service", w.WebHookeSvcKey.String()))
-
-			return nil
+		if deleteErr != nil {
+			w.Logger.Error(gerr.New(fmt.Sprintf("failed to delete existing service %s", w.WebHookeSvcKey.String())),
+				fmt.Sprintf("failed to delete existing service %s", w.WebHookeSvcKey.String()))
+			return deleteErr
 		}
+
+		w.Logger.Info(fmt.Sprintf("deleted existing service %s", w.WebHookeSvcKey.String()))
 	}
 
-	w.Logger.Info(fmt.Sprintf("%s service is found", w.WebHookeSvcKey.String()))
+	newService := newWebhookServiceTemplate(w.WebHookeSvcKey, w.WebHookPort, w.WebHookServicePort, w.DeploymentSelector)
+
+	setOwnerReferences(w.mgr.GetClient(), w.Logger, w.WebHookeSvcKey.Namespace, w.DeployLabel, newService)
+
+	if err := w.mgr.GetClient().Create(context.TODO(), newService); err != nil {
+		return err
+	}
+
+	w.Logger.Info(fmt.Sprintf("created service %s ", w.WebHookeSvcKey.String()))
 
 	return nil
 }
