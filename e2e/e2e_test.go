@@ -117,7 +117,6 @@ func TestE2ESuite(t *testing.T) {
 
 	for _, tID := range testIDs {
 		if err := runner.Run(tID); err != nil {
-			t.Log("sometimes the travis cache would be an issue for retry, so trigger it via another PR")
 			t.Fatal(err)
 		}
 	}
