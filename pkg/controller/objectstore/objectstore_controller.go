@@ -68,10 +68,10 @@ type channelMapper struct {
 	logger logr.Logger
 }
 
-func (mapper *channelMapper) Map(obj handler.MapObject) []reconcile.Request {
+func (mapper *channelMapper) Map(obj client.Object) []reconcile.Request {
 	dpllist := &dplv1.DeployableList{}
 
-	err := mapper.List(context.TODO(), dpllist, client.InNamespace(obj.Meta.GetNamespace()))
+	err := mapper.List(context.TODO(), dpllist, client.InNamespace(obj.GetNamespace()))
 	if err != nil {
 		mapper.logger.Error(err, "failed to list all deployable")
 		return nil
@@ -100,9 +100,11 @@ func add(mgr manager.Manager, r reconcile.Reconciler, logger logr.Logger) error 
 	}
 
 	// watch for changes to channel too
+	cmapper := &channelMapper{Client: mgr.GetClient(), logger: logger}
+
 	return c.Watch(&source.Kind{
 		Type: &chv1.Channel{}},
-		&handler.EnqueueRequestsFromMapFunc{ToRequests: &channelMapper{Client: mgr.GetClient(), logger: logger}})
+		handler.EnqueueRequestsFromMapFunc(cmapper.Map))
 }
 
 var _ reconcile.Reconciler = &ReconcileDeployable{}
@@ -122,7 +124,7 @@ type ReconcileDeployable struct {
 // a Deployment as an example Automatically generate RBAC rules to allow the Controller to read and write Deployments
 // +kubebuilder:rbac:groups=apps.open-cluster-management.io,resources=deployables,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups=apps.open-cluster-management.io,resources=deployables/status,verbs=get;update;patch
-func (r *ReconcileDeployable) Reconcile(request reconcile.Request) (reconcile.Result, error) {
+func (r *ReconcileDeployable) Reconcile(ctx context.Context, request reconcile.Request) (reconcile.Result, error) {
 	// Fetch the Deployable instance
 	log := r.Log.WithValues("obj-reconcile", request.NamespacedName)
 	log.Info(fmt.Sprintf("Starting %v reconcile loop for %v", controllerName, request.NamespacedName))

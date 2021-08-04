@@ -21,7 +21,8 @@ import (
 	"path/filepath"
 	"testing"
 
-	"k8s.io/apimachinery/pkg/runtime"
+	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/client-go/rest"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -36,17 +37,8 @@ var c client.Client
 
 // testing.M is going to set up a local k8s env and provide the client, so the other test case can access to the cluster
 func TestMain(m *testing.M) {
-	customAPIServerFlags := []string{"--disable-admission-plugins=NamespaceLifecycle,LimitRanger,ServiceAccount," +
-		"TaintNodesByCondition,Priority,DefaultTolerationSeconds,DefaultStorageClass,StorageObjectInUseProtection," +
-		"PersistentVolumeClaimResize,ResourceQuota",
-	}
-
-	apiServerFlags := append([]string(nil), envtest.DefaultKubeAPIServerFlags...)
-	apiServerFlags = append(apiServerFlags, customAPIServerFlags...)
-
 	testEnv := &envtest.Environment{
-		CRDDirectoryPaths:  []string{filepath.Join("..", "..", "deploy", "crds"), filepath.Join("..", "..", "deploy", "dependent-crds")},
-		KubeAPIServerFlags: apiServerFlags,
+		CRDDirectoryPaths: []string{filepath.Join("..", "..", "deploy", "crds"), filepath.Join("..", "..", "deploy", "dependent-crds")},
 	}
 
 	s := scheme.Scheme
@@ -65,6 +57,27 @@ func TestMain(m *testing.M) {
 		log.Fatal(err)
 	}
 
+	err = c.Create(context.Background(), &corev1.Namespace{
+		ObjectMeta: metav1.ObjectMeta{Name: "ch-obj"},
+	})
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	err = c.Create(context.Background(), &corev1.Namespace{
+		ObjectMeta: metav1.ObjectMeta{Name: "ch-qa"},
+	})
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	err = c.Create(context.Background(), &corev1.Namespace{
+		ObjectMeta: metav1.ObjectMeta{Name: "a-ns"},
+	})
+	if err != nil {
+		log.Fatal(err)
+	}
+
 	code := m.Run()
 
 	testEnv.Stop()
@@ -73,7 +86,7 @@ func TestMain(m *testing.M) {
 }
 
 // Will generate and CR and provide a delete func of it
-func GenerateCRsAtLocalKube(c client.Client, instance runtime.Object) (func(), error) {
+func GenerateCRsAtLocalKube(c client.Client, instance client.Object) (func(), error) {
 	err := c.Create(context.TODO(), instance)
 	if err != nil {
 		log.Printf("Can't create %#v at the local Kube due to: %v", instance.GetObjectKind(), err)

@@ -30,7 +30,6 @@ import (
 	v1 "k8s.io/api/core/v1"
 
 	"k8s.io/apimachinery/pkg/api/errors"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/dynamic"
@@ -85,7 +84,7 @@ type channelMapper struct {
 	log logr.Logger
 }
 
-func (mapper *channelMapper) Map(obj handler.MapObject) []reconcile.Request {
+func (mapper *channelMapper) Map(obj client.Object) []reconcile.Request {
 	dpllist := &dplv1.DeployableList{}
 	if err := mapper.List(
 		context.TODO(),
@@ -96,7 +95,7 @@ func (mapper *channelMapper) Map(obj handler.MapObject) []reconcile.Request {
 		return nil
 	}
 
-	objKey := types.NamespacedName{Name: obj.Meta.GetName(), Namespace: obj.Meta.GetNamespace()}
+	objKey := types.NamespacedName{Name: obj.GetName(), Namespace: obj.GetNamespace()}
 	mapper.log.Info(fmt.Sprintf("channel %v mapper's dpl list %v\n", objKey.String(), len(dpllist.Items)))
 
 	var requests []reconcile.Request
@@ -109,7 +108,7 @@ func (mapper *channelMapper) Map(obj handler.MapObject) []reconcile.Request {
 }
 
 //check if a map has a given key
-func isSubDeployable(in metav1.Object) bool {
+func isSubDeployable(in client.Object) bool {
 	anno := in.GetAnnotations()
 
 	if _, ok := anno[AnnotationSubHosting]; ok {
@@ -133,22 +132,22 @@ func isSubDeployable(in metav1.Object) bool {
 var channelDeployablePredicateFunctions = predicate.Funcs{
 	// Create returns true if the Create event should be processed
 	CreateFunc: func(e event.CreateEvent) bool {
-		return !isSubDeployable(e.Meta)
+		return !isSubDeployable(e.Object)
 	},
 
 	// Delete returns true if the Delete event should be processed
 	DeleteFunc: func(e event.DeleteEvent) bool {
-		return !isSubDeployable(e.Meta)
+		return !isSubDeployable(e.Object)
 	},
 
 	UpdateFunc: func(e event.UpdateEvent) bool {
-		return !isSubDeployable(e.MetaOld) || !isSubDeployable(e.MetaNew)
+		return !isSubDeployable(e.ObjectOld) || !isSubDeployable(e.ObjectNew)
 	},
 }
 
 // add adds a new Controller to mgr with r as the reconcile.Reconciler
 func add(mgr manager.Manager, r reconcile.Reconciler, logger logr.Logger) error {
-	if err := mgr.GetFieldIndexer().IndexField(context.TODO(), &dplv1.Deployable{}, CtrlDeployableIndexer, func(rawObj runtime.Object) []string {
+	if err := mgr.GetFieldIndexer().IndexField(context.TODO(), &dplv1.Deployable{}, CtrlDeployableIndexer, func(rawObj client.Object) []string {
 		// grab the job object, extract the owner...
 		dpl := rawObj.(*dplv1.Deployable)
 		anno := dpl.GetAnnotations()
@@ -167,7 +166,7 @@ func add(mgr manager.Manager, r reconcile.Reconciler, logger logr.Logger) error 
 		return err
 	}
 
-	if err := mgr.GetFieldIndexer().IndexField(context.TODO(), &dplv1.Deployable{}, CtrlGenerateDeployableIndexer, func(rawObj runtime.Object) []string {
+	if err := mgr.GetFieldIndexer().IndexField(context.TODO(), &dplv1.Deployable{}, CtrlGenerateDeployableIndexer, func(rawObj client.Object) []string {
 		// grab the job object, extract the owner...
 		dpl := rawObj.(*dplv1.Deployable)
 		anno := dpl.GetAnnotations()
@@ -198,7 +197,9 @@ func add(mgr manager.Manager, r reconcile.Reconciler, logger logr.Logger) error 
 	}
 
 	// watch for changes to channel too
-	return c.Watch(&source.Kind{Type: &chv1.Channel{}}, &handler.EnqueueRequestsFromMapFunc{ToRequests: &channelMapper{Client: mgr.GetClient(), log: logger}})
+	cmapper := &channelMapper{Client: mgr.GetClient(), log: logger}
+
+	return c.Watch(&source.Kind{Type: &chv1.Channel{}}, handler.EnqueueRequestsFromMapFunc(cmapper.Map))
 }
 
 var _ reconcile.Reconciler = &ReconcileDeployable{}
@@ -243,7 +244,7 @@ func (r *ReconcileDeployable) appendEvent(rootInstance *chv1.Channel, dplkey typ
 // +kubebuilder:rbac:groups=apps,resources=deployments/status,verbs=get;update;patch
 // +kubebuilder:rbac:groups=apps.open-cluster-management.io,resources=channels,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups=apps.open-cluster-management.io,resources=channels/status,verbs=get;update;patch
-func (r *ReconcileDeployable) Reconcile(request reconcile.Request) (reconcile.Result, error) {
+func (r *ReconcileDeployable) Reconcile(ctx context.Context, request reconcile.Request) (reconcile.Result, error) {
 	log := r.Log.WithValues("dpl-reconcile", request.NamespacedName)
 	log.Info(fmt.Sprintf("Starting %v reconcile loop for %v", controllerName, request.NamespacedName))
 

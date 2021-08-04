@@ -15,6 +15,8 @@
 package objectstore
 
 import (
+	"context"
+	"log"
 	"os"
 	"path/filepath"
 	"testing"
@@ -29,6 +31,9 @@ import (
 	"github.com/onsi/ginkgo/reporters/stenographer"
 	"github.com/onsi/gomega/gexec"
 	uzap "go.uber.org/zap"
+	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+
 	"k8s.io/client-go/kubernetes/scheme"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -65,18 +70,11 @@ var _ = BeforeSuite(func(done Done) {
 			UseExistingCluster: &t,
 		}
 	} else {
-		customAPIServerFlags := []string{"--disable-admission-plugins=NamespaceLifecycle,LimitRanger,ServiceAccount," +
-			"TaintNodesByCondition,Priority,DefaultTolerationSeconds,DefaultStorageClass,StorageObjectInUseProtection," +
-			"PersistentVolumeClaimResize,ResourceQuota",
-		}
-
-		apiServerFlags := append([]string(nil), envtest.DefaultKubeAPIServerFlags...)
-		apiServerFlags = append(apiServerFlags, customAPIServerFlags...)
-
 		testEnv = &envtest.Environment{
-			CRDDirectoryPaths:  []string{filepath.Join("..", "..", "..", "deploy", "crds"), filepath.Join("..", "..", "..", "deploy", "dependent-crds")},
-			KubeAPIServerFlags: apiServerFlags,
+			CRDDirectoryPaths: []string{filepath.Join("..", "..", "..", "deploy", "crds"), filepath.Join("..", "..", "..", "deploy", "dependent-crds")},
 		}
+
+		testEnv.ControlPlane.GetAPIServer().Configure()
 	}
 
 	cfg, err := testEnv.Start()
@@ -107,6 +105,18 @@ var _ = BeforeSuite(func(done Done) {
 	k8sClient = k8sManager.GetClient()
 	Expect(k8sClient).ToNot(BeNil())
 
+	var c client.Client
+	if c, err = client.New(cfg, client.Options{Scheme: scheme.Scheme}); err != nil {
+		log.Fatal(err)
+	}
+
+	err = c.Create(context.Background(), &corev1.Namespace{
+		ObjectMeta: metav1.ObjectMeta{Name: "a-ns"},
+	})
+	if err != nil {
+		log.Fatal(err)
+	}
+
 	close(done)
 }, StartTimeout)
 
@@ -119,8 +129,8 @@ var _ = AfterSuite(func() {
 
 func SetupTestReconcile(inner reconcile.Reconciler) (reconcile.Reconciler, chan reconcile.Request) {
 	requests := make(chan reconcile.Request)
-	fn := reconcile.Func(func(req reconcile.Request) (reconcile.Result, error) {
-		result, err := inner.Reconcile(req)
+	fn := reconcile.Func(func(ctx context.Context, req reconcile.Request) (reconcile.Result, error) {
+		result, err := inner.Reconcile(ctx, req)
 		requests <- req
 		return result, err
 	})

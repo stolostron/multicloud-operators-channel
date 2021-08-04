@@ -123,9 +123,10 @@ func add(mgr manager.Manager, r reconcile.Reconciler, logger logr.Logger) error 
 	}
 
 	if placementutils.IsReadyACMClusterRegistry(mgr.GetAPIReader()) {
+		cmapper := &clusterMapper{Client: mgr.GetClient(), logger: logger}
 		err = c.Watch(
 			&source.Kind{Type: &spokeClusterV1.ManagedCluster{}},
-			&handler.EnqueueRequestsFromMapFunc{ToRequests: &clusterMapper{Client: mgr.GetClient(), logger: logger}},
+			handler.EnqueueRequestsFromMapFunc(cmapper.Map),
 			placementutils.ClusterPredicateFunc,
 		)
 	}
@@ -139,8 +140,8 @@ type clusterMapper struct {
 }
 
 // Map triggers all placements
-func (mapper *clusterMapper) Map(obj handler.MapObject) []reconcile.Request {
-	cname := obj.Meta.GetName()
+func (mapper *clusterMapper) Map(obj client.Object) []reconcile.Request {
+	cname := obj.GetName()
 
 	mapper.logger.Info(fmt.Sprintf("In cluster Mapper for %v", cname))
 
@@ -186,7 +187,7 @@ type ReconcileChannel struct {
 // +kubebuilder:rbac:groups=apps,resources=deployments/status,verbs=get;update;patch
 // +kubebuilder:rbac:groups=apps.open-cluster-management.io,resources=channels,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups=apps.open-cluster-management.io,resources=channels/status,verbs=get;update;patch
-func (r *ReconcileChannel) Reconcile(request reconcile.Request) (reconcile.Result, error) {
+func (r *ReconcileChannel) Reconcile(ctx context.Context, request reconcile.Request) (reconcile.Result, error) {
 	log := r.Log.WithValues("channel-reconcile", request.NamespacedName)
 
 	log.Info(fmt.Sprintf("Starting %v reconcile loop for %v", controllerName, request.NamespacedName))
@@ -194,7 +195,7 @@ func (r *ReconcileChannel) Reconcile(request reconcile.Request) (reconcile.Resul
 
 	instance := &chv1.Channel{}
 
-	err := r.Get(context.TODO(), request.NamespacedName, instance)
+	err := r.Get(ctx, request.NamespacedName, instance)
 	if err != nil {
 		if kerr.IsNotFound(err) {
 			// Object not found, return.  Created objects are automatically garbage collected.

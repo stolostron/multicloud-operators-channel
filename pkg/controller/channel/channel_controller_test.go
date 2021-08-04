@@ -19,7 +19,7 @@ import (
 	"testing"
 	"time"
 
-	tlog "github.com/go-logr/logr/testing"
+	"github.com/go-logr/logr"
 	"github.com/onsi/gomega"
 	"golang.org/x/net/context"
 	corev1 "k8s.io/api/core/v1"
@@ -79,13 +79,14 @@ func TestChannelControllerReconcile(t *testing.T) {
 	eventBroadcaster.StartRecordingToSink(&typedcorev1.EventSinkImpl{Interface: hubClientSet.CoreV1().Events("")})
 	recorder := eventBroadcaster.NewRecorder(scheme.Scheme, corev1.EventSource{Component: "channel"})
 
-	recFn, requests := SetupTestReconcile(newReconciler(mgr, dynamicClient, recorder, tlog.NullLogger{}))
-	g.Expect(add(mgr, recFn, tlog.NullLogger{})).NotTo(gomega.HaveOccurred())
+	recFn, requests := SetupTestReconcile(newReconciler(mgr, dynamicClient, recorder, logr.DiscardLogger{}))
+	g.Expect(add(mgr, recFn, logr.DiscardLogger{})).NotTo(gomega.HaveOccurred())
 
-	stopMgr, mgrStopped := StartTestManager(mgr, g)
+	ctx, cancel := context.WithTimeout(context.TODO(), 5*time.Minute)
+	mgrStopped := StartTestManager(ctx, mgr, g)
 
 	defer func() {
-		close(stopMgr)
+		cancel()
 		mgrStopped.Wait()
 	}()
 
@@ -96,7 +97,6 @@ func TestChannelControllerReconcile(t *testing.T) {
 
 	defer c.Delete(context.TODO(), channelInstance)
 
-	time.Sleep(time.Second * 1)
 	g.Eventually(requests, timeout).Should(gomega.Receive(gomega.Equal(expectedRequest)))
 }
 
@@ -139,17 +139,18 @@ func TestChannelAnnotateReferredSecertAndConfigMap(t *testing.T) {
 
 	tRecorder := record.NewBroadcaster().NewRecorder(mgr.GetScheme(), corev1.EventSource{Component: "channel"})
 
-	stopMgr, mgrStopped := StartTestManager(mgr, g)
+	ctx, cancel := context.WithTimeout(context.TODO(), 5*time.Minute)
+	mgrStopped := StartTestManager(ctx, mgr, g)
 
 	defer func() {
-		close(stopMgr)
+		cancel()
 		mgrStopped.Wait()
 	}()
 
 	// Create dynamic client
 	dynamicClient := dynamic.NewForConfigOrDie(cfg)
 
-	rec := newReconciler(mgr, dynamicClient, tRecorder, tlog.NullLogger{})
+	rec := newReconciler(mgr, dynamicClient, tRecorder, logr.DiscardLogger{})
 
 	defer c.Delete(context.TODO(), refSrt)
 	g.Expect(c.Create(context.TODO(), refSrt)).NotTo(gomega.HaveOccurred())
@@ -162,7 +163,7 @@ func TestChannelAnnotateReferredSecertAndConfigMap(t *testing.T) {
 
 	rq := reconcile.Request{NamespacedName: chKey}
 
-	_, err = rec.Reconcile(rq)
+	_, err = rec.Reconcile(context.TODO(), rq)
 	g.Expect(err).NotTo(gomega.HaveOccurred())
 
 	updatedSrt := &corev1.Secret{}
@@ -294,17 +295,18 @@ func TestChannelReconcileWithoutClusterCRD(t *testing.T) {
 
 	tRecorder := record.NewBroadcaster().NewRecorder(mgr.GetScheme(), corev1.EventSource{Component: "channel"})
 
-	stopMgr, mgrStopped := StartTestManager(mgr, g)
+	ctx, cancel := context.WithTimeout(context.TODO(), 5*time.Minute)
+	mgrStopped := StartTestManager(ctx, mgr, g)
 
 	defer func() {
-		close(stopMgr)
+		cancel()
 		mgrStopped.Wait()
 	}()
 
 	// Create dynamic client
 	dynamicClient := dynamic.NewForConfigOrDie(cfg)
 
-	rec := newReconciler(mgr, dynamicClient, tRecorder, tlog.NullLogger{})
+	rec := newReconciler(mgr, dynamicClient, tRecorder, logr.DiscardLogger{})
 
 	defer c.Delete(context.TODO(), refSrt)
 	g.Expect(c.Create(context.TODO(), refSrt)).NotTo(gomega.HaveOccurred())
@@ -314,7 +316,7 @@ func TestChannelReconcileWithoutClusterCRD(t *testing.T) {
 
 	rq := reconcile.Request{NamespacedName: chKey}
 
-	_, err = rec.Reconcile(rq)
+	_, err = rec.Reconcile(context.TODO(), rq)
 	g.Expect(err).NotTo(gomega.HaveOccurred())
 
 	expectedRole := &rbac.Role{}

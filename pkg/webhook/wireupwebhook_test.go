@@ -50,7 +50,7 @@ var _ = PDescribe("test if webhook's supplymentryResource create properly", func
 			sstop = make(chan struct{})
 			defer close(sstop)
 			go func() {
-				Expect(lMgr.Start(sstop)).Should(Succeed())
+				Expect(lMgr.Start(context.TODO())).Should(Succeed())
 			}()
 
 			testNs = "default"
@@ -62,7 +62,7 @@ var _ = PDescribe("test if webhook's supplymentryResource create properly", func
 				w.WebhookName = wbhName
 			}
 
-			wireUp, err := NewWireUp(lMgr, sstop, wbhNameSetUp)
+			wireUp, err := NewWireUp(context.TODO(), lMgr, wbhNameSetUp)
 			Expect(err).NotTo(HaveOccurred())
 
 			clt, err := client.New(ctrl.GetConfigOrDie(), client.Options{})

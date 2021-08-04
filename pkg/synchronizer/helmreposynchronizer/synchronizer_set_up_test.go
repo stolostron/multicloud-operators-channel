@@ -15,12 +15,15 @@
 package helmreposynchronizer
 
 import (
+	"context"
 	"log"
 	"os"
 	"path/filepath"
 	"sync"
 	"testing"
 
+	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/client-go/rest"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -38,17 +41,8 @@ var c client.Client
 
 // testing.M is going to set up a local k8s env and provide the client, so the other test case can access to the cluster
 func TestMain(m *testing.M) {
-	customAPIServerFlags := []string{"--disable-admission-plugins=NamespaceLifecycle,LimitRanger,ServiceAccount," +
-		"TaintNodesByCondition,Priority,DefaultTolerationSeconds,DefaultStorageClass,StorageObjectInUseProtection," +
-		"PersistentVolumeClaimResize,ResourceQuota",
-	}
-
-	apiServerFlags := append([]string(nil), envtest.DefaultKubeAPIServerFlags...)
-	apiServerFlags = append(apiServerFlags, customAPIServerFlags...)
-
 	testEnv := &envtest.Environment{
-		CRDDirectoryPaths:  []string{filepath.Join("..", "..", "..", "deploy", "crds"), filepath.Join("..", "..", "..", "deploy", "dependent-crds")},
-		KubeAPIServerFlags: apiServerFlags,
+		CRDDirectoryPaths: []string{filepath.Join("..", "..", "..", "deploy", "crds"), filepath.Join("..", "..", "..", "deploy", "dependent-crds")},
 	}
 
 	s := scheme.Scheme
@@ -67,6 +61,13 @@ func TestMain(m *testing.M) {
 		log.Fatal(err)
 	}
 
+	err = c.Create(context.Background(), &corev1.Namespace{
+		ObjectMeta: metav1.ObjectMeta{Name: "t-ch-ns"},
+	})
+	if err != nil {
+		log.Fatal(err)
+	}
+
 	code := m.Run()
 
 	testEnv.Stop()
@@ -74,15 +75,14 @@ func TestMain(m *testing.M) {
 }
 
 // StartTestManager adds recFn
-func StartTestManager(mgr manager.Manager, g *gomega.GomegaWithT) (chan struct{}, *sync.WaitGroup) {
-	stop := make(chan struct{})
+func StartTestManager(ctx context.Context, mgr manager.Manager, g *gomega.GomegaWithT) *sync.WaitGroup {
 	wg := &sync.WaitGroup{}
 	wg.Add(1)
 
 	go func() {
 		defer wg.Done()
-		g.Expect(mgr.Start(stop)).NotTo(gomega.HaveOccurred())
+		mgr.Start(ctx)
 	}()
 
-	return stop, wg
+	return wg
 }
