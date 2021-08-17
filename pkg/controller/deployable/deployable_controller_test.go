@@ -20,7 +20,7 @@ import (
 
 	"golang.org/x/net/context"
 
-	tlog "github.com/go-logr/logr/testing"
+	"github.com/go-logr/logr"
 	"github.com/google/go-cmp/cmp"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -65,11 +65,11 @@ var _ = Describe("channel and deployable requeue", func() {
 		k8sManager, err := mgr.New(cCfg, mgr.Options{MetricsBindAddress: "0"})
 		Expect(err).ToNot(HaveOccurred())
 
-		recFn, requests = SetupTestReconcile(newReconciler(k8sManager, record.NewFakeRecorder(fakeRecordBufferSize), tlog.NullLogger{}))
-		Expect(add(k8sManager, recFn, tlog.NullLogger{})).NotTo(HaveOccurred())
+		recFn, requests = SetupTestReconcile(newReconciler(k8sManager, record.NewFakeRecorder(fakeRecordBufferSize), logr.DiscardLogger{}))
+		Expect(add(k8sManager, recFn, logr.DiscardLogger{})).NotTo(HaveOccurred())
 
 		go func() {
-			Expect(k8sManager.Start(stop)).ToNot(HaveOccurred())
+			Expect(k8sManager.Start(context.TODO())).ToNot(HaveOccurred())
 		}()
 
 		k8sClient = k8sManager.GetClient()
@@ -173,11 +173,11 @@ var _ = Describe("promote deployables to channel namespace without considering c
 		k8sManager, err := mgr.New(cCfg, mgr.Options{MetricsBindAddress: "0"})
 		Expect(err).ToNot(HaveOccurred())
 
-		recFn, requests = SetupTestReconcile(newReconciler(k8sManager, record.NewFakeRecorder(fakeRecordBufferSize), tlog.NullLogger{}))
-		Expect(add(k8sManager, recFn, tlog.NullLogger{})).NotTo(HaveOccurred())
+		recFn, requests = SetupTestReconcile(newReconciler(k8sManager, record.NewFakeRecorder(fakeRecordBufferSize), logr.DiscardLogger{}))
+		Expect(add(k8sManager, recFn, logr.DiscardLogger{})).NotTo(HaveOccurred())
 
 		go func() {
-			Expect(k8sManager.Start(stop)).ToNot(HaveOccurred())
+			Expect(k8sManager.Start(context.TODO())).ToNot(HaveOccurred())
 		}()
 
 		k8sClient = k8sManager.GetClient()

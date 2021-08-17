@@ -17,7 +17,7 @@ package utils
 import (
 	"testing"
 
-	tlog "github.com/go-logr/logr/testing"
+	"github.com/go-logr/logr"
 )
 
 const (
@@ -26,7 +26,7 @@ const (
 )
 
 func TestGetHelmRepoIndex(t *testing.T) {
-	idx, err := GetHelmRepoIndex(helmTests, false, nil, nil, LoadLocalIdx, tlog.NullLogger{})
+	idx, err := GetHelmRepoIndex(helmTests, false, nil, nil, LoadLocalIdx, logr.DiscardLogger{})
 
 	if err != nil {
 		t.Errorf("failed to clone %+v", err)

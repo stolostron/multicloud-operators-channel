@@ -51,7 +51,6 @@ type ChannelSynchronizer struct {
 	EnableForChannel          bool
 	kubeClient                client.Client
 	ObjectStore               utils.ObjectStore
-	Signal                    <-chan struct{}
 	SyncInterval              int
 
 	//this is created during manager start up time and shared with reconcile.
@@ -77,18 +76,15 @@ func CreateObjectStoreSynchronizer(config *rest.Config, chdesc *utils.ChannelDes
 }
 
 // Start - starts the sync process
-func (sync *ChannelSynchronizer) Start(s <-chan struct{}) error {
-	sync.Signal = s
-
-	go wait.Until(func() {
+//nolint: unparam
+func (sync *ChannelSynchronizer) Start(ctx context.Context) error {
+	go wait.UntilWithContext(ctx, func(ctx context.Context) {
 		if err := sync.syncChannelsWithObjStore(); err != nil {
 			syncLog.Error(err, "failed to run object store synchronizer")
 			return
 		}
 		syncLog.Info("housekeeping object store synchronizer")
-	}, time.Duration(sync.SyncInterval)*time.Second, sync.Signal)
-
-	<-sync.Signal
+	}, time.Duration(sync.SyncInterval)*time.Second)
 
 	return nil
 }
@@ -105,6 +101,7 @@ func (sync *ChannelSynchronizer) syncChannelsWithObjStore() error {
 
 	for _, ch := range chlist.Items {
 		ch := ch
+
 		// Syncying objectbucket channel types only
 		if !strings.EqualFold(string(ch.Spec.Type), chv1.ChannelTypeObjectBucket) {
 			continue

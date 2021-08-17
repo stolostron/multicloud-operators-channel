@@ -15,6 +15,8 @@
 package objectstoresynchronizer
 
 import (
+	"context"
+	"log"
 	"os"
 	"path/filepath"
 	"testing"
@@ -31,6 +33,8 @@ import (
 	uzap "go.uber.org/zap"
 
 	"github.com/onsi/gomega/gexec"
+	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	ctrl "sigs.k8s.io/controller-runtime"
 	mgr "sigs.k8s.io/controller-runtime/pkg/manager"
 
@@ -67,17 +71,8 @@ var _ = BeforeSuite(func(done Done) {
 			UseExistingCluster: &t,
 		}
 	} else {
-		customAPIServerFlags := []string{"--disable-admission-plugins=NamespaceLifecycle,LimitRanger,ServiceAccount," +
-			"TaintNodesByCondition,Priority,DefaultTolerationSeconds,DefaultStorageClass,StorageObjectInUseProtection," +
-			"PersistentVolumeClaimResize,ResourceQuota",
-		}
-
-		apiServerFlags := append([]string(nil), envtest.DefaultKubeAPIServerFlags...)
-		apiServerFlags = append(apiServerFlags, customAPIServerFlags...)
-
 		testEnv = &envtest.Environment{
-			CRDDirectoryPaths:  []string{filepath.Join("..", "..", "..", "deploy", "crds"), filepath.Join("..", "..", "..", "deploy", "dependent-crds")},
-			KubeAPIServerFlags: apiServerFlags,
+			CRDDirectoryPaths: []string{filepath.Join("..", "..", "..", "deploy", "crds"), filepath.Join("..", "..", "..", "deploy", "dependent-crds")},
 		}
 	}
 
@@ -108,6 +103,32 @@ var _ = BeforeSuite(func(done Done) {
 
 	k8sClient = k8sManager.GetClient()
 	Expect(k8sClient).ToNot(BeNil())
+
+	var c client.Client
+	if c, err = client.New(cfg, client.Options{Scheme: scheme.Scheme}); err != nil {
+		log.Fatal(err)
+	}
+
+	err = c.Create(context.Background(), &corev1.Namespace{
+		ObjectMeta: metav1.ObjectMeta{Name: "tns-1"},
+	})
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	err = c.Create(context.Background(), &corev1.Namespace{
+		ObjectMeta: metav1.ObjectMeta{Name: "tns-2"},
+	})
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	err = c.Create(context.Background(), &corev1.Namespace{
+		ObjectMeta: metav1.ObjectMeta{Name: "tns-3"},
+	})
+	if err != nil {
+		log.Fatal(err)
+	}
 
 	close(done)
 }, StartTimeout)

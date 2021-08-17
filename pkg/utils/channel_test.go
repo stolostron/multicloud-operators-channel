@@ -19,7 +19,7 @@ import (
 	"strings"
 	"testing"
 
-	tlog "github.com/go-logr/logr/testing"
+	"github.com/go-logr/logr"
 	"github.com/google/go-cmp/cmp"
 	"github.com/onsi/gomega"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -61,7 +61,7 @@ func TestGenerateChannelMap(t *testing.T) {
 	fetched := &chv1.Channel{}
 	g.Expect(c.Get(ctx, key, fetched)).NotTo(gomega.HaveOccurred())
 
-	got, _ := utils.GenerateChannelMap(c, tlog.NullLogger{})
+	got, _ := utils.GenerateChannelMap(c, logr.DiscardLogger{})
 	want := map[string]*chv1.Channel{chName: fetched}
 
 	// test cases

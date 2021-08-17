@@ -48,7 +48,6 @@ var (
 type ChannelSynchronizer struct {
 	Scheme       *runtime.Scheme
 	kubeClient   client.Client
-	Signal       <-chan struct{}
 	SyncInterval int
 	ChannelMap   map[types.NamespacedName]*chv1.Channel
 }
@@ -72,18 +71,15 @@ func CreateHelmrepoSynchronizer(config *rest.Config, scheme *runtime.Scheme, syn
 }
 
 // Start - starts the sync process
-func (sync *ChannelSynchronizer) Start(s <-chan struct{}) error {
+//nolint:unparam
+func (sync *ChannelSynchronizer) Start(ctx context.Context) error {
 	logf.Info(fmt.Sprintf("start %v sync loop", syncrhonizerName))
 	defer logf.Info(fmt.Sprintf("exit %v sync loop", syncrhonizerName))
 
-	sync.Signal = s
-
-	go wait.Until(func() {
+	go wait.UntilWithContext(ctx, func(ctx context.Context) {
 		logf.Info("helmrepo housekeeping loop ...")
 		sync.syncChannelsWithHelmRepo()
-	}, time.Duration(sync.SyncInterval)*time.Second, sync.Signal)
-
-	<-s
+	}, time.Duration(sync.SyncInterval)*time.Second)
 
 	return nil
 }

@@ -97,7 +97,7 @@ type ReconcileChannel struct {
 // Automatically generate RBAC rules to allow the Controller to read and write Deployments
 // +kubebuilder:rbac:groups=apps.open-cluster-management.io,resources=deployables,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups=apps.open-cluster-management.io,resources=deployables/status,verbs=get;update;patch
-func (r *ReconcileChannel) Reconcile(request reconcile.Request) (reconcile.Result, error) {
+func (r *ReconcileChannel) Reconcile(ctx context.Context, request reconcile.Request) (reconcile.Result, error) {
 	// Fetch the Deployable instance
 	log := r.Log.WithValues("helm-reconcile", request.NamespacedName)
 	log.Info(fmt.Sprintf("Starting %v reconcile loop for %v", controllerName, request.NamespacedName))

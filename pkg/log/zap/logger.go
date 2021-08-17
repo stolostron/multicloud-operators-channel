@@ -41,7 +41,7 @@ func createLogger(conf config, destWriter io.Writer) logr.Logger {
 	conf.encoder = &zapf.KubeAwareEncoder{Encoder: conf.encoder, Verbose: conf.level.Level() < 0}
 	if conf.sample {
 		conf.opts = append(conf.opts, zap.WrapCore(func(core zapcore.Core) zapcore.Core {
-			return zapcore.NewSampler(core, time.Second, 100, 100)
+			return zapcore.NewSamplerWithOptions(core, time.Second, 100, 100)
 		}))
 	}
 

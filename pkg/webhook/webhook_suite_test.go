@@ -15,6 +15,7 @@
 package webhook
 
 import (
+	"context"
 	"os"
 	"path/filepath"
 	"testing"
@@ -30,8 +31,8 @@ import (
 
 	"github.com/onsi/gomega/gexec"
 	uzap "go.uber.org/zap"
+	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/kubernetes/scheme"
 
 	admissionv1 "k8s.io/api/admissionregistration/v1"
@@ -83,18 +84,9 @@ var _ = BeforeSuite(func(done Done) {
 			UseExistingCluster: &t,
 		}
 	} else {
-		customAPIServerFlags := []string{"--disable-admission-plugins=NamespaceLifecycle,LimitRanger,ServiceAccount," +
-			"TaintNodesByCondition,Priority,DefaultTolerationSeconds,DefaultStorageClass,StorageObjectInUseProtection," +
-			"PersistentVolumeClaimResize,ResourceQuota",
-		}
-
-		apiServerFlags := append([]string(nil), envtest.DefaultKubeAPIServerFlags...)
-		apiServerFlags = append(apiServerFlags, customAPIServerFlags...)
-
 		testEnv = &envtest.Environment{
 			CRDDirectoryPaths: []string{filepath.Join("..", "..", "deploy", "crds"),
 				filepath.Join("..", "..", "deploy", "dependent-crds")},
-			KubeAPIServerFlags: apiServerFlags,
 		}
 	}
 
@@ -129,6 +121,16 @@ var _ = BeforeSuite(func(done Done) {
 	k8sClient, err = client.New(testEnv.Config, client.Options{})
 	Expect(err).NotTo(HaveOccurred())
 
+	err = k8sClient.Create(context.Background(), &corev1.Namespace{
+		ObjectMeta: metav1.ObjectMeta{Name: "test"},
+	})
+	Expect(err).ToNot(HaveOccurred())
+
+	err = k8sClient.Create(context.Background(), &corev1.Namespace{
+		ObjectMeta: metav1.ObjectMeta{Name: "test-ns"},
+	})
+	Expect(err).ToNot(HaveOccurred())
+
 	hookServer.Register(validatorPath,
 		&webhook.Admission{
 			Handler: &ChannelValidator{
@@ -158,7 +160,7 @@ func initializeWebhookInEnvironment() {
 	webhookPathV1 := validatorPath
 
 	testEnv.WebhookInstallOptions = envtest.WebhookInstallOptions{
-		ValidatingWebhooks: []runtime.Object{
+		ValidatingWebhooks: []client.Object{
 			&admissionv1.ValidatingWebhookConfiguration{
 				ObjectMeta: metav1.ObjectMeta{
 					Name: webhookValidatorName,

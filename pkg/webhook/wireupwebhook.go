@@ -42,8 +42,8 @@ import (
 )
 
 type WireUp struct {
-	mgr  manager.Manager
-	stop <-chan struct{}
+	mgr manager.Manager
+	ctx context.Context
 
 	Server  *webhook.Server
 	Handler webhook.AdmissionHandler
@@ -62,7 +62,7 @@ type WireUp struct {
 	DeploymentSelector map[string]string
 }
 
-func NewWireUp(mgr manager.Manager, stop <-chan struct{},
+func NewWireUp(ctx context.Context, mgr manager.Manager,
 	opts ...func(*WireUp)) (*WireUp, error) {
 	WebhookName := "channels-apps-open-cluster-management-webhook"
 
@@ -86,7 +86,7 @@ func NewWireUp(mgr manager.Manager, stop <-chan struct{},
 
 	wireUp := &WireUp{
 		mgr:    mgr,
-		stop:   stop,
+		ctx:    ctx,
 		Server: mgr.GetWebhookServer(),
 		Logger: logf.Log.WithName("webhook"),
 
@@ -153,7 +153,7 @@ func (w *WireUp) WireUpWebhookSupplymentryResource(caCert []byte, gvk schema.Gro
 	w.Logger.Info("entry wire up webhook resources")
 	defer w.Logger.Info("exit wire up webhook resources")
 
-	if !w.mgr.GetCache().WaitForCacheSync(w.stop) {
+	if !w.mgr.GetCache().WaitForCacheSync(w.ctx) {
 		w.Logger.Error(gerr.New("cache not started"), "failed to start up cache")
 	}
 

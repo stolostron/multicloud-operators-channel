@@ -50,10 +50,11 @@ func TestObjectStorageForChannel(t *testing.T) {
 
 	g.Expect(c.Create(context.TODO(), created)).NotTo(gomega.HaveOccurred())
 
-	stopMgr, mgrStopped := StartTestManager(mgr, g)
+	ctx, cancel := context.WithTimeout(context.TODO(), 5*time.Minute)
+	mgrStopped := StartTestManager(ctx, mgr, g)
 
 	defer func() {
-		close(stopMgr)
+		cancel()
 		mgrStopped.Wait()
 	}()
 	// Test Create

@@ -26,7 +26,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	mgr "sigs.k8s.io/controller-runtime/pkg/manager"
 
-	tlog "github.com/go-logr/logr/testing"
+	"github.com/go-logr/logr"
 	"github.com/google/go-cmp/cmp"
 	"github.com/onsi/gomega"
 
@@ -145,7 +145,7 @@ func TestFindDeployableForChannelsInMap(t *testing.T) {
 
 	for _, tC := range testCases {
 		t.Run(tC.desc, func(t *testing.T) {
-			p, dpls, err := utils.RebuildDeployableRelationshipGraph(c, tC.dpl, tC.ch, tlog.NullLogger{})
+			p, dpls, err := utils.RebuildDeployableRelationshipGraph(c, tC.dpl, tC.ch, logr.DiscardLogger{})
 			if assertDpls(tC.expect, p, dpls[chName], err) {
 				t.Errorf("wanted %#v, got %v %v %v", tC.expect, dpls, p, err)
 			}
@@ -551,13 +551,13 @@ func TestCleanupDeployables(t *testing.T) {
 	g.Expect(addIndexFiled(k8sManager)).Should(gomega.Succeed())
 
 	go func() {
-		g.Expect(k8sManager.Start(stop)).ToNot(gomega.HaveOccurred())
+		g.Expect(k8sManager.Start(context.TODO())).ToNot(gomega.HaveOccurred())
 	}()
 
 	k8sClient := k8sManager.GetClient()
 	g.Expect(k8sClient).ToNot(gomega.BeNil())
 
-	g.Expect(k8sManager.GetCache().WaitForCacheSync(stop)).Should(gomega.BeTrue())
+	g.Expect(k8sManager.GetCache().WaitForCacheSync(context.TODO())).Should(gomega.BeTrue())
 
 	for _, tC := range testCases {
 		t.Run(tC.desc, func(t *testing.T) {
@@ -574,7 +574,7 @@ func TestCleanupDeployables(t *testing.T) {
 }
 
 func addIndexFiled(k8sManager mgr.Manager) error {
-	if err := k8sManager.GetFieldIndexer().IndexField(context.TODO(), &dplv1.Deployable{}, CtrlDeployableIndexer, func(rawObj runtime.Object) []string {
+	if err := k8sManager.GetFieldIndexer().IndexField(context.TODO(), &dplv1.Deployable{}, CtrlDeployableIndexer, func(rawObj client.Object) []string {
 		// grab the job object, extract the owner...
 		dpl := rawObj.(*dplv1.Deployable)
 		anno := dpl.GetAnnotations()
@@ -593,7 +593,7 @@ func addIndexFiled(k8sManager mgr.Manager) error {
 		return err
 	}
 
-	if err := k8sManager.GetFieldIndexer().IndexField(context.TODO(), &dplv1.Deployable{}, CtrlGenerateDeployableIndexer, func(rawObj runtime.Object) []string {
+	if err := k8sManager.GetFieldIndexer().IndexField(context.TODO(), &dplv1.Deployable{}, CtrlGenerateDeployableIndexer, func(rawObj client.Object) []string {
 		// grab the job object, extract the owner...
 		dpl := rawObj.(*dplv1.Deployable)
 		anno := dpl.GetAnnotations()
