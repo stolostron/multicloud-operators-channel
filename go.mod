@@ -17,6 +17,7 @@ require (
 	github.com/open-cluster-management/api v0.0.0-20210513122330-d76f10481f05
 	github.com/open-cluster-management/multicloud-operators-deployable v1.2.4-0-20210816-f9fe854
 	github.com/open-cluster-management/multicloud-operators-placementrule v1.2.4-0-20210816-699e5
+	github.com/opencontainers/runc v1.0.0-rc9 // indirect
 	github.com/pkg/errors v0.9.1
 	github.com/spf13/pflag v1.0.5
 	github.com/stretchr/testify v1.7.0
