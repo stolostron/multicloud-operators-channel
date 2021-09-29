@@ -23,7 +23,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 
-	chv1 "github.com/open-cluster-management/multicloud-operators-channel/pkg/apis/apps/v1"
+	chv1 "open-cluster-management.io/multicloud-operators-channel/pkg/apis/apps/v1"
 )
 
 var _ = Describe("test channel validation logic", func() {

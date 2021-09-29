@@ -25,11 +25,11 @@ import (
 
 func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenAPIDefinition {
 	return map[string]common.OpenAPIDefinition{
-		"github.com/open-cluster-management/multicloud-operators-channel/pkg/apis/apps/v1.Channel":       schema_pkg_apis_apps_v1_Channel(ref),
-		"github.com/open-cluster-management/multicloud-operators-channel/pkg/apis/apps/v1.ChannelGate":   schema_pkg_apis_apps_v1_ChannelGate(ref),
-		"github.com/open-cluster-management/multicloud-operators-channel/pkg/apis/apps/v1.ChannelList":   schema_pkg_apis_apps_v1_ChannelList(ref),
-		"github.com/open-cluster-management/multicloud-operators-channel/pkg/apis/apps/v1.ChannelSpec":   schema_pkg_apis_apps_v1_ChannelSpec(ref),
-		"github.com/open-cluster-management/multicloud-operators-channel/pkg/apis/apps/v1.ChannelStatus": schema_pkg_apis_apps_v1_ChannelStatus(ref),
+		"open-cluster-management.io/multicloud-operators-channel/pkg/apis/apps/v1.Channel":       schema_pkg_apis_apps_v1_Channel(ref),
+		"open-cluster-management.io/multicloud-operators-channel/pkg/apis/apps/v1.ChannelGate":   schema_pkg_apis_apps_v1_ChannelGate(ref),
+		"open-cluster-management.io/multicloud-operators-channel/pkg/apis/apps/v1.ChannelList":   schema_pkg_apis_apps_v1_ChannelList(ref),
+		"open-cluster-management.io/multicloud-operators-channel/pkg/apis/apps/v1.ChannelSpec":   schema_pkg_apis_apps_v1_ChannelSpec(ref),
+		"open-cluster-management.io/multicloud-operators-channel/pkg/apis/apps/v1.ChannelStatus": schema_pkg_apis_apps_v1_ChannelStatus(ref),
 	}
 }
 
@@ -42,7 +42,7 @@ func schema_pkg_apis_apps_v1_Channel(ref common.ReferenceCallback) common.OpenAP
 				Properties: map[string]spec.Schema{
 					"status": {
 						SchemaProps: spec.SchemaProps{
-							Ref: ref("github.com/open-cluster-management/multicloud-operators-channel/pkg/apis/apps/v1.ChannelStatus"),
+							Ref: ref("open-cluster-management.io/multicloud-operators-channel/pkg/apis/apps/v1.ChannelStatus"),
 						},
 					},
 					"metadata": {
@@ -52,7 +52,7 @@ func schema_pkg_apis_apps_v1_Channel(ref common.ReferenceCallback) common.OpenAP
 					},
 					"spec": {
 						SchemaProps: spec.SchemaProps{
-							Ref: ref("github.com/open-cluster-management/multicloud-operators-channel/pkg/apis/apps/v1.ChannelSpec"),
+							Ref: ref("open-cluster-management.io/multicloud-operators-channel/pkg/apis/apps/v1.ChannelSpec"),
 						},
 					},
 					"kind": {
@@ -73,7 +73,7 @@ func schema_pkg_apis_apps_v1_Channel(ref common.ReferenceCallback) common.OpenAP
 			},
 		},
 		Dependencies: []string{
-			"github.com/open-cluster-management/multicloud-operators-channel/pkg/apis/apps/v1.ChannelSpec", "github.com/open-cluster-management/multicloud-operators-channel/pkg/apis/apps/v1.ChannelStatus", "k8s.io/apimachinery/pkg/apis/meta/v1.ObjectMeta"},
+			"open-cluster-management.io/multicloud-operators-channel/pkg/apis/apps/v1.ChannelSpec", "open-cluster-management.io/multicloud-operators-channel/pkg/apis/apps/v1.ChannelStatus", "k8s.io/apimachinery/pkg/apis/meta/v1.ObjectMeta"},
 	}
 }
 
@@ -154,7 +154,7 @@ func schema_pkg_apis_apps_v1_ChannelList(ref common.ReferenceCallback) common.Op
 							Items: &spec.SchemaOrArray{
 								Schema: &spec.Schema{
 									SchemaProps: spec.SchemaProps{
-										Ref: ref("github.com/open-cluster-management/multicloud-operators-channel/pkg/apis/apps/v1.Channel"),
+										Ref: ref("open-cluster-management.io/multicloud-operators-channel/pkg/apis/apps/v1.Channel"),
 									},
 								},
 							},
@@ -165,7 +165,7 @@ func schema_pkg_apis_apps_v1_ChannelList(ref common.ReferenceCallback) common.Op
 			},
 		},
 		Dependencies: []string{
-			"github.com/open-cluster-management/multicloud-operators-channel/pkg/apis/apps/v1.Channel", "k8s.io/apimachinery/pkg/apis/meta/v1.ListMeta"},
+			"open-cluster-management.io/multicloud-operators-channel/pkg/apis/apps/v1.Channel", "k8s.io/apimachinery/pkg/apis/meta/v1.ListMeta"},
 	}
 }
 
@@ -207,7 +207,7 @@ func schema_pkg_apis_apps_v1_ChannelSpec(ref common.ReferenceCallback) common.Op
 					},
 					"gates": {
 						SchemaProps: spec.SchemaProps{
-							Ref: ref("github.com/open-cluster-management/multicloud-operators-channel/pkg/apis/apps/v1.ChannelGate"),
+							Ref: ref("open-cluster-management.io/multicloud-operators-channel/pkg/apis/apps/v1.ChannelGate"),
 						},
 					},
 					"sourceNamespaces": {
@@ -233,7 +233,7 @@ func schema_pkg_apis_apps_v1_ChannelSpec(ref common.ReferenceCallback) common.Op
 			},
 		},
 		Dependencies: []string{
-			"github.com/open-cluster-management/multicloud-operators-channel/pkg/apis/apps/v1.ChannelGate", "k8s.io/api/core/v1.ObjectReference"},
+			"open-cluster-management.io/multicloud-operators-channel/pkg/apis/apps/v1.ChannelGate", "k8s.io/api/core/v1.ObjectReference"},
 	}
 }
 

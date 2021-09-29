@@ -20,8 +20,7 @@ import (
 
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 
-	spokeClusterV1 "github.com/open-cluster-management/api/cluster/v1"
-	dplapis "github.com/open-cluster-management/multicloud-operators-deployable/pkg/apis"
+	spokeClusterV1 "open-cluster-management.io/api/cluster/v1"
 )
 
 // AddToSchemes may be used to add all resources defined in the project to a Scheme
@@ -30,11 +29,6 @@ var AddToSchemes runtime.SchemeBuilder
 // AddToScheme adds all Resources to the Scheme
 func AddToScheme(s *runtime.Scheme) error {
 	var err error
-	// add mcm scheme, mcm scheme only on hub cluster
-	if err = dplapis.AddToSchemes.AddToScheme(s); err != nil {
-		logf.Log.Error(err, "unable add deployable APIs to scheme")
-		return err
-	}
 
 	if err = spokeClusterV1.AddToScheme(s); err != nil {
 		logf.Log.Error(err, "unable add managed cluster APIs to scheme")

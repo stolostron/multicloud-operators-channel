@@ -36,8 +36,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
-	spokeClusterV1 "github.com/open-cluster-management/api/cluster/v1"
-	chv1 "github.com/open-cluster-management/multicloud-operators-channel/pkg/apis/apps/v1"
+	spokeClusterV1 "open-cluster-management.io/api/cluster/v1"
+	chv1 "open-cluster-management.io/multicloud-operators-channel/pkg/apis/apps/v1"
 )
 
 var c client.Client

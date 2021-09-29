@@ -38,16 +38,12 @@ import (
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/manager/signals"
 
-	chv1 "github.com/open-cluster-management/multicloud-operators-channel/pkg/apis/apps/v1"
+	chv1 "open-cluster-management.io/multicloud-operators-channel/pkg/apis/apps/v1"
 
-	"github.com/open-cluster-management/multicloud-operators-channel/pkg/apis"
-	"github.com/open-cluster-management/multicloud-operators-channel/pkg/controller"
-	"github.com/open-cluster-management/multicloud-operators-channel/pkg/utils"
-	chWebhook "github.com/open-cluster-management/multicloud-operators-channel/pkg/webhook"
-
-	helmsync "github.com/open-cluster-management/multicloud-operators-channel/pkg/synchronizer/helmreposynchronizer"
-	objsync "github.com/open-cluster-management/multicloud-operators-channel/pkg/synchronizer/objectstoresynchronizer"
-	placementutils "github.com/open-cluster-management/multicloud-operators-placementrule/pkg/utils"
+	"open-cluster-management.io/multicloud-operators-channel/pkg/apis"
+	"open-cluster-management.io/multicloud-operators-channel/pkg/controller"
+	"open-cluster-management.io/multicloud-operators-channel/pkg/utils"
+	chWebhook "open-cluster-management.io/multicloud-operators-channel/pkg/webhook"
 )
 
 // Change below variables to serve metrics on different host or port.
@@ -128,34 +124,6 @@ func RunManager() {
 		os.Exit(exitCode)
 	}
 
-	//Create channel synchronizer
-	osync, err := objsync.CreateObjectStoreSynchronizer(cfg, chdesc, options.SyncInterval)
-
-	if err != nil {
-		logger.Error(err, "unable to create object-store syncrhonizer on destination cluster.")
-		os.Exit(exitCode)
-	}
-
-	err = mgr.Add(osync)
-	if err != nil {
-		logger.Error(err, "Failed to register synchronizer.")
-		os.Exit(exitCode)
-	}
-
-	// Create channel synchronizer for helm repo
-	hsync, err := helmsync.CreateHelmrepoSynchronizer(cfg, mgr.GetScheme(), options.SyncInterval)
-
-	if err != nil {
-		logger.Error(err, "unable to create helo-repo syncrhonizer on destination cluster.")
-		os.Exit(exitCode)
-	}
-
-	err = mgr.Add(hsync)
-	if err != nil {
-		logger.Error(err, "Failed to register synchronizer.")
-		os.Exit(exitCode)
-	}
-
 	logger.Info("Registering Components.")
 
 	// Setup Scheme for all resources
@@ -181,15 +149,15 @@ func RunManager() {
 	// Setup all Controllers
 	logger.Info("Setting up controller")
 
-	if err := controller.AddToManager(mgr, dynamicClient, recorder, logf.Log.WithName("controllers"), chdesc, hsync); err != nil {
+	if err := controller.AddToManager(mgr, dynamicClient, recorder, logf.Log.WithName("controllers"), chdesc); err != nil {
 		logger.Error(err, "unable to register controllers to the manager")
 		os.Exit(exitCode)
 	}
 
 	sig := signals.SetupSignalHandler()
 
-	logger.Info("Detecting ACM cluster API service...")
-	placementutils.DetectClusterRegistry(sig, mgr.GetAPIReader())
+	logger.Info("Detecting cluster API service...")
+	utils.DetectClusterRegistry(sig, mgr.GetAPIReader())
 
 	// Setup webhooks
 	if !options.Debug {
