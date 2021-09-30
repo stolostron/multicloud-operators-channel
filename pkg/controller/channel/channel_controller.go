@@ -53,6 +53,11 @@ var (
 	clusterRules = []rbac.PolicyRule{
 		{
 			Verbs:     []string{"get", "list", "watch"},
+			APIGroups: []string{chv1.SchemeGroupVersion.Group},
+			Resources: []string{"channels", "channels/status"},
+		},
+		{
+			Verbs:     []string{"get", "list", "watch"},
 			APIGroups: []string{""},
 			Resources: []string{"secrets", "configmaps"},
 		},
@@ -403,11 +408,17 @@ func (r *ReconcileChannel) validateClusterRBAC(instance *chv1.Channel, logger lo
 	}
 
 	for _, cl := range cllist.Items {
-		subjects = append(subjects, rbac.Subject{
-			APIGroup: "rbac.authorization.k8s.io",
-			Kind:     "Group",
-			Name:     "system:open-cluster-management:cluster:" + cl.Name + ":addon:application-manager",
-		})
+		subjects = append(subjects,
+			rbac.Subject{
+				APIGroup: "rbac.authorization.k8s.io",
+				Kind:     "User",
+				Name:     "system:open-cluster-management:cluster:" + cl.Name + ":addon:application-manager:agent:appmgr",
+			},
+			rbac.Subject{
+				APIGroup: "rbac.authorization.k8s.io",
+				Kind:     "Group",
+				Name:     "system:open-cluster-management:cluster:" + cl.Name + ":addon:application-manager",
+			})
 	}
 
 	roleref := rbac.RoleRef{
