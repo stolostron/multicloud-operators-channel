@@ -23,6 +23,7 @@ import (
 	gerr "github.com/pkg/errors"
 
 	appsv1 "k8s.io/api/apps/v1"
+	apixv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -220,7 +221,7 @@ func (w *WireUp) createOrUpdateValiationWebhook(ca []byte, gvk schema.GroupVersi
 		if errors.IsNotFound(err) { // create a new validator
 			cfg := newValidatingWebhookCfg(w.WebHookeSvcKey, validatorName, w.ValidtorPath, ca, gvk, ops)
 
-			setOwnerReferences(w.mgr.GetClient(), w.Logger, w.WebHookeSvcKey.Namespace, w.DeployLabel, cfg)
+			setWebhookOwnerReferences(w.mgr.GetClient(), w.Logger, cfg)
 
 			if err := w.mgr.GetClient().Create(context.TODO(), cfg); err != nil {
 				return gerr.Wrap(err, fmt.Sprintf("Failed to create validating webhook %s", validatorName))
@@ -232,6 +233,8 @@ func (w *WireUp) createOrUpdateValiationWebhook(ca []byte, gvk schema.GroupVersi
 		validator.Webhooks[0].ClientConfig.Service.Namespace = w.WebHookeSvcKey.Namespace
 		validator.Webhooks[0].ClientConfig.Service.Name = w.WebHookeSvcKey.Name
 		validator.Webhooks[0].ClientConfig.CABundle = ca
+
+		setWebhookOwnerReferences(w.mgr.GetClient(), w.Logger, validator)
 
 		if err := w.mgr.GetClient().Update(context.TODO(), validator); err != nil {
 			return gerr.Wrap(err, fmt.Sprintf("Failed to update validating webhook %s", validatorName))
@@ -255,6 +258,26 @@ func setOwnerReferences(c client.Client, logger logr.Logger, deployNs string, de
 
 	obj.SetOwnerReferences([]metav1.OwnerReference{
 		*metav1.NewControllerRef(owner, owner.GetObjectKind().GroupVersionKind())})
+}
+
+func setWebhookOwnerReferences(c client.Client, logger logr.Logger, obj metav1.Object) {
+	channelCrdName := "channels.apps.open-cluster-management.io"
+	key := types.NamespacedName{Name: channelCrdName}
+	owner := &apixv1.CustomResourceDefinition{}
+
+	if err := c.Get(context.TODO(), key, owner); err != nil {
+		logger.Error(err, fmt.Sprintf("Failed to set webhook owner references for %s", obj.GetName()))
+		return
+	}
+
+	obj.SetOwnerReferences([]metav1.OwnerReference{
+		{
+			APIVersion: owner.APIVersion,
+			Kind:       owner.Kind,
+			Name:       owner.Name,
+			UID:        owner.UID,
+		},
+	})
 }
 
 func newWebhookServiceTemplate(svcKey types.NamespacedName, webHookPort, webHookServicePort int, deploymentSelector map[string]string) *corev1.Service {
