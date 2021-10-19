@@ -1,4 +1,4 @@
-# Copyright 2019 The Kubernetes Authors.
+# Copyright 2021 The Kubernetes Authors.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -27,10 +27,9 @@ FINDFILES=find . \( -path ./.git -o -path ./.github \) -prune -o -type f
 XARGS = xargs -0 ${XARGS_FLAGS}
 CLEANXARGS = xargs ${XARGS_FLAGS}
 
-IMG ?= $(shell cat COMPONENT_NAME 2> /dev/null)
 REGISTRY = quay.io/open-cluster-management
-VERSION ?= $(shell cat COMPONENT_VERSION 2> /dev/null)
-IMAGE_NAME_AND_VERSION ?= $(REGISTRY)/$(IMG):$(VERSION)
+VERSION = latest
+IMAGE_NAME_AND_VERSION ?= $(REGISTRY)/multicloud-operators-channel:$(VERSION)
 export GOPACKAGES   = $(shell go list ./... | grep -v /manager | grep -v /bindata  | grep -v /vendor | grep -v /internal | grep -v /build | grep -v /test | grep -v /e2e )
 
 TEST_TMP :=/tmp
@@ -44,13 +43,12 @@ KB_TOOLS_ARCHIVE_PATH := $(TEST_TMP)/$(KB_TOOLS_ARCHIVE_NAME)
 .PHONY: build
 
 build:
-	@common/scripts/gobuild.sh build/_output/bin/$(IMG) ./cmd/manager
+	@common/scripts/gobuild.sh build/_output/bin/multicluster-operators-channel ./cmd/manager
 
 .PHONY: build-images
 
 build-images: build
 	@docker build -t ${IMAGE_NAME_AND_VERSION} -f build/Dockerfile .
-	@docker tag ${IMAGE_NAME_AND_VERSION} $(REGISTRY)/$(IMG):latest
 
 .PHONY: lint
 

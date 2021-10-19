@@ -36,7 +36,7 @@ contribution. See the [DCO](DCO) file for details.
 
 Anyone may comment on issues and submit reviews for pull requests. However, in
 order to be assigned an issue or pull request, you must be a member of the
-[open-cluster-management](https://github.com/open-cluster-management) GitHub organization.
+[open-cluster-management](https://github.com/open-cluster-management-io) GitHub organization.
 
 Repo maintainers can assign you an issue or pull request by leaving a
 `/assign <your Github ID>` comment on the issue or pull request.
@@ -46,7 +46,7 @@ Repo maintainers can assign you an issue or pull request by leaving a
 After your PR is ready to commit, please run following commands to check your code.
 
 ```shell
-make verify
+make build
 make test
 ```
 
@@ -55,8 +55,5 @@ make test
 Make sure your code build passed.
 
 ```shell
-export BUILD_LOCALLY=1
 make
 ```
-
-Now, you can follow the [getting started guide](./README.md#getting-started) to work with the the open-cluster-management multicloud-operators-channel repository.
