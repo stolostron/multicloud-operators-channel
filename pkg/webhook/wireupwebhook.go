@@ -264,6 +264,7 @@ func setWebhookOwnerReferences(c client.Client, logger logr.Logger, obj metav1.O
 	channelCrdName := "channels.apps.open-cluster-management.io"
 	key := types.NamespacedName{Name: channelCrdName}
 	owner := &apixv1.CustomResourceDefinition{}
+
 	if err := c.Get(context.TODO(), key, owner); err != nil {
 		logger.Error(err, fmt.Sprintf("Failed to set webhook owner references for %s", obj.GetName()))
 		return
@@ -277,7 +278,6 @@ func setWebhookOwnerReferences(c client.Client, logger logr.Logger, obj metav1.O
 			UID:        owner.UID,
 		},
 	})
-
 }
 
 func newWebhookServiceTemplate(svcKey types.NamespacedName, webHookPort, webHookServicePort int, deploymentSelector map[string]string) *corev1.Service {
