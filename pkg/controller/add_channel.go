@@ -1,4 +1,4 @@
-// Copyright 2019 The Kubernetes Authors.
+// Copyright 2021 The Kubernetes Authors.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -15,7 +15,7 @@
 package controller
 
 import (
-	chv1 "github.com/open-cluster-management/multicloud-operators-channel/pkg/controller/channel"
+	chv1 "open-cluster-management.io/multicloud-operators-channel/pkg/controller/channel"
 )
 
 func init() {

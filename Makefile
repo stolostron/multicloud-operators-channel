@@ -1,4 +1,4 @@
-# Copyright 2019 The Kubernetes Authors.
+# Copyright 2021 The Kubernetes Authors.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -12,33 +12,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-# This repo is build in Travis-ci by default;
-# Override this variable in local env.
-TRAVIS_BUILD  ?= 1
-
-# Image URL to use all building/pushing image targets;
-# Use your own docker registry and image name for dev/test by overridding the IMG and REGISTRY environment variable.
-IMG ?= $(shell cat COMPONENT_NAME 2> /dev/null)
-REGISTRY ?= quay.io/open-cluster-management
-
-# Github host to use for checking the source tree;
-# Override this variable ue with your own value if you're working on forked repo.
-GIT_HOST ?= github.com/open-cluster-management
-
-PWD := $(shell pwd)
-BASE_DIR := $(shell basename $(PWD))
-
-# Keep an existing GOPATH, make a private one if it is undefined
-GOPATH_DEFAULT := $(PWD)/.go
-export GOPATH ?= $(GOPATH_DEFAULT)
-GOBIN_DEFAULT := $(GOPATH)/bin
-export GOBIN ?= $(GOBIN_DEFAULT)
-TESTARGS_DEFAULT := "-v"
-export TESTARGS ?= $(TESTARGS_DEFAULT)
-DEST ?= $(GOPATH)/src/$(GIT_HOST)/$(BASE_DIR)
-VERSION ?= $(shell cat COMPONENT_VERSION 2> /dev/null)
-IMAGE_NAME_AND_VERSION ?= $(REGISTRY)/$(IMG)
-
 LOCAL_OS := $(shell uname)
 ifeq ($(LOCAL_OS),Linux)
     TARGET_OS ?= linux
@@ -50,118 +23,59 @@ else
     $(error "This system's OS $(LOCAL_OS) isn't recognized/supported")
 endif
 
-.PHONY: fmt lint test build build-images
-ifeq ($(TRAVIS_BUILD),1)
-	ifneq ("$(realpath $(DEST))", "$(realpath $(PWD))")
-	    $(error Please run 'make' from $(DEST). Current directory is $(PWD))
-	endif
-endif
+FINDFILES=find . \( -path ./.git -o -path ./.github \) -prune -o -type f
+XARGS = xargs -0 ${XARGS_FLAGS}
+CLEANXARGS = xargs ${XARGS_FLAGS}
 
-# GITHUB_USER containing '@' char must be escaped with '%40'
-GITHUB_USER := $(shell echo $(GITHUB_USER) | sed 's/@/%40/g')
-GITHUB_TOKEN ?=
+REGISTRY = quay.io/open-cluster-management
+VERSION = latest
+IMAGE_NAME_AND_VERSION ?= $(REGISTRY)/multicloud-operators-channel:$(VERSION)
+export GOPACKAGES   = $(shell go list ./... | grep -v /manager | grep -v /bindata  | grep -v /vendor | grep -v /internal | grep -v /build | grep -v /test | grep -v /e2e )
 
-USE_VENDORIZED_BUILD_HARNESS ?=
+TEST_TMP :=/tmp
+export KUBEBUILDER_ASSETS ?=$(TEST_TMP)/kubebuilder/bin
+K8S_VERSION ?=1.19.2
+GOHOSTOS ?=$(shell go env GOHOSTOS)
+GOHOSTARCH ?= $(shell go env GOHOSTARCH)
+KB_TOOLS_ARCHIVE_NAME :=kubebuilder-tools-$(K8S_VERSION)-$(GOHOSTOS)-$(GOHOSTARCH).tar.gz
+KB_TOOLS_ARCHIVE_PATH := $(TEST_TMP)/$(KB_TOOLS_ARCHIVE_NAME)
 
-ifndef USE_VENDORIZED_BUILD_HARNESS
-	ifeq ($(TRAVIS_BUILD),1)
-	-include $(shell curl -H 'Authorization: token ${GITHUB_TOKEN}' -H 'Accept: application/vnd.github.v4.raw' -L https://api.github.com/repos/open-cluster-management/build-harness-extensions/contents/templates/Makefile.build-harness-bootstrap -o .build-harness-bootstrap; echo .build-harness-bootstrap)
-	endif
-else
--include vbh/.build-harness-vendorized
-endif
-
-default::
-	@echo "Build Harness Bootstrapped"
-
-include common/Makefile.common.mk
-
-############################################################
-# work section
-############################################################
-$(GOBIN):
-	@echo "create gobin"
-	@mkdir -p $(GOBIN)
-
-work: $(GOBIN)
-
-############################################################
-# format section
-############################################################
-
-# All available format: format-go format-protos format-python
-# Default value will run all formats, override these make target with your requirements:
-#    eg: fmt: format-go format-protos
-fmt: format-go format-protos format-python
-
-############################################################
-# check section
-############################################################
-
-check: lint
-
-# All available linters: lint-dockerfiles lint-scripts lint-yaml lint-copyright-banner lint-go lint-python lint-helm lint-markdown lint-sass lint-typescript lint-protos
-# Default value will run all linters, override these make target with your requirements:
-#    eg: lint: lint-go lint-yaml
-lint: lint-all
-
-############################################################
-# test section
-############################################################
-
-test:
-	@kubebuilder version
-	@go test ${TESTARGS} ./cmd/... ./pkg/...
-
-############################################################
-# coverage section
-############################################################
-
-openapi-gen:
-	which build/_output/bin/openapi-gen > /dev/null || go build -o build/_output/bin/openapi-gen k8s.io/kube-openapi/cmd/openapi-gen
-	build/_output/bin/openapi-gen -o . -i $(GIT_HOST)/$(BASE_DIR)/pkg/apis/apps/v1 \
-		-p pkg/apis/apps/v1 \
-		-h hack/boilerplate.go.txt
-############################################################
-# build section
-############################################################
+.PHONY: build
 
 build:
-	@common/scripts/gobuild.sh build/_output/bin/$(IMG) ./cmd/manager
+	@common/scripts/gobuild.sh build/_output/bin/multicluster-operators-channel ./cmd/manager
 
-local:
-	@GOOS=darwin common/scripts/gobuild.sh build/_output/bin/$(IMG) ./cmd/manager
-
-############################################################
-# images section
-############################################################
+.PHONY: build-images
 
 build-images: build
 	@docker build -t ${IMAGE_NAME_AND_VERSION} -f build/Dockerfile .
-	@docker tag ${IMAGE_NAME_AND_VERSION} $(REGISTRY)/$(IMG):latest
 
-build-latest-community-operator:
-	docker tag ${COMPONENT_DOCKER_REPO}/${COMPONENT_NAME}:${COMPONENT_VERSION}${COMPONENT_TAG_EXTENSION} ${COMPONENT_DOCKER_REPO}/${COMPONENT_NAME}:latest
-	docker login ${COMPONENT_DOCKER_REPO} -u ${DOCKER_USER} -p ${DOCKER_PASS}
-	docker push ${COMPONENT_DOCKER_REPO}/${COMPONENT_NAME}:latest
-	@echo "Pushed the following image: ${COMPONENT_DOCKER_REPO}/${COMPONENT_NAME}:latest"
+.PHONY: lint
 
-release-community-operator:
-	docker login ${COMPONENT_DOCKER_REPO} -u ${DOCKER_USER} -p ${DOCKER_PASS}
-	docker pull ${COMPONENT_DOCKER_REPO}/${COMPONENT_NAME}:${COMPONENT_VERSION}${COMPONENT_TAG_EXTENSION}
-	docker tag ${COMPONENT_DOCKER_REPO}/${COMPONENT_NAME}:${COMPONENT_VERSION}${COMPONENT_TAG_EXTENSION} ${COMPONENT_DOCKER_REPO}/${COMPONENT_NAME}:community-${COMPONENT_VERSION}
-	docker push ${COMPONENT_DOCKER_REPO}/${COMPONENT_NAME}:community-${COMPONENT_VERSION}
-	@echo "Pushed the following image: ${COMPONENT_DOCKER_REPO}/${COMPONENT_NAME}:community-${COMPONENT_VERSION}"
+lint: lint-all
 
-export CONTAINER_NAME=e2e
-e2e: build build-images
-	build/run-e2e-tests.sh
+.PHONY: lint-all
 
-e2e-setup: e2e
-	build/set_up_e2e_local_dir.sh
+lint-all:lint-go
 
-############################################################
-# clean section
-############################################################
-clean::
-	rm -f build/_output/bin/$(IMG)
+.PHONY: lint-go
+
+lint-go:
+	@${FINDFILES} -name '*.go' \( ! \( -name '*.gen.go' -o -name '*.pb.go' \) \) -print0 | ${XARGS} common/scripts/lint_go.sh
+
+.PHONY: test
+
+# download the kubebuilder-tools to get kube-apiserver binaries from it
+ensure-kubebuilder-tools:
+ifeq "" "$(wildcard $(KUBEBUILDER_ASSETS))"
+	$(info Downloading kube-apiserver into '$(KUBEBUILDER_ASSETS)')
+	mkdir -p '$(KUBEBUILDER_ASSETS)'
+	curl -s -f -L https://storage.googleapis.com/kubebuilder-tools/$(KB_TOOLS_ARCHIVE_NAME) -o '$(KB_TOOLS_ARCHIVE_PATH)'
+	tar -C '$(KUBEBUILDER_ASSETS)' --strip-components=2 -zvxf '$(KB_TOOLS_ARCHIVE_PATH)'
+else
+	$(info Using existing kube-apiserver from "$(KUBEBUILDER_ASSETS)")
+endif
+.PHONY: ensure-kubebuilder-tools
+
+test: ensure-kubebuilder-tools
+	go test -timeout 300s -v ./pkg/... 

@@ -1,4 +1,4 @@
-// Copyright 2019 The Kubernetes Authors.
+// Copyright 2021 The Kubernetes Authors.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -21,19 +21,18 @@ import (
 
 	"github.com/go-logr/logr"
 
-	helmsync "github.com/open-cluster-management/multicloud-operators-channel/pkg/synchronizer/helmreposynchronizer"
-	"github.com/open-cluster-management/multicloud-operators-channel/pkg/utils"
+	"open-cluster-management.io/multicloud-operators-channel/pkg/utils"
 )
 
 // AddToManagerFuncs is a list of functions to add all Controllers to the Manager
 var AddToManagerFuncs []func(manager.Manager, dynamic.Interface, record.EventRecorder, logr.Logger,
-	*utils.ChannelDescriptor, *helmsync.ChannelSynchronizer) error
+	*utils.ChannelDescriptor) error
 
 // AddToManager adds all Controllers to the Manager
 func AddToManager(m manager.Manager, dynamicClient dynamic.Interface, recorder record.EventRecorder,
-	logger logr.Logger, chdesc *utils.ChannelDescriptor, sync *helmsync.ChannelSynchronizer) error {
+	logger logr.Logger, chdesc *utils.ChannelDescriptor) error {
 	for _, f := range AddToManagerFuncs {
-		if err := f(m, dynamicClient, recorder, logger, chdesc, sync); err != nil {
+		if err := f(m, dynamicClient, recorder, logger, chdesc); err != nil {
 			return err
 		}
 	}

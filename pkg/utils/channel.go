@@ -1,4 +1,4 @@
-// Copyright 2019 The Kubernetes Authors.
+// Copyright 2021 The Kubernetes Authors.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -22,8 +22,10 @@ import (
 
 	"github.com/go-logr/logr"
 	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/labels"
 
-	chv1 "github.com/open-cluster-management/multicloud-operators-channel/pkg/apis/apps/v1"
+	chv1 "open-cluster-management.io/multicloud-operators-channel/pkg/apis/apps/v1"
 
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
@@ -131,4 +133,18 @@ func ParseSecertInfo(secret *corev1.Secret) (username string, password string, r
 	region = string(secret.Data[SecretMapKeyRegion])
 
 	return
+}
+
+func ConvertLabels(labelSelector *metav1.LabelSelector) (labels.Selector, error) {
+	if labelSelector != nil {
+		selector, err := metav1.LabelSelectorAsSelector(labelSelector)
+
+		if err != nil {
+			return labels.Nothing(), err
+		}
+
+		return selector, nil
+	}
+
+	return labels.Everything(), nil
 }
