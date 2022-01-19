@@ -21,7 +21,7 @@ import (
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 
 	spokeClusterV1 "github.com/open-cluster-management/api/cluster/v1"
-	dplapis "github.com/open-cluster-management/multicloud-operators-deployable/pkg/apis"
+	dplapis "github.com/stolostron/multicloud-operators-deployable/pkg/apis"
 )
 
 // AddToSchemes may be used to add all resources defined in the project to a Scheme

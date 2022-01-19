@@ -20,10 +20,10 @@ import (
 
 	"github.com/go-logr/logr"
 
-	chv1 "github.com/open-cluster-management/multicloud-operators-channel/pkg/apis/apps/v1"
-	helmsync "github.com/open-cluster-management/multicloud-operators-channel/pkg/synchronizer/helmreposynchronizer"
-	"github.com/open-cluster-management/multicloud-operators-channel/pkg/utils"
-	dplv1 "github.com/open-cluster-management/multicloud-operators-deployable/pkg/apis/apps/v1"
+	chv1 "github.com/stolostron/multicloud-operators-channel/pkg/apis/apps/v1"
+	helmsync "github.com/stolostron/multicloud-operators-channel/pkg/synchronizer/helmreposynchronizer"
+	"github.com/stolostron/multicloud-operators-channel/pkg/utils"
+	dplv1 "github.com/stolostron/multicloud-operators-deployable/pkg/apis/apps/v1"
 
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/types"
