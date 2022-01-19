@@ -629,6 +629,9 @@ github.com/onsi/gomega v1.10.2/go.mod h1:iN09h71vgCQne3DLsj+A5owkum+a2tYe+TOCB1y
 github.com/onsi/gomega v1.13.0 h1:7lLHu94wT9Ij0o6EWWclhu0aOh32VxhkwEJvzuWPeak=
 github.com/onsi/gomega v1.13.0/go.mod h1:lRk9szgn8TxENtWd0Tp4c3wjlRfMTMH27I+3Je41yGY=
 github.com/op/go-logging v0.0.0-20160315200505-970db520ece7/go.mod h1:HzydrMdWErDVzsI23lYNej1Htcns9BCg93Dk0bBINWk=
+github.com/open-cluster-management/library-e2e-go v0.0.0-20200620112055-c80fc3c14997 h1:V4vucpchQUykRjg7fkWuyu+55Xf9Qrsw6KQOUvXDdGM=
+github.com/open-cluster-management/library-e2e-go v0.0.0-20200620112055-c80fc3c14997/go.mod h1:glvUOJg5EAb1Lq0OPcYhl57PJTxN2T5xuSfdV3Iab4Y=
+github.com/open-cluster-management/library-go v0.0.0-20200828173847-299c21e6c3fc/go.mod h1:X9KdKajEnrx6+LQSjo+61gLdk4Ntmwp+YEYD0CIJT7I=
 github.com/opencontainers/go-digest v0.0.0-20170106003457-a6d0ee40d420/go.mod h1:cMLVZDEM3+U2I4VmLI6N8jQYUd2OVphdqWwCJHrFt2s=
 github.com/opencontainers/go-digest v0.0.0-20180430190053-c9281466c8b2/go.mod h1:cMLVZDEM3+U2I4VmLI6N8jQYUd2OVphdqWwCJHrFt2s=
 github.com/opencontainers/go-digest v1.0.0-rc1/go.mod h1:cMLVZDEM3+U2I4VmLI6N8jQYUd2OVphdqWwCJHrFt2s=
@@ -765,10 +768,10 @@ github.com/spf13/viper v1.3.2/go.mod h1:ZiWeW+zYFKm7srdB9IoDzzZXaJaI5eL9QjNiN/DM
 github.com/spf13/viper v1.4.0/go.mod h1:PTJ7Z/lr49W6bUbkmS1V3by4uWynFiR9p7+dSq/yZzE=
 github.com/spf13/viper v1.7.0/go.mod h1:8WkrPz2fc9jxqZNCJI/76HCieCp4Q8HaLFoCha5qpdg=
 github.com/stoewer/go-strcase v1.2.0/go.mod h1:IBiWB2sKIp3wVVQ3Y035++gc+knqhUQag1KpM8ahLw8=
-github.com/stolostron/multicloud-operators-deployable v1.2.4-0-20220114-a630015d h1:Bcq6xfG1MGBiTbAbnLCu1Q2e8tHkXWQitbrXqAgnPPQ=
-github.com/stolostron/multicloud-operators-deployable v1.2.4-0-20220114-a630015d/go.mod h1:JSiVL6pi15c5EBYbN+I4jDzn2IDnoNhYuGsllIsHWXY=
 github.com/stolostron/klusterlet-addon-controller v0.0.0-20210303215539-1d12cebe6f19 h1:hftm4DM0u/igwO7DEydPFoXaSY6Dly3e51EFAKgb3tE=
 github.com/stolostron/klusterlet-addon-controller v0.0.0-20210303215539-1d12cebe6f19/go.mod h1:YWcjLe+zqmdqPFvwzASizCa8JdXe5briBgxoP+r3CRM=
+github.com/stolostron/multicloud-operators-deployable v1.2.4-0-20220114-a630015d h1:Bcq6xfG1MGBiTbAbnLCu1Q2e8tHkXWQitbrXqAgnPPQ=
+github.com/stolostron/multicloud-operators-deployable v1.2.4-0-20220114-a630015d/go.mod h1:JSiVL6pi15c5EBYbN+I4jDzn2IDnoNhYuGsllIsHWXY=
 github.com/stolostron/multicloud-operators-placementrule v1.2.4-0-20220112-8eedb3f h1:X8grm1OnaKF1sMd+rB9Bm798VS/tpmjjjldsBlttk4Q=
 github.com/stolostron/multicloud-operators-placementrule v1.2.4-0-20220112-8eedb3f/go.mod h1:uMTaz9cMLe5N+yJ/PpHPtSOdlBFB00WdxAW+K5TfkVw=
 github.com/streadway/amqp v0.0.0-20190404075320-75d898a42a94/go.mod h1:AZpEONHx3DKn8O/DFsRAY58/XVQiIPMTMB1SddzLXVw=
