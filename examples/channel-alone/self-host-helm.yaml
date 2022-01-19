@@ -11,7 +11,7 @@ metadata:
   namespace: ch-self-host-helm
 spec:
   type: HelmRepo
-  pathname: https://raw.githubusercontent.com/open-cluster-management/app-ui-e2e-private-helm/master
+  pathname: https://raw.githubusercontent.com/stolostron/app-ui-e2e-private-helm/master
   secretRef:
     name: dev
 ---
