@@ -20,7 +20,7 @@ set -e
 echo -e "E2E TESTS GO HERE!"
 
 # need to find a way to use the Makefile to set these
-REGISTRY=quay.io/open-cluster-management
+REGISTRY=quay.io/stolostron
 IMG=$(cat COMPONENT_NAME 2> /dev/null)
 IMAGE_NAME=${REGISTRY}/${IMG}
 BUILD_IMAGE=${IMAGE_NAME}:latest
@@ -111,7 +111,7 @@ kubectl get po -A
 # over here, we are build the test server on the fly since, the `go get` will
 # mess up the go.mod file when doing the local test
 echo -e "\nGet the applifecycle-backend-e2e data"
-go get github.com/open-cluster-management/applifecycle-backend-e2e@v0.2.7
+go get github.com/stolostron/applifecycle-backend-e2e@v0.2.7
 
 E2E_BINARY_NAME="applifecycle-backend-e2e"
 

@@ -15,7 +15,7 @@
 package apis
 
 import (
-	v1 "github.com/open-cluster-management/multicloud-operators-channel/pkg/apis/apps/v1"
+	v1 "github.com/stolostron/multicloud-operators-channel/pkg/apis/apps/v1"
 )
 
 func init() {
