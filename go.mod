@@ -17,6 +17,7 @@ require (
 	github.com/open-cluster-management/api v0.0.0-20201007180356-41d07eee4294
 	github.com/pkg/errors v0.9.1
 	github.com/spf13/pflag v1.0.5
+	github.com/stolostron/endpoint-operator v1.2.2-0-20220114-0ddd7f9
 	github.com/stolostron/multicloud-operators-deployable v1.2.2-0-20220118-ad940ac1
 	github.com/stolostron/multicloud-operators-placementrule v1.2.2-0-20220115-4218674
 	github.com/stretchr/testify v1.6.1
