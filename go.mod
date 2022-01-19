@@ -1,4 +1,4 @@
-module github.com/open-cluster-management/multicloud-operators-channel
+module github.com/stolostron/multicloud-operators-channel
 
 go 1.17
 
@@ -15,8 +15,8 @@ require (
 	github.com/onsi/ginkgo v1.16.4
 	github.com/onsi/gomega v1.13.0
 	github.com/open-cluster-management/api v0.0.0-20210513122330-d76f10481f05
-	github.com/open-cluster-management/multicloud-operators-deployable v1.2.4-0-20211122-24ac963
-	github.com/open-cluster-management/multicloud-operators-placementrule v1.2.4-0-20211122-be034
+	github.com/stolostron/multicloud-operators-deployable v1.2.4-0-20220114-a630015d
+	github.com/stolostron/multicloud-operators-placementrule v1.2.4-0-20220112-8eedb3f
 	github.com/opencontainers/runc v1.0.0-rc9 // indirect
 	github.com/pkg/errors v0.9.1
 	github.com/spf13/pflag v1.0.5
@@ -144,4 +144,7 @@ require (
 	sigs.k8s.io/yaml v1.2.0 // indirect
 )
 
-replace k8s.io/client-go => k8s.io/client-go v0.21.3
+replace (
+	github.com/open-cluster-management/api => open-cluster-management.io/api v0.0.0-20210513122330-d76f10481f05
+	k8s.io/client-go => k8s.io/client-go v0.21.3
+)

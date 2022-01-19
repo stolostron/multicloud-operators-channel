@@ -26,9 +26,9 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 
-	chv1 "github.com/open-cluster-management/multicloud-operators-channel/pkg/apis/apps/v1"
-	"github.com/open-cluster-management/multicloud-operators-channel/pkg/utils"
 	dplv1 "github.com/open-cluster-management/multicloud-operators-deployable/pkg/apis/apps/v1"
+	chv1 "github.com/stolostron/multicloud-operators-channel/pkg/apis/apps/v1"
+	"github.com/stolostron/multicloud-operators-channel/pkg/utils"
 )
 
 // 1. clone from git and create deployables for all the resources at git

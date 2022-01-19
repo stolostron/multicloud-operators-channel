@@ -21,7 +21,7 @@ import (
 
 	"github.com/spf13/pflag"
 
-	"github.com/open-cluster-management/multicloud-operators-channel/cmd/manager/exec"
+	"github.com/stolostron/multicloud-operators-channel/cmd/manager/exec"
 )
 
 func main() {
