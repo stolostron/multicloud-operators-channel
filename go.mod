@@ -15,6 +15,7 @@ require (
 	github.com/onsi/ginkgo v1.16.4
 	github.com/onsi/gomega v1.13.0
 	github.com/open-cluster-management/api v0.0.0-20210513122330-d76f10481f05
+	github.com/open-cluster-management/klusterlet-addon-controller v0.0.0-20210303215539-1d12cebe6f19
 	github.com/stolostron/multicloud-operators-deployable v1.2.4-0-20220114-a630015d
 	github.com/stolostron/multicloud-operators-placementrule v1.2.4-0-20220112-8eedb3f
 	github.com/opencontainers/runc v1.0.0-rc9 // indirect
@@ -146,5 +147,6 @@ require (
 
 replace (
 	github.com/open-cluster-management/api => open-cluster-management.io/api v0.0.0-20210513122330-d76f10481f05
+	github.com/open-cluster-management/klusterlet-addon-controller => github.com/stolostron/klusterlet-addon-controller v0.0.0-20210303215539-1d12cebe6f19
 	k8s.io/client-go => k8s.io/client-go v0.21.3
 )
