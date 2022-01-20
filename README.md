@@ -40,9 +40,9 @@ The following example is tested on a minikube, so that you can play with this op
 
 
 ```shell
-% mkdir -p "$GOPATH"/src/github.com/open-cluster-management
+% mkdir -p "$GOPATH"/src/github.com/stolostron
 
-% cd "$GOPATH"/src/github.com/open-cluster-management
+% cd "$GOPATH"/src/github.com/stolostron
 
 % git clone https://github.com/stolostron/multicloud-operators-channel.git
 
