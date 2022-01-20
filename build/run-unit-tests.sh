@@ -24,7 +24,7 @@ _ARCH=$(go env GOARCH)
 KubeBuilderVersion="2.3.2"
 
 # download kubebuilder and extract it to tmp
-curl -L https://go.kubebuilder.io/dl/"$KubeBuilderVersion"/"${_OS}"/"${_ARCH}" | tar -xz -C /tmp/
+curl -L https://github.com/kubernetes-sigs/kubebuilder/releases/download/v"$KubeBuilderVersion"/kubebuilder_"$KubeBuilderVersion"_"${_OS}"_"${_ARCH}".tar.gz | tar -xz -C /tmp/
 
 # move to a long-term location and put it on your path
 # (you'll need to set the KUBEBUILDER_ASSETS env var if you put it somewhere else)
