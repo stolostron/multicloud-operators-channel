@@ -45,9 +45,9 @@ import (
 	"github.com/stolostron/multicloud-operators-channel/pkg/utils"
 	chWebhook "github.com/stolostron/multicloud-operators-channel/pkg/webhook"
 
+	placementutils "github.com/open-cluster-management/multicloud-operators-placementrule/pkg/utils"
 	helmsync "github.com/stolostron/multicloud-operators-channel/pkg/synchronizer/helmreposynchronizer"
 	objsync "github.com/stolostron/multicloud-operators-channel/pkg/synchronizer/objectstoresynchronizer"
-	placementutils "github.com/stolostron/multicloud-operators-placementrule/pkg/utils"
 )
 
 // Change below variables to serve metrics on different host or port.

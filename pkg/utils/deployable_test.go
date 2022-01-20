@@ -30,9 +30,9 @@ import (
 	"github.com/google/go-cmp/cmp"
 	"github.com/onsi/gomega"
 
+	dplv1 "github.com/open-cluster-management/multicloud-operators-deployable/pkg/apis/apps/v1"
 	chv1 "github.com/stolostron/multicloud-operators-channel/pkg/apis/apps/v1"
 	"github.com/stolostron/multicloud-operators-channel/pkg/utils"
-	dplv1 "github.com/stolostron/multicloud-operators-deployable/pkg/apis/apps/v1"
 )
 
 const (
