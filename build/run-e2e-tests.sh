@@ -110,8 +110,11 @@ kubectl get po -A
 
 # over here, we are build the test server on the fly since, the `go get` will
 # mess up the go.mod file when doing the local test
+LATEST_TAG=`git ls-remote --tags https://github.com/stolostron/applifecycle-backend-e2e.git| awk '{print $2}' | sed 's$refs/tags/$$' | grep "v[0-9]*\.[0-9]*\.[0-9]*$" | sort -nr | head -n1`
+echo -e "\nGet latest version tag of applifecycle-backend-e2e: $LATEST_TAG"
+
 echo -e "\nGet the applifecycle-backend-e2e data"
-go get github.com/stolostron/applifecycle-backend-e2e@v0.2.7
+go get github.com/stolostron/applifecycle-backend-e2e@$LATEST_TAG
 
 E2E_BINARY_NAME="applifecycle-backend-e2e"
 

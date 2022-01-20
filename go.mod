@@ -37,7 +37,6 @@ require (
 
 replace (
 	github.com/open-cluster-management/api => open-cluster-management.io/api v0.0.0-20201007180356-41d07eee4294
-	github.com/open-cluster-management/applifecycle-backend-e2e => github.com/stolostron/applifecycle-backend-e2e v0.1.8 // indirect
 	github.com/open-cluster-management/multicloud-operators-deployable => github.com/stolostron/multicloud-operators-deployable v1.2.2-2-20201130-7bc3c
 	github.com/open-cluster-management/multicloud-operators-placementrule => github.com/stolostron/multicloud-operators-placementrule v1.2.2-2-20201130-98cfd
 	k8s.io/api => k8s.io/api v0.19.3
