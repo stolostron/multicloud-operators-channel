@@ -21,7 +21,7 @@ echo "Install Kubebuilder components for test framework usage!"
 
 _OS=$(go env GOOS)
 _ARCH=$(go env GOARCH)
-KubeBuilderVersion="2.3.1"
+KubeBuilderVersion="2.3.2"
 
 # download kubebuilder and extract it to tmp
 curl -L https://go.kubebuilder.io/dl/"$KubeBuilderVersion"/"${_OS}"/"${_ARCH}" | tar -xz -C /tmp/
