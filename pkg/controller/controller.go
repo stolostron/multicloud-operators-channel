@@ -21,8 +21,8 @@ import (
 
 	"github.com/go-logr/logr"
 
-	helmsync "github.com/open-cluster-management/multicloud-operators-channel/pkg/synchronizer/helmreposynchronizer"
-	"github.com/open-cluster-management/multicloud-operators-channel/pkg/utils"
+	helmsync "github.com/stolostron/multicloud-operators-channel/pkg/synchronizer/helmreposynchronizer"
+	"github.com/stolostron/multicloud-operators-channel/pkg/utils"
 )
 
 // AddToManagerFuncs is a list of functions to add all Controllers to the Manager

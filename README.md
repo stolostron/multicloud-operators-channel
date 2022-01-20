@@ -1,9 +1,9 @@
 # multicloud-operators-channel
 
-[![Build](https://travis-ci.com/open-cluster-management/multicloud-operators-channel.svg?branch=master)](https://travis-ci.com/open-cluster-management/multicloud-operators-channel.svg?branch=master)
-[![Go Report Card](https://goreportcard.com/badge/github.com/open-cluster-management/multicloud-operators-channel)](https://goreportcard.com/report/github.com/open-cluster-management/multicloud-operators-channel)
-[![GoDoc](https://godoc.org/github.com/open-cluster-management/multicloud-operators-channel?status.svg)](https://godoc.org/github.com/open-cluster-management/multicloud-operators-channel?status.svg)
-[![Sonarcloud Status](https://sonarcloud.io/api/project_badges/measure?project=open-cluster-management_multicloud-operators-channel&metric=coverage)](https://sonarcloud.io/api/project_badges/measure?project=open-cluster-management_multicloud-operators-channel&metric=coverage)
+[![Build](https://travis-ci.com/stolostron/multicloud-operators-channel.svg?branch=master)](https://travis-ci.com/stolostron/multicloud-operators-channel.svg?branch=master)
+[![Go Report Card](https://goreportcard.com/badge/github.com/stolostron/multicloud-operators-channel)](https://goreportcard.com/report/github.com/stolostron/multicloud-operators-channel)
+[![GoDoc](https://godoc.org/github.com/stolostron/multicloud-operators-channel?status.svg)](https://godoc.org/github.com/stolostron/multicloud-operators-channel?status.svg)
+[![Sonarcloud Status](https://sonarcloud.io/api/project_badges/measure?project=stolostron_multicloud-operators-channel&metric=coverage)](https://sonarcloud.io/api/project_badges/measure?project=stolostron_multicloud-operators-channel&metric=coverage)
 [![License](https://img.shields.io/:license-apache-blue.svg)](http://www.apache.org/licenses/LICENSE-2.0.html)
 
 <!-- START doctoc generated TOC please keep comment here to allow auto update -->
@@ -40,13 +40,13 @@ The following example is tested on a minikube, so that you can play with this op
 
 
 ```shell
-% mkdir -p "$GOPATH"/src/github.com/open-cluster-management
+% mkdir -p "$GOPATH"/src/github.com/stolostron
 
-% cd "$GOPATH"/src/github.com/open-cluster-management
+% cd "$GOPATH"/src/github.com/stolostron
 
-% git clone https://github.com/open-cluster-management/multicloud-operators-channel.git
+% git clone https://github.com/stolostron/multicloud-operators-channel.git
 
-% cd "$GOPATH"/src/github.com/open-cluster-management/multicloud-operators-channel
+% cd "$GOPATH"/src/github.com/stolostron/multicloud-operators-channel
 ```
 
 - Setup environment and deploy channel operator
@@ -187,9 +187,9 @@ Check the [Security Doc](SECURITY.md) if you've found a security issue.
 
 ### multicloud-operators repositories
 
-- [multicloud-operators-application](https://github.com/open-cluster-management/multicloud-operators-application)
-- [multicloud-operators-channel](https://github.com/open-cluster-management/multicloud-operators-channel)
-- [multicloud-operators-deployable](https://github.com/open-cluster-management/multicloud-operators-deployable)
-- [multicloud-operators-placementrule](https://github.com/open-cluster-management/multicloud-operators-placementrule)
-- [multicloud-operators-subscription](https://github.com/open-cluster-management/multicloud-operators-subscription)
-- [multicloud-operators-subscription-release](https://github.com/open-cluster-management/multicloud-operators-subscription-release)
+- [multicloud-operators-application](https://github.com/stolostron/multicloud-operators-application)
+- [multicloud-operators-channel](https://github.com/stolostron/multicloud-operators-channel)
+- [multicloud-operators-deployable](https://github.com/stolostron/multicloud-operators-deployable)
+- [multicloud-operators-placementrule](https://github.com/stolostron/multicloud-operators-placementrule)
+- [multicloud-operators-subscription](https://github.com/stolostron/multicloud-operators-subscription)
+- [multicloud-operators-subscription-release](https://github.com/stolostron/multicloud-operators-subscription-release)

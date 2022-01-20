@@ -39,6 +39,7 @@ linters:
     - scopelint
     - funlen
     - bodyclose
+    - staticcheck
   fast: false
 
 linters-settings:
