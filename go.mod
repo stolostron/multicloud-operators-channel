@@ -1,4 +1,4 @@
-module github.com/open-cluster-management/multicloud-operators-channel
+module github.com/stolostron/multicloud-operators-channel
 
 go 1.17
 
@@ -97,4 +97,9 @@ require (
 	sigs.k8s.io/yaml v1.2.0 // indirect
 )
 
-replace k8s.io/client-go => k8s.io/client-go v0.19.3
+replace (
+	github.com/open-cluster-management/api => github.com/stolostron/api v0.0.0-20201007180356-41d07eee4294
+	github.com/open-cluster-management/multicloud-operators-deployable => github.com/stolostron/multicloud-operators-deployable v1.2.2-2-20201130-7bc3c
+	github.com/open-cluster-management/multicloud-operators-placementrule => github.com/stolostron/multicloud-operators-placementrule v1.2.2-2-20201130-98cfd
+	k8s.io/client-go => k8s.io/client-go v0.19.3
+)
