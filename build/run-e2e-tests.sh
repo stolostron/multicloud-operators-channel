@@ -112,11 +112,11 @@ kubectl get po -A
 # mess up the go.mod file when doing the local test
 
 # Only latest tag with format "v0~9*.0~9*.0~9*" is picked up
-LATEST_TAG=`git ls-remote --tags https://github.com/open-cluster-management/applifecycle-backend-e2e.git| awk '{print $2}' | sed 's$refs/tags/$$' | grep "v[0-9]*\.[0-9]*\.[0-9]*$" | sort -nr | head -n1`
+LATEST_TAG=`git ls-remote --tags https://github.com/stolostron/applifecycle-backend-e2e.git| awk '{print $2}' | sed 's$refs/tags/$$' | grep "v[0-9]*\.[0-9]*\.[0-9]*$" | sort -nr | head -n1`
 echo -e "\nGet latest version tag of applifecycle-backend-e2e: $LATEST_TAG"
 
 echo -e "\nGet the applifecycle-backend-e2e data"
-go get github.com/open-cluster-management/applifecycle-backend-e2e@$LATEST_TAG
+go get github.com/stolostron/applifecycle-backend-e2e@$LATEST_TAG
 
 export PATH=$PATH:~/go/bin
 E2E_BINARY_NAME="applifecycle-backend-e2e"
