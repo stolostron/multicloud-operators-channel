@@ -29,8 +29,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
-	"github.com/open-cluster-management/multicloud-operators-channel/pkg/apis"
-	chv1 "github.com/open-cluster-management/multicloud-operators-channel/pkg/apis/apps/v1"
+	"github.com/stolostron/multicloud-operators-channel/pkg/apis"
+	chv1 "github.com/stolostron/multicloud-operators-channel/pkg/apis/apps/v1"
 )
 
 var cfg *rest.Config

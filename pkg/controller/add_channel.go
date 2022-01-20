@@ -15,7 +15,7 @@
 package controller
 
 import (
-	chv1 "github.com/open-cluster-management/multicloud-operators-channel/pkg/controller/channel"
+	chv1 "github.com/stolostron/multicloud-operators-channel/pkg/controller/channel"
 )
 
 func init() {

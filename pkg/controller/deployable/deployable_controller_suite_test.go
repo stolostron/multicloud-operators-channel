@@ -42,7 +42,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/envtest"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
-	"github.com/open-cluster-management/multicloud-operators-channel/pkg/apis"
+	"github.com/stolostron/multicloud-operators-channel/pkg/apis"
 )
 
 const StartTimeout = 60 // seconds

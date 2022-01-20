@@ -38,16 +38,16 @@ import (
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/manager/signals"
 
-	chv1 "github.com/open-cluster-management/multicloud-operators-channel/pkg/apis/apps/v1"
+	chv1 "github.com/stolostron/multicloud-operators-channel/pkg/apis/apps/v1"
 
-	"github.com/open-cluster-management/multicloud-operators-channel/pkg/apis"
-	"github.com/open-cluster-management/multicloud-operators-channel/pkg/controller"
-	"github.com/open-cluster-management/multicloud-operators-channel/pkg/utils"
-	chWebhook "github.com/open-cluster-management/multicloud-operators-channel/pkg/webhook"
+	"github.com/stolostron/multicloud-operators-channel/pkg/apis"
+	"github.com/stolostron/multicloud-operators-channel/pkg/controller"
+	"github.com/stolostron/multicloud-operators-channel/pkg/utils"
+	chWebhook "github.com/stolostron/multicloud-operators-channel/pkg/webhook"
 
-	helmsync "github.com/open-cluster-management/multicloud-operators-channel/pkg/synchronizer/helmreposynchronizer"
-	objsync "github.com/open-cluster-management/multicloud-operators-channel/pkg/synchronizer/objectstoresynchronizer"
 	placementutils "github.com/open-cluster-management/multicloud-operators-placementrule/pkg/utils"
+	helmsync "github.com/stolostron/multicloud-operators-channel/pkg/synchronizer/helmreposynchronizer"
+	objsync "github.com/stolostron/multicloud-operators-channel/pkg/synchronizer/objectstoresynchronizer"
 )
 
 // Change below variables to serve metrics on different host or port.
