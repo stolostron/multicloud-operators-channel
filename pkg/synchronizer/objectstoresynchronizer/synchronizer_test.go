@@ -28,8 +28,8 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 
-	chv1 "github.com/open-cluster-management/multicloud-operators-channel/pkg/apis/apps/v1"
-	"github.com/open-cluster-management/multicloud-operators-channel/pkg/utils"
+	chv1 "github.com/stolostron/multicloud-operators-channel/pkg/apis/apps/v1"
+	"github.com/stolostron/multicloud-operators-channel/pkg/utils"
 	dplv1 "github.com/open-cluster-management/multicloud-operators-deployable/pkg/apis/apps/v1"
 )
 

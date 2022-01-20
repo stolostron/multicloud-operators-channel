@@ -42,7 +42,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/envtest"
 
-	chv1 "github.com/open-cluster-management/multicloud-operators-channel/pkg/apis/apps/v1"
+	chv1 "github.com/stolostron/multicloud-operators-channel/pkg/apis/apps/v1"
 	"github.com/open-cluster-management/multicloud-operators-deployable/pkg/apis"
 )
 

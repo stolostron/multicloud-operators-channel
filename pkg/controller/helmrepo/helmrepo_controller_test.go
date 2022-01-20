@@ -27,8 +27,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
-	chv1 "github.com/open-cluster-management/multicloud-operators-channel/pkg/apis/apps/v1"
-	synchronizer "github.com/open-cluster-management/multicloud-operators-channel/pkg/synchronizer/helmreposynchronizer"
+	chv1 "github.com/stolostron/multicloud-operators-channel/pkg/apis/apps/v1"
+	synchronizer "github.com/stolostron/multicloud-operators-channel/pkg/synchronizer/helmreposynchronizer"
 )
 
 var c client.Client
