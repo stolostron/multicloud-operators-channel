@@ -71,6 +71,7 @@ const (
 	clusterCRDName  = "clusters.clusterregistry.k8s.io"
 	controllerName  = "channel"
 	controllerSetup = "channel-setup"
+	backupLabel     = "cluster.open-cluster-management.io/backup"
 )
 
 /**
@@ -195,12 +196,12 @@ func (r *ReconcileChannel) Reconcile(ctx context.Context, request reconcile.Requ
 			// Object not found, return.  Created objects are automatically garbage collected.
 			// For additional cleanup logic use finalizers.
 			//sync the channel to the serving-channel annotation in all involved secrets - remove channel
-			if err := r.syncReferredObjAnnotation(request, nil, srtGvk, log); err != nil {
+			if err := r.syncReferredObjAnnotationLabel(request, nil, srtGvk, log); err != nil {
 				return reconcile.Result{}, err
 			}
 
 			//remove the channel from the serving-channel annotation in all involved ConfigMaps - remove channel
-			if err := r.syncReferredObjAnnotation(request, nil, cmGvk, log); err != nil {
+			if err := r.syncReferredObjAnnotationLabel(request, nil, cmGvk, log); err != nil {
 				return reconcile.Result{}, err
 			}
 
@@ -257,7 +258,7 @@ func (r *ReconcileChannel) handleReferencedObjects(instance *chv1.Channel, req r
 			r.Log.Error(err, "failed to update referred secret label")
 		}
 
-		if err := r.syncReferredObjAnnotation(req, srtRef, srtGvk, log); err != nil {
+		if err := r.syncReferredObjAnnotationLabel(req, srtRef, srtGvk, log); err != nil {
 			r.Log.Error(err, "failed to annotate")
 		}
 	}
@@ -273,7 +274,7 @@ func (r *ReconcileChannel) handleReferencedObjects(instance *chv1.Channel, req r
 			r.Log.Error(err, "failed to update referred configMap label")
 		}
 
-		if err := r.syncReferredObjAnnotation(req, cmRef, cmGvk, log); err != nil {
+		if err := r.syncReferredObjAnnotationLabel(req, cmRef, cmGvk, log); err != nil {
 			r.Log.Error(err, "failed to annotate")
 		}
 	}
@@ -313,7 +314,7 @@ func (r *ReconcileChannel) updatedReferencedObjectLabels(ref *corev1.ObjectRefer
 	return nil
 }
 
-func (r *ReconcileChannel) syncReferredObjAnnotation(
+func (r *ReconcileChannel) syncReferredObjAnnotationLabel(
 	rq reconcile.Request,
 	ref *corev1.ObjectReference, objGvk schema.GroupVersionKind, logger logr.Logger) error {
 	chnKey := types.NamespacedName{Name: rq.Name, Namespace: rq.Namespace}
@@ -343,6 +344,8 @@ func (r *ReconcileChannel) syncReferredObjAnnotation(
 
 	for _, obj := range uObjList.Items {
 		obj := obj
+
+		//set annotations
 		annotations := obj.GetAnnotations()
 
 		if annotations == nil {
@@ -366,6 +369,19 @@ func (r *ReconcileChannel) syncReferredObjAnnotation(
 		}
 
 		obj.SetAnnotations(annotations)
+
+		//set labels
+		labels := obj.GetLabels()
+
+		if labels == nil {
+			labels = make(map[string]string)
+		}
+
+		if _, ok := labels[backupLabel]; !ok {
+			labels[backupLabel] = "app"
+		}
+
+		obj.SetLabels(labels)
 
 		if err := r.Update(context.TODO(), &obj); err != nil {
 			logger.Error(err, fmt.Sprintf("failed to annotate object: %v/%v", obj.GetNamespace(), obj.GetName()))
