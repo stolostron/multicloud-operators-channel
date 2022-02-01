@@ -21,12 +21,12 @@ import (
 	"strings"
 
 	spokeClusterV1 "github.com/open-cluster-management/api/cluster/v1"
-	dplv1 "github.com/open-cluster-management/multicloud-operators-deployable/pkg/apis/apps/v1"
-	dplutils "github.com/open-cluster-management/multicloud-operators-deployable/pkg/utils"
 	placementutils "github.com/open-cluster-management/multicloud-operators-placementrule/pkg/utils"
 	chv1 "github.com/stolostron/multicloud-operators-channel/pkg/apis/apps/v1"
 	helmsync "github.com/stolostron/multicloud-operators-channel/pkg/synchronizer/helmreposynchronizer"
 	"github.com/stolostron/multicloud-operators-channel/pkg/utils"
+	dplv1 "github.com/stolostron/multicloud-operators-deployable/pkg/apis/apps/v1"
+	dplutils "github.com/stolostron/multicloud-operators-deployable/pkg/utils"
 
 	"github.com/go-logr/logr"
 	gerr "github.com/pkg/errors"

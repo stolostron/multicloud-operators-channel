@@ -32,8 +32,8 @@ import (
 
 	"github.com/onsi/gomega"
 
-	"github.com/open-cluster-management/multicloud-operators-deployable/pkg/apis"
 	chv1 "github.com/stolostron/multicloud-operators-channel/pkg/apis/apps/v1"
+	"github.com/stolostron/multicloud-operators-deployable/pkg/apis"
 )
 
 var cfg *rest.Config
