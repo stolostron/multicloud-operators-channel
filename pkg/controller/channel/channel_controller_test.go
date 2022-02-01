@@ -172,7 +172,7 @@ func TestChannelAnnotateReferredSecertAndConfigMap(t *testing.T) {
 		types.NamespacedName{Name: refSrtName, Namespace: targetNamespace},
 		updatedSrt)).NotTo(gomega.HaveOccurred())
 
-	assertReferredObjAnno(t, updatedSrt, chKey.String())
+	assertReferredObjAnnoLabel(t, updatedSrt, chKey.String())
 
 	updatedCm := &corev1.ConfigMap{}
 	g.Expect(c.Get(
@@ -180,7 +180,7 @@ func TestChannelAnnotateReferredSecertAndConfigMap(t *testing.T) {
 		types.NamespacedName{Name: refCmName, Namespace: targetNamespace},
 		updatedCm)).NotTo(gomega.HaveOccurred())
 
-	assertReferredObjAnno(t, updatedCm, chKey.String())
+	assertReferredObjAnnoLabel(t, updatedCm, chKey.String())
 
 	expectedRole := &rbac.Role{}
 	defer c.Delete(context.TODO(), expectedRole)
@@ -213,7 +213,7 @@ func TestChannelAnnotateReferredSecertAndConfigMap(t *testing.T) {
 	g.Expect(c.Delete(context.TODO(), clusterCRD))
 }
 
-func assertReferredObjAnno(t *testing.T, obj metav1.Object, chKeyStr string) {
+func assertReferredObjAnnoLabel(t *testing.T, obj metav1.Object, chKeyStr string) {
 	anno := obj.GetAnnotations()
 	if len(anno) == 0 {
 		t.Errorf("anno is empty")
@@ -228,6 +228,17 @@ func assertReferredObjAnno(t *testing.T, obj metav1.Object, chKeyStr string) {
 	annoStr := strings.Trim(anno[chv1.ServingChannel], ",")
 	if annoStr != chKeyStr {
 		t.Errorf("referred annotation, wanted %v got %v\n", chKeyStr, anno[chv1.ServingChannel])
+		return
+	}
+
+	labels := obj.GetLabels()
+	if len(labels) == 0 {
+		t.Errorf("label is empty")
+		return
+	}
+
+	if _, ok := labels[backupLabel]; !ok {
+		t.Errorf(backupLabel + " label is missing")
 		return
 	}
 }
