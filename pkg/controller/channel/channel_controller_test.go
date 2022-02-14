@@ -79,8 +79,8 @@ func TestChannelControllerReconcile(t *testing.T) {
 	eventBroadcaster.StartRecordingToSink(&typedcorev1.EventSinkImpl{Interface: hubClientSet.CoreV1().Events("")})
 	recorder := eventBroadcaster.NewRecorder(scheme.Scheme, corev1.EventSource{Component: "channel"})
 
-	recFn, requests := SetupTestReconcile(newReconciler(mgr, dynamicClient, recorder, logr.DiscardLogger{}))
-	g.Expect(add(mgr, recFn, logr.DiscardLogger{})).NotTo(gomega.HaveOccurred())
+	recFn, requests := SetupTestReconcile(newReconciler(mgr, dynamicClient, recorder, logr.Discard()))
+	g.Expect(add(mgr, recFn, logr.Discard())).NotTo(gomega.HaveOccurred())
 
 	ctx, cancel := context.WithTimeout(context.TODO(), 5*time.Minute)
 	mgrStopped := StartTestManager(ctx, mgr, g)
@@ -150,7 +150,7 @@ func TestChannelAnnotateReferredSecertAndConfigMap(t *testing.T) {
 	// Create dynamic client
 	dynamicClient := dynamic.NewForConfigOrDie(cfg)
 
-	rec := newReconciler(mgr, dynamicClient, tRecorder, logr.DiscardLogger{})
+	rec := newReconciler(mgr, dynamicClient, tRecorder, logr.Discard())
 
 	defer c.Delete(context.TODO(), refSrt)
 	g.Expect(c.Create(context.TODO(), refSrt)).NotTo(gomega.HaveOccurred())
@@ -317,7 +317,7 @@ func TestChannelReconcileWithoutClusterCRD(t *testing.T) {
 	// Create dynamic client
 	dynamicClient := dynamic.NewForConfigOrDie(cfg)
 
-	rec := newReconciler(mgr, dynamicClient, tRecorder, logr.DiscardLogger{})
+	rec := newReconciler(mgr, dynamicClient, tRecorder, logr.Discard())
 
 	defer c.Delete(context.TODO(), refSrt)
 	g.Expect(c.Create(context.TODO(), refSrt)).NotTo(gomega.HaveOccurred())

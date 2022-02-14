@@ -61,7 +61,7 @@ func TestGenerateChannelMap(t *testing.T) {
 	fetched := &chv1.Channel{}
 	g.Expect(c.Get(ctx, key, fetched)).NotTo(gomega.HaveOccurred())
 
-	got, _ := utils.GenerateChannelMap(c, logr.DiscardLogger{})
+	got, _ := utils.GenerateChannelMap(c, logr.Discard())
 	want := map[string]*chv1.Channel{chName: fetched}
 
 	// test cases

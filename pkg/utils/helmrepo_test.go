@@ -26,7 +26,7 @@ const (
 )
 
 func TestGetHelmRepoIndex(t *testing.T) {
-	idx, err := GetHelmRepoIndex(helmTests, false, nil, nil, LoadLocalIdx, logr.DiscardLogger{})
+	idx, err := GetHelmRepoIndex(helmTests, false, nil, nil, LoadLocalIdx, logr.Discard())
 
 	if err != nil {
 		t.Errorf("failed to clone %+v", err)
