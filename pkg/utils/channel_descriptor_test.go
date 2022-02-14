@@ -131,9 +131,9 @@ func TestValidateChannel(t *testing.T) {
 			myChDescriptor, _ := utils.CreateObjectStorageChannelDescriptor()
 
 			if tC.myStorage == nil {
-				_ = myChDescriptor.ConnectWithResourceHost(tC.chn, tC.kubeClient, logr.DiscardLogger{})
+				_ = myChDescriptor.ConnectWithResourceHost(tC.chn, tC.kubeClient, logr.Discard())
 			} else {
-				_ = myChDescriptor.ConnectWithResourceHost(tC.chn, tC.kubeClient, logr.DiscardLogger{}, tC.myStorage)
+				_ = myChDescriptor.ConnectWithResourceHost(tC.chn, tC.kubeClient, logr.Discard(), tC.myStorage)
 			}
 
 			if diff := cmp.Diff(tC.myStorage, tC.wanted); diff != "" {

@@ -159,43 +159,45 @@ func initializeWebhookInEnvironment() {
 	noSideEffectsV1 := admissionv1.SideEffectClassNone
 	webhookPathV1 := validatorPath
 
-	testEnv.WebhookInstallOptions = envtest.WebhookInstallOptions{
-		ValidatingWebhooks: []client.Object{
-			&admissionv1.ValidatingWebhookConfiguration{
-				ObjectMeta: metav1.ObjectMeta{
-					Name: webhookValidatorName,
-				},
-				TypeMeta: metav1.TypeMeta{
-					Kind:       "ValidatingWebhookConfiguration",
-					APIVersion: "admissionregistration.k8s.io/v1beta1",
-				},
-				Webhooks: []admissionv1.ValidatingWebhook{
+	vwc := []*admissionv1.ValidatingWebhookConfiguration{}
+	vwc = append(vwc, &admissionv1.ValidatingWebhookConfiguration{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: webhookValidatorName,
+		},
+		TypeMeta: metav1.TypeMeta{
+			Kind:       "ValidatingWebhookConfiguration",
+			APIVersion: "admissionregistration.k8s.io/v1beta1",
+		},
+		Webhooks: []admissionv1.ValidatingWebhook{
+			{
+				Name:                    webhookName,
+				AdmissionReviewVersions: []string{"v1beta1"},
+				Rules: []admissionv1.RuleWithOperations{
 					{
-						Name: webhookName,
-						Rules: []admissionv1.RuleWithOperations{
-							{
-								Operations: []admissionv1.OperationType{"CREATE", "UPDATE"},
-								Rule: admissionv1.Rule{
-									APIGroups:   []string{chv1.SchemeGroupVersion.Group},
-									APIVersions: []string{chv1.SchemeGroupVersion.Version},
-									Resources:   []string{resourceName},
-									Scope:       &namespacedScopeV1,
-								},
-							},
+						Operations: []admissionv1.OperationType{"CREATE", "UPDATE"},
+						Rule: admissionv1.Rule{
+							APIGroups:   []string{chv1.SchemeGroupVersion.Group},
+							APIVersions: []string{chv1.SchemeGroupVersion.Version},
+							Resources:   []string{resourceName},
+							Scope:       &namespacedScopeV1,
 						},
-						FailurePolicy: &failedTypeV1,
-						MatchPolicy:   &equivalentTypeV1,
-						SideEffects:   &noSideEffectsV1,
-						ClientConfig: admissionv1.WebhookClientConfig{
-							Service: &admissionv1.ServiceReference{
-								Name:      "channel-validation-service",
-								Namespace: "default",
-								Path:      &webhookPathV1,
-							},
-						},
+					},
+				},
+				FailurePolicy: &failedTypeV1,
+				MatchPolicy:   &equivalentTypeV1,
+				SideEffects:   &noSideEffectsV1,
+				ClientConfig: admissionv1.WebhookClientConfig{
+					Service: &admissionv1.ServiceReference{
+						Name:      "channel-validation-service",
+						Namespace: "default",
+						Path:      &webhookPathV1,
 					},
 				},
 			},
 		},
+	})
+
+	testEnv.WebhookInstallOptions = envtest.WebhookInstallOptions{
+		ValidatingWebhooks: vwc,
 	}
 }
