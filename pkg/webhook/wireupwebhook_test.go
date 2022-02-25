@@ -71,7 +71,7 @@ var _ = PDescribe("test if webhook's supplymentryResource create properly", func
 			caCert, err := wireUp.Attach(clt)
 			Expect(err).NotTo(HaveOccurred())
 
-			wireUp.WireUpWebhookSupplymentryResource(caCert,
+			wireUp.WireUpWebhookSupplymentryResource(false, clt, caCert,
 				schema.GroupVersionKind{Group: "", Version: "v1", Kind: "channels"},
 				[]admissionv1.OperationType{admissionv1.Create})
 
