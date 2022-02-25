@@ -40,6 +40,11 @@ GOHOSTARCH ?= $(shell go env GOHOSTARCH)
 KB_TOOLS_ARCHIVE_NAME :=kubebuilder-tools-$(K8S_VERSION)-$(GOHOSTOS)-$(GOHOSTARCH).tar.gz
 KB_TOOLS_ARCHIVE_PATH := $(TEST_TMP)/$(KB_TOOLS_ARCHIVE_NAME)
 
+.PHONY: local
+
+local:
+	@GOOS=darwin common/scripts/gobuild.sh build/_output/bin/multicluster-operators-channel ./cmd/manager
+
 .PHONY: build
 
 build:

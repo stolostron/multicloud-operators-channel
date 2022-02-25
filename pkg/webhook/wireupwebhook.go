@@ -16,6 +16,7 @@ package webhook
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"os"
 	"strings"
@@ -31,7 +32,7 @@ import (
 	"k8s.io/apimachinery/pkg/util/intstr"
 
 	admissionv1 "k8s.io/api/admissionregistration/v1"
-	"k8s.io/apimachinery/pkg/api/errors"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 
 	"github.com/go-logr/logr"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
@@ -138,7 +139,7 @@ func DelPreValiationCfg20(clt client.Client) error {
 	ctx := context.TODO()
 
 	if err := clt.Get(ctx, pCfgKey, pCfg); err != nil {
-		if errors.IsNotFound(err) {
+		if apierrors.IsNotFound(err) {
 			return nil
 		}
 
@@ -150,7 +151,8 @@ func DelPreValiationCfg20(clt client.Client) error {
 
 //assuming we have a service set up for the webhook, and the service is linking
 //to a secret which has the CA
-func (w *WireUp) WireUpWebhookSupplymentryResource(caCert []byte, gvk schema.GroupVersionKind, ops []admissionv1.OperationType, cFuncs ...CleanUpFunc) error {
+func (w *WireUp) WireUpWebhookSupplymentryResource(isExternalAPIServer bool, inClient client.Client,
+	caCert []byte, gvk schema.GroupVersionKind, ops []admissionv1.OperationType, cFuncs ...CleanUpFunc) error {
 	w.Logger.Info("entry wire up webhook resources")
 	defer w.Logger.Info("exit wire up webhook resources")
 
@@ -166,7 +168,7 @@ func (w *WireUp) WireUpWebhookSupplymentryResource(caCert []byte, gvk schema.Gro
 		}
 	}
 
-	return gerr.Wrap(w.createOrUpdateValiationWebhook(caCert, gvk, ops), "failed to set up the validation webhook config")
+	return gerr.Wrap(w.createOrUpdateValiationWebhook(isExternalAPIServer, inClient, caCert, gvk, ops), "failed to set up the validation webhook config")
 }
 
 func findEnvVariable(envName string) (string, error) {
@@ -178,39 +180,116 @@ func findEnvVariable(envName string) (string, error) {
 	return val, nil
 }
 
-func (w *WireUp) getOrCreateWebhookService() error {
+func (w *WireUp) getOrCreateWebhookService(isExternalAPIServer bool, inClusterClient client.Client) error {
 	service := &corev1.Service{}
 
-	err := w.mgr.GetClient().Get(context.TODO(), w.WebHookeSvcKey, service)
+	outCLusterClient := w.mgr.GetClient()
+
+	// 1. On the management cluster, create the service for exposing the channel webhook server (channel pod)
+	err := inClusterClient.Get(context.TODO(), w.WebHookeSvcKey, service)
 
 	if err == nil {
 		// This channel container could be running in a different pod. Delete and re-create the service
 		// to ensure that the service always points to the correct target pod.
-		deleteErr := w.mgr.GetClient().Delete(context.TODO(), service)
+		deleteErr := inClusterClient.Delete(context.TODO(), service)
 
 		if deleteErr != nil {
 			w.Logger.Error(gerr.New(fmt.Sprintf("failed to delete existing service %s", w.WebHookeSvcKey.String())),
 				fmt.Sprintf("failed to delete existing service %s", w.WebHookeSvcKey.String()))
+
 			return deleteErr
 		}
 
 		w.Logger.Info(fmt.Sprintf("deleted existing service %s", w.WebHookeSvcKey.String()))
 	}
 
-	newService := newWebhookServiceTemplate(w.WebHookeSvcKey, w.WebHookPort, w.WebHookServicePort, w.DeploymentSelector)
+	w.Logger.Info(fmt.Sprintf("creating in Cluster service %s ", w.WebHookeSvcKey.String()))
 
-	setOwnerReferences(w.mgr.GetClient(), w.Logger, w.WebHookeSvcKey.Namespace, w.DeployLabel, newService)
+	newService := newWebhookServiceTemplate(false, w.WebHookeSvcKey, w.WebHookPort, w.WebHookServicePort, w.DeploymentSelector)
 
-	if err := w.mgr.GetClient().Create(context.TODO(), newService); err != nil {
+	setOwnerReferences(inClusterClient, w.Logger, w.WebHookeSvcKey.Namespace, w.DeployLabel, newService)
+
+	if err := inClusterClient.Create(context.TODO(), newService); err != nil {
 		return err
 	}
 
-	w.Logger.Info(fmt.Sprintf("created service %s ", w.WebHookeSvcKey.String()))
+	w.Logger.Info(fmt.Sprintf("created in Cluster service %s ", w.WebHookeSvcKey.String()))
+
+	// 2. If isExternalAPIServer = true, create the additional service in the hosted cluster
+	if !isExternalAPIServer {
+		return nil
+	}
+
+	service = &corev1.Service{}
+	err = outCLusterClient.Get(context.TODO(), w.WebHookeSvcKey, service)
+
+	if err == nil {
+		// Delete and re-create the service to ensure that the service always points to the correct target pod.
+		deleteErr := outCLusterClient.Delete(context.TODO(), service)
+
+		if deleteErr != nil {
+			w.Logger.Error(gerr.New(fmt.Sprintf("failed to delete existing service %s on hosted cluster", w.WebHookeSvcKey.String())),
+				fmt.Sprintf("failed to delete existing service %s on hosted cluster", w.WebHookeSvcKey.String()))
+
+			return deleteErr
+		}
+
+		w.Logger.Info(fmt.Sprintf("deleted existing service %s on hosted cluster", w.WebHookeSvcKey.String()))
+	}
+
+	newService = newWebhookServiceTemplate(true, w.WebHookeSvcKey, w.WebHookPort, w.WebHookServicePort, w.DeploymentSelector)
+
+	if err := outCLusterClient.Create(context.TODO(), newService); err != nil {
+		return err
+	}
+
+	w.Logger.Info(fmt.Sprintf("created hosted cluster service %s ", w.WebHookeSvcKey.String()))
+
+	// 3. get the service Cluster IP of the webhook server running on the management cluster. The service is created in step 1
+
+	service = &corev1.Service{}
+
+	if err = inClusterClient.Get(context.TODO(), w.WebHookeSvcKey, service); err != nil {
+		return err
+	}
+
+	serviceClusterIP := service.Spec.ClusterIP
+
+	if serviceClusterIP == "" {
+		return errors.New("no service Cluster IP found: " + w.WebHookeSvcKey.String())
+	}
+
+	// 4. If isExternalAPIServer = true, create the additional endpoint in the hosted cluster
+	endpoint := &corev1.Endpoints{}
+	err = outCLusterClient.Get(context.TODO(), w.WebHookeSvcKey, endpoint)
+
+	if err == nil {
+		// Delete and re-create the endpoint to ensure that the service always points to the correct endpoint
+		deleteErr := outCLusterClient.Delete(context.TODO(), endpoint)
+
+		if deleteErr != nil {
+			w.Logger.Error(gerr.New(fmt.Sprintf("failed to delete existing endpoint %s on hosted cluster", w.WebHookeSvcKey.String())),
+				fmt.Sprintf("failed to delete existing endpoint %s on hosted cluster", w.WebHookeSvcKey.String()))
+
+			return deleteErr
+		}
+
+		w.Logger.Info(fmt.Sprintf("deleted existing endpoint %s on hosted cluster", w.WebHookeSvcKey.String()))
+	}
+
+	newEndpoint := newWebhookEndpointTemplate(w.WebHookeSvcKey, w.WebHookServicePort, serviceClusterIP)
+
+	if err := outCLusterClient.Create(context.TODO(), newEndpoint); err != nil {
+		return err
+	}
+
+	w.Logger.Info(fmt.Sprintf("created hosted cluster endpoint %s ", w.WebHookeSvcKey.String()))
 
 	return nil
 }
 
-func (w *WireUp) createOrUpdateValiationWebhook(ca []byte, gvk schema.GroupVersionKind,
+func (w *WireUp) createOrUpdateValiationWebhook(isExternalAPIServer bool, inClient client.Client,
+	ca []byte, gvk schema.GroupVersionKind,
 	ops []admissionv1.OperationType) error {
 	validator := &admissionv1.ValidatingWebhookConfiguration{}
 	key := types.NamespacedName{Name: GetValidatorName(w.WebhookName)}
@@ -218,7 +297,7 @@ func (w *WireUp) createOrUpdateValiationWebhook(ca []byte, gvk schema.GroupVersi
 	validatorName := GetValidatorName(w.WebhookName)
 
 	if err := w.mgr.GetClient().Get(context.TODO(), key, validator); err != nil {
-		if errors.IsNotFound(err) { // create a new validator
+		if apierrors.IsNotFound(err) { // create a new validator
 			cfg := newValidatingWebhookCfg(w.WebHookeSvcKey, validatorName, w.ValidtorPath, ca, gvk, ops)
 
 			setWebhookOwnerReferences(w.mgr.GetClient(), w.Logger, cfg)
@@ -244,7 +323,7 @@ func (w *WireUp) createOrUpdateValiationWebhook(ca []byte, gvk schema.GroupVersi
 	}
 
 	// make sure the service of the validator exists
-	return gerr.Wrap(w.getOrCreateWebhookService(), "failed to set up service for webhook")
+	return gerr.Wrap(w.getOrCreateWebhookService(isExternalAPIServer, inClient), "failed to set up service for webhook")
 }
 
 func setOwnerReferences(c client.Client, logger logr.Logger, deployNs string, deployLabel string, obj metav1.Object) {
@@ -256,8 +335,16 @@ func setOwnerReferences(c client.Client, logger logr.Logger, deployNs string, de
 		return
 	}
 
+	logger.Info(fmt.Sprintf("apiversion: %v, kind: %v, name: %v, uid: %v", owner.APIVersion, owner.Kind, owner.Name, owner.UID))
+
 	obj.SetOwnerReferences([]metav1.OwnerReference{
-		*metav1.NewControllerRef(owner, owner.GetObjectKind().GroupVersionKind())})
+		{
+			APIVersion: "apps/v1",
+			Kind:       "Deployment",
+			Name:       owner.Name,
+			UID:        owner.UID,
+		},
+	})
 }
 
 func setWebhookOwnerReferences(c client.Client, logger logr.Logger, obj metav1.Object) {
@@ -280,8 +367,34 @@ func setWebhookOwnerReferences(c client.Client, logger logr.Logger, obj metav1.O
 	})
 }
 
-func newWebhookServiceTemplate(svcKey types.NamespacedName, webHookPort, webHookServicePort int, deploymentSelector map[string]string) *corev1.Service {
+func newWebhookServiceTemplate(isExternalAPIServer bool, svcKey types.NamespacedName, webHookPort,
+	webHookServicePort int, deploymentSelector map[string]string) *corev1.Service {
+	if isExternalAPIServer {
+		// if the service is created on hosted cluster, no selector and target port should be specicified as the webhook server pod is not running there
+		return &corev1.Service{
+			TypeMeta: metav1.TypeMeta{
+				Kind:       "Service",
+				APIVersion: "v1",
+			},
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      svcKey.Name,
+				Namespace: svcKey.Namespace,
+			},
+			Spec: corev1.ServiceSpec{
+				Ports: []corev1.ServicePort{
+					{
+						Port: int32(webHookServicePort),
+					},
+				},
+			},
+		}
+	}
+
 	return &corev1.Service{
+		TypeMeta: metav1.TypeMeta{
+			Kind:       "Service",
+			APIVersion: "v1",
+		},
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      svcKey.Name,
 			Namespace: svcKey.Namespace,
@@ -294,6 +407,33 @@ func newWebhookServiceTemplate(svcKey types.NamespacedName, webHookPort, webHook
 				},
 			},
 			Selector: deploymentSelector,
+		},
+	}
+}
+
+func newWebhookEndpointTemplate(svcKey types.NamespacedName, webHookServicePort int, serviceClusterIP string) *corev1.Endpoints {
+	return &corev1.Endpoints{
+		TypeMeta: metav1.TypeMeta{
+			Kind:       "Endpoints",
+			APIVersion: "v1",
+		},
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      svcKey.Name,
+			Namespace: svcKey.Namespace,
+		},
+		Subsets: []corev1.EndpointSubset{
+			{
+				Addresses: []corev1.EndpointAddress{
+					{
+						IP: serviceClusterIP,
+					},
+				},
+				Ports: []corev1.EndpointPort{
+					{
+						Port: int32(webHookServicePort),
+					},
+				},
+			},
 		},
 	}
 }

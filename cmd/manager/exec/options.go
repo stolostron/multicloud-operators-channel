@@ -22,6 +22,7 @@ const defaultSyncInterval = 60 //seconds
 // ChannelCMDOptions for command line flag parsing
 type ChannelCMDOptions struct {
 	MetricsAddr  string
+	KubeConfig   string
 	SyncInterval int
 	LeaderElect  bool
 	Debug        bool
@@ -71,6 +72,13 @@ func ProcessFlags() {
 		"The address the metric endpoint binds to.",
 	)
 
+	flag.StringVar(
+		&options.KubeConfig,
+		"kubeconfig",
+		options.KubeConfig,
+		"The kube config that points to an external api server.",
+	)
+
 	flag.IntVar(
 		&options.SyncInterval,
 		"sync-interval",
@@ -82,7 +90,7 @@ func ProcessFlags() {
 		&options.Debug,
 		"debug",
 		false,
-		"if debug is true, then webhooks will be created",
+		"if debug is true, then local webhooks will not be created",
 	)
 
 	flag.BoolVar(

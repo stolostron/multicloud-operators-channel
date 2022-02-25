@@ -15,9 +15,14 @@
 package exec
 
 import (
+	"errors"
 	"fmt"
+	"io/ioutil"
 	"log"
 	"os"
+
+	"k8s.io/apimachinery/pkg/api/equality"
+	"k8s.io/client-go/tools/clientcmd"
 
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/client-go/dynamic"
@@ -83,11 +88,34 @@ func RunManager() {
 
 	logger := logf.Log.WithName("set up manager")
 
-	// Get a config to talk to the apiserver
-	cfg, err := config.GetConfig()
+	var cfg, inConfig, outConfig *rest.Config
+
+	inConfig, err = config.GetConfig()
+
 	if err != nil {
 		logger.Error(err, "")
 		os.Exit(exitCode)
+	}
+
+	if options.KubeConfig != "" {
+		outConfig, err = getClientConfigFromKubeConfig(options.KubeConfig)
+	}
+
+	if err != nil {
+		logger.Error(err, "")
+		os.Exit(exitCode)
+	}
+
+	isExternalAPIServer := false
+	cfg = inConfig
+
+	if outConfig != nil && !equality.Semantic.DeepEqual(inConfig, outConfig) {
+		cfg = outConfig
+		isExternalAPIServer = true
+	}
+
+	if isExternalAPIServer {
+		logger.Info("connect to external api server, kubeconfig:" + options.KubeConfig)
 	}
 
 	enableLeaderElection := false
@@ -97,11 +125,11 @@ func RunManager() {
 
 		enableLeaderElection = true
 	} else {
-		logger.Info("LeaderElection disabled as not running in a cluster")
+		logger.Info("LeaderElection disabled as not running in cluster")
 	}
 
 	// Create a new Cmd to provide shared dependencies and start components
-	mgr, err := ctrl.NewManager(ctrl.GetConfigOrDie(), ctrl.Options{
+	mgr, err := ctrl.NewManager(cfg, ctrl.Options{
 		MetricsBindAddress:      fmt.Sprintf("%s:%d", metricsHost, metricsPort),
 		Port:                    operatorMetricsPort,
 		LeaderElection:          enableLeaderElection,
@@ -115,7 +143,7 @@ func RunManager() {
 	}
 
 	// Create dynamic client
-	dynamicClient := dynamic.NewForConfigOrDie(ctrl.GetConfigOrDie())
+	dynamicClient := dynamic.NewForConfigOrDie(cfg)
 
 	// Create channel descriptor is user for the object bucket
 	chdesc, err := utils.CreateObjectStorageChannelDescriptor()
@@ -169,9 +197,15 @@ func RunManager() {
 			os.Exit(exitCode)
 		}
 
-		clt, err := client.New(ctrl.GetConfigOrDie(), client.Options{})
+		clt, err := client.New(cfg, client.Options{})
 		if err != nil {
 			logger.Error(err, "failed to create a client for webhook to get CA cert secret")
+			os.Exit(exitCode)
+		}
+
+		inClt, err := client.New(inConfig, client.Options{})
+		if err != nil {
+			logger.Error(err, "failed to create the in-cluster client")
 			os.Exit(exitCode)
 		}
 
@@ -182,7 +216,8 @@ func RunManager() {
 		}
 
 		go func() {
-			if err := wiredWebhook.WireUpWebhookSupplymentryResource(caCert, chv1.SchemeGroupVersion.WithKind(kindName),
+			if err := wiredWebhook.WireUpWebhookSupplymentryResource(isExternalAPIServer, inClt,
+				caCert, chv1.SchemeGroupVersion.WithKind(kindName),
 				[]admissionv1.OperationType{admissionv1.Create}, chWebhook.DelPreValiationCfg20); err != nil {
 				logger.Error(err, "failed to set up webhook configuration")
 				os.Exit(exitCode)
@@ -196,4 +231,31 @@ func RunManager() {
 		logger.Error(err, "Manager exited non-zero")
 		os.Exit(exitCode)
 	}
+}
+
+func getClientConfigFromKubeConfig(kubeconfigFile string) (*rest.Config, error) {
+	if len(kubeconfigFile) > 0 {
+		return GetClientConfig(kubeconfigFile)
+	}
+
+	return nil, errors.New("no kubeconfig file found")
+}
+
+func GetClientConfig(kubeConfigFile string) (*rest.Config, error) {
+	kubeConfigBytes, err := ioutil.ReadFile(kubeConfigFile)
+	if err != nil {
+		return nil, err
+	}
+
+	kubeConfig, err := clientcmd.NewClientConfigFromBytes(kubeConfigBytes)
+	if err != nil {
+		return nil, err
+	}
+
+	clientConfig, err := kubeConfig.ClientConfig()
+	if err != nil {
+		return nil, err
+	}
+
+	return clientConfig, nil
 }
