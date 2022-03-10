@@ -144,8 +144,7 @@ spec:
                   channel.
                 type: boolean
               pathname:
-                description: For a `namespace` channel, pathname is the name of the
-                  namespace; For a `helmrepo` or `github` channel, pathname is the
+                description: For a `helmrepo` or `git` channel, pathname is the
                   remote URL for the channel contents; For a `objectbucket` channel,
                   pathname is the URL and name of the bucket.
                 type: string
@@ -198,12 +197,10 @@ spec:
               type:
                 description: ChannelType defines types of channel
                 enum:
-                - Namespace
                 - HelmRepo
                 - ObjectBucket
                 - GitHub
                 - Git
-                - namespace
                 - helmrepo
                 - objectbucket
                 - github
