@@ -46,7 +46,7 @@ const (
 	timeout           = time.Second * 5
 	targetNamespace   = "default"
 	tragetChannelName = "foo"
-	targetChannelType = chv1.ChannelType("namespace")
+	targetChannelType = chv1.ChannelType("git")
 )
 
 var expectedRequest = reconcile.Request{NamespacedName: types.NamespacedName{Name: tragetChannelName, Namespace: targetNamespace}}
