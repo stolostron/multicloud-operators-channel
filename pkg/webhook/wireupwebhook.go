@@ -313,6 +313,12 @@ func (w *WireUp) createOrUpdateValiationWebhook(isExternalAPIServer bool, inClie
 		validator.Webhooks[0].ClientConfig.Service.Name = w.WebHookeSvcKey.Name
 		validator.Webhooks[0].ClientConfig.CABundle = ca
 
+		ignore := admissionv1.Ignore
+		timeoutSeconds := int32(30)
+
+		validator.Webhooks[0].FailurePolicy = &ignore
+		validator.Webhooks[0].TimeoutSeconds = &timeoutSeconds
+
 		setWebhookOwnerReferences(w.mgr.GetClient(), w.Logger, validator)
 
 		if err := w.mgr.GetClient().Update(context.TODO(), validator); err != nil {
@@ -440,8 +446,9 @@ func newWebhookEndpointTemplate(svcKey types.NamespacedName, webHookServicePort 
 
 func newValidatingWebhookCfg(svcKey types.NamespacedName, validatorName, path string, ca []byte,
 	gvk schema.GroupVersionKind, ops []admissionv1.OperationType) *admissionv1.ValidatingWebhookConfiguration {
-	fail := admissionv1.Fail
+	ignore := admissionv1.Ignore
 	side := admissionv1.SideEffectClassNone
+	timeoutSeconds := int32(30)
 
 	return &admissionv1.ValidatingWebhookConfiguration{
 		ObjectMeta: metav1.ObjectMeta{
@@ -452,7 +459,7 @@ func newValidatingWebhookCfg(svcKey types.NamespacedName, validatorName, path st
 			Name:                    validatorName,
 			AdmissionReviewVersions: []string{"v1beta1"},
 			SideEffects:             &side,
-			FailurePolicy:           &fail,
+			FailurePolicy:           &ignore,
 			ClientConfig: admissionv1.WebhookClientConfig{
 				Service: &admissionv1.ServiceReference{
 					Name:      svcKey.Name,
@@ -461,15 +468,18 @@ func newValidatingWebhookCfg(svcKey types.NamespacedName, validatorName, path st
 				},
 				CABundle: ca,
 			},
-			Rules: []admissionv1.RuleWithOperations{{
-				Rule: admissionv1.Rule{
-					APIGroups:   []string{gvk.Group},
-					APIVersions: []string{gvk.Version},
-					Resources:   []string{gvk.Kind},
+			Rules: []admissionv1.RuleWithOperations{
+				{
+					Rule: admissionv1.Rule{
+						APIGroups:   []string{gvk.Group},
+						APIVersions: []string{gvk.Version},
+						Resources:   []string{gvk.Kind},
+					},
+					Operations: ops,
 				},
-				Operations: ops,
 			},
-			}},
+			TimeoutSeconds: &timeoutSeconds,
+		},
 		},
 	}
 }
