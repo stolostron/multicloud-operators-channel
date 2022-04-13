@@ -14,7 +14,7 @@ See how channels are being used in the [multicloud-operators-subscription](https
 
 ## Deployment
 
-See `multicloud-operators-subscription` [stand-alone](https://github.com/open-cluster-management-io/multicloud-operators-subscription#stand-alone-deployment) and [multi-cluster](https://github.com/open-cluster-management-io/multicloud-operators-subscription#multi-cluster-deployment) deployments for more information. 
+See `multicloud-operators-subscription` [stand-alone](https://github.com/open-cluster-management-io/multicloud-operators-subscription#stand-alone-deployment) and [multi-cluster](https://github.com/open-cluster-management-io/multicloud-operators-subscription#multi-cluster-deployment) deployments for more information.
 
 ## Community, discussion, contribution, and support
 
