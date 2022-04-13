@@ -20,6 +20,7 @@ import (
 	"io/ioutil"
 	"log"
 	"os"
+	"path/filepath"
 
 	"k8s.io/apimachinery/pkg/api/equality"
 	"k8s.io/client-go/tools/clientcmd"
@@ -242,7 +243,7 @@ func getClientConfigFromKubeConfig(kubeconfigFile string) (*rest.Config, error) 
 }
 
 func GetClientConfig(kubeConfigFile string) (*rest.Config, error) {
-	kubeConfigBytes, err := ioutil.ReadFile(kubeConfigFile)
+	kubeConfigBytes, err := ioutil.ReadFile(filepath.Clean(kubeConfigFile))
 	if err != nil {
 		return nil, err
 	}
