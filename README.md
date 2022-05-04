@@ -22,7 +22,7 @@
 <!-- END doctoc generated TOC please keep comment here to allow auto update -->
 ## Overview
 
-Channel controller sync and promote resources from the target source to a channel namespace on your hub cluster or to a host(such as object bucket). Then your subscription can consume these resources from the channel directly.
+Channel controller sync and promote resources from the target source to a channel namespace on your hub cluster or to a host(such as object bucket). Then your subscription can consume these resources from the channel directly. 
 
 ## Quick Start
 
