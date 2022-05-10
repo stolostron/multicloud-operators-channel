@@ -114,7 +114,7 @@ LATEST_TAG=`git ls-remote --tags https://github.com/open-cluster-management/appl
 echo -e "\nGet latest version tag of applifecycle-backend-e2e: $LATEST_TAG"
 
 echo -e "\nGet the applifecycle-backend-e2e data"
-go get github.com/open-cluster-management/applifecycle-backend-e2e@$LATEST_TAG
+go get github.com/open-cluster-management/applifecycle-backend-e2e@v0.2.1
 
 E2E_BINARY_NAME="applifecycle-backend-e2e"
 
