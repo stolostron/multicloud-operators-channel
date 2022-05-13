@@ -283,7 +283,7 @@ func TestChannelReconcileWithoutClusterCRD(t *testing.T) {
 		},
 	}
 
-	// referreding to a non-exist object, reconcile should still pass
+	// referreding to a non-exist object, reconcile should error
 	refCmName := "ch-cm"
 
 	chKey := types.NamespacedName{Name: tragetChannelName, Namespace: targetNamespace}
@@ -328,7 +328,7 @@ func TestChannelReconcileWithoutClusterCRD(t *testing.T) {
 	rq := reconcile.Request{NamespacedName: chKey}
 
 	_, err = rec.Reconcile(context.TODO(), rq)
-	g.Expect(err).NotTo(gomega.HaveOccurred())
+	g.Expect(err).To(gomega.HaveOccurred())
 
 	expectedRole := &rbac.Role{}
 	defer c.Delete(context.TODO(), expectedRole)
