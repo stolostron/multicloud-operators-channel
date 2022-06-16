@@ -6,7 +6,7 @@
 - [Deployment](#deployment)
 - [Community, discussion, contribution, and support](#community,-discussion,-contribution,-and-support)
 
-## Overview
+## Overview 
 
 Channels (channel.apps.open-cluster-management.io) define the source repositories that a cluster can subscribe to with a subscription, and can be the following types: Git, Helm release, and Object storage repositories, and resource templates on the hub cluster.
 
