@@ -46,6 +46,7 @@ import (
 
 	chv1 "open-cluster-management.io/multicloud-operators-channel/pkg/apis/apps/v1"
 
+	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	"open-cluster-management.io/multicloud-operators-channel/pkg/apis"
 	"open-cluster-management.io/multicloud-operators-channel/pkg/controller"
 	"open-cluster-management.io/multicloud-operators-channel/pkg/utils"
@@ -160,6 +161,11 @@ func RunManager() {
 
 	if err := apis.AddToScheme(mgr.GetScheme()); err != nil {
 		logger.Error(err, "unable add APIs to scheme")
+		os.Exit(exitCode)
+	}
+
+	if err := apiextensionsv1.AddToScheme(mgr.GetScheme()); err != nil {
+		logger.Error(err, "unable add apiextensions to scheme")
 		os.Exit(exitCode)
 	}
 
