@@ -201,7 +201,7 @@ func GenerateSelfSignedCACert(cn string) (Certificate, error) {
 
 	priv, err := rsa.GenerateKey(rand.Reader, rsaKeySize)
 	if err != nil {
-		return ca, fmt.Errorf("error generating rsa key: %s", err)
+		return ca, fmt.Errorf("error generating rsa key: %w", err)
 	}
 
 	ca.Cert, ca.Key, err = getCertAndKey(template, priv, template, priv)
@@ -221,7 +221,7 @@ func GenerateSignedCert(cn string, alternateDNS []string, ca Certificate) (Certi
 	signerCert, err := x509.ParseCertificate(decodedSignerCert.Bytes)
 	if err != nil {
 		return cert, fmt.Errorf(
-			"error parsing certificate: decodedSignerCert.Bytes: %s",
+			"error parsing certificate: decodedSignerCert.Bytes: %w",
 			err,
 		)
 	}
@@ -234,7 +234,7 @@ func GenerateSignedCert(cn string, alternateDNS []string, ca Certificate) (Certi
 	signerKey, err := x509.ParsePKCS1PrivateKey(decodedSignerKey.Bytes)
 	if err != nil {
 		return cert, fmt.Errorf(
-			"error parsing prive key: decodedSignerKey.Bytes: %s",
+			"error parsing prive key: decodedSignerKey.Bytes: %w",
 			err,
 		)
 	}
@@ -246,7 +246,7 @@ func GenerateSignedCert(cn string, alternateDNS []string, ca Certificate) (Certi
 
 	priv, err := rsa.GenerateKey(rand.Reader, rsaKeySize)
 	if err != nil {
-		return cert, fmt.Errorf("error generating rsa key: %s", err)
+		return cert, fmt.Errorf("error generating rsa key: %w", err)
 	}
 
 	cert.Cert, cert.Key, err = getCertAndKey(template, priv, signerCert, signerKey)
@@ -295,7 +295,7 @@ func getCertAndKey(
 	)
 
 	if err != nil {
-		return "", "", fmt.Errorf("error creating certificate: %s", err)
+		return "", "", fmt.Errorf("error creating certificate: %w", err)
 	}
 
 	certBuffer := bytes.Buffer{}
@@ -303,7 +303,7 @@ func getCertAndKey(
 		&certBuffer,
 		&pem.Block{Type: "CERTIFICATE", Bytes: derBytes},
 	); err != nil {
-		return "", "", fmt.Errorf("error pem-encoding certificate: %s", err)
+		return "", "", fmt.Errorf("error pem-encoding certificate: %w", err)
 	}
 
 	keyBuffer := bytes.Buffer{}
@@ -314,7 +314,7 @@ func getCertAndKey(
 			Bytes: x509.MarshalPKCS1PrivateKey(signeeKey),
 		},
 	); err != nil {
-		return "", "", fmt.Errorf("error pem-encoding key: %s", err)
+		return "", "", fmt.Errorf("error pem-encoding key: %w", err)
 	}
 
 	return certBuffer.String(), keyBuffer.String(), nil

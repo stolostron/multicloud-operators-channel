@@ -55,9 +55,9 @@ import (
 
 // Change below variables to serve metrics on different host or port.
 var (
-	metricsHost             = "0.0.0.0"
-	metricsPort         int = 8384
-	operatorMetricsPort int = 8687
+	metricsHost         = "0.0.0.0"
+	metricsPort         = 8384
+	operatorMetricsPort = 8687
 )
 
 const (
