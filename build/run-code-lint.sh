@@ -37,7 +37,7 @@ gem install mdl
 gem install awesome_bot
 
 # Install golangci-lint
-curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b "$(go env GOPATH)"/bin v1.24.0
+curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b "$(go env GOPATH)"/bin v1.46.2
 
 # Start lint task
 make -f Makefile.prow lint-all
