@@ -59,21 +59,6 @@ func CreateObjectStorageChannelDescriptor() (*ChannelDescriptor, error) {
 	return c, nil
 }
 
-//SetObjectStorageForChannel is mainly for testing purpose
-func (desc *ChannelDescriptor) SetObjectStorageForChannel(chn *chv1.Channel, objStoreHandler ObjectStore) bool {
-	if _, ok := desc.channelUnitRegistry[chn.Name]; !ok {
-		desc.channelUnitRegistry[chn.Name] = &ChannelDescription{}
-	}
-
-	_, bucket := parseBucketAndEndpoint(chn.Spec.Pathname)
-	t := desc.channelUnitRegistry[chn.Name]
-	t.Channel = chn.DeepCopy()
-	t.Bucket = bucket
-	t.ObjectStore = objStoreHandler
-
-	return true
-}
-
 // ConnectWithResourceHost validates and makes channel object store connection
 func (desc *ChannelDescriptor) ConnectWithResourceHost(chn *chv1.Channel, kubeClient client.Client, log logr.Logger, objStoreHandler ...ObjectStore) error {
 	var storageHanler ObjectStore
