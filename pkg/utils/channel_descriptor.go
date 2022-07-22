@@ -42,14 +42,6 @@ type ChannelDescriptor struct {
 	channelUnitRegistry map[string]*ChannelDescription // key: channel name
 }
 
-func (desc *ChannelDescriptor) GetBucketNameByChannel(chName string) string {
-	if _, ok := desc.channelUnitRegistry[chName]; !ok {
-		return ""
-	}
-
-	return desc.channelUnitRegistry[chName].Bucket
-}
-
 // CreateChannelDescriptor - creates an instance of ChannelDescriptor
 func CreateObjectStorageChannelDescriptor() (*ChannelDescriptor, error) {
 	c := &ChannelDescriptor{
