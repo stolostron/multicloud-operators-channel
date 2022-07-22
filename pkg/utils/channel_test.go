@@ -181,6 +181,25 @@ func TestUpdateServingChannel(t *testing.T) {
 	}
 }
 
+func TestConvertLabels(t *testing.T) {
+	g := gomega.NewGomegaWithT(t)
+
+	namereq := metav1.LabelSelectorRequirement{}
+	namereq.Key = "name"
+	namereq.Operator = metav1.LabelSelectorOpIn
+
+	namereq.Values = []string{"rollingendpoint"}
+	labelSelector := &metav1.LabelSelector{
+		MatchExpressions: []metav1.LabelSelectorRequirement{namereq},
+	}
+
+	_, err := ConvertLabels(labelSelector)
+	g.Expect(err).NotTo(gomega.HaveOccurred())
+
+	_, err = ConvertLabels(nil)
+	g.Expect(err).NotTo(gomega.HaveOccurred())
+}
+
 func convertCommaStringToMap(s string) map[string]bool {
 	m := make(map[string]bool)
 
