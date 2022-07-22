@@ -42,14 +42,6 @@ type ChannelDescriptor struct {
 	channelUnitRegistry map[string]*ChannelDescription // key: channel name
 }
 
-func (desc *ChannelDescriptor) GetBucketNameByChannel(chName string) string {
-	if _, ok := desc.channelUnitRegistry[chName]; !ok {
-		return ""
-	}
-
-	return desc.channelUnitRegistry[chName].Bucket
-}
-
 // CreateChannelDescriptor - creates an instance of ChannelDescriptor
 func CreateObjectStorageChannelDescriptor() (*ChannelDescriptor, error) {
 	c := &ChannelDescriptor{
@@ -57,21 +49,6 @@ func CreateObjectStorageChannelDescriptor() (*ChannelDescriptor, error) {
 	}
 
 	return c, nil
-}
-
-//SetObjectStorageForChannel is mainly for testing purpose
-func (desc *ChannelDescriptor) SetObjectStorageForChannel(chn *chv1.Channel, objStoreHandler ObjectStore) bool {
-	if _, ok := desc.channelUnitRegistry[chn.Name]; !ok {
-		desc.channelUnitRegistry[chn.Name] = &ChannelDescription{}
-	}
-
-	_, bucket := parseBucketAndEndpoint(chn.Spec.Pathname)
-	t := desc.channelUnitRegistry[chn.Name]
-	t.Channel = chn.DeepCopy()
-	t.Bucket = bucket
-	t.ObjectStore = objStoreHandler
-
-	return true
 }
 
 // ConnectWithResourceHost validates and makes channel object store connection
@@ -194,13 +171,6 @@ func (desc *ChannelDescriptor) Get(chname string) (chdesc *ChannelDescription, o
 	desc.RUnlock()
 
 	return result, ok
-}
-
-// Delete the channel description
-func (desc *ChannelDescriptor) Delete(chname string) {
-	desc.Lock()
-	delete(desc.channelUnitRegistry, chname)
-	desc.Unlock()
 }
 
 // Put a new channel description

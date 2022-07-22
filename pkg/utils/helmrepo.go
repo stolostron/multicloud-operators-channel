@@ -15,11 +15,9 @@
 package utils
 
 import (
-	"crypto/tls"
 	"fmt"
 	"io/ioutil"
 	"net/http"
-	"strconv"
 
 	"github.com/ghodss/yaml"
 	"github.com/go-logr/logr"
@@ -32,38 +30,6 @@ const (
 	InsecureSkipVerifyFlag = "insecureSkipVerify"
 )
 
-func decideHTTPClient(repoURL string, insecureSkipVerify bool, chnRefCfgMap *corev1.ConfigMap, logger logr.Logger) *http.Client {
-	logger.Info(repoURL)
-
-	// rootsCA is loading from host if not configed, https://golang.org/src/crypto/x509/root_linux.go
-	tlsConfig := &tls.Config{MinVersion: tls.VersionTLS12}
-
-	if insecureSkipVerify {
-		logger.Info("Channel spec has insecureSkipVerify: true. Skipping server certificate verification.")
-
-		tlsConfig.InsecureSkipVerify = true
-	}
-
-	if chnRefCfgMap != nil && chnRefCfgMap.Data[InsecureSkipVerifyFlag] != "" {
-		b, err := strconv.ParseBool(chnRefCfgMap.Data[InsecureSkipVerifyFlag])
-		if err != nil {
-			logger.Error(err, "unable to parse insecureSkipVerify false, using default value: false")
-		}
-
-		logger.Info("Channel config map found with insecureSkipVerify: " + chnRefCfgMap.Data["insecureSkipVerify"] + ". Skipping server certificate verification.")
-
-		tlsConfig.InsecureSkipVerify = b
-	}
-
-	client := &http.Client{
-		Transport: &http.Transport{
-			TLSClientConfig: tlsConfig,
-		},
-	}
-
-	return client
-}
-
 func buildRepoURL(repoURL string) string {
 	validURL := repoURL
 
@@ -72,34 +38,6 @@ func buildRepoURL(repoURL string) string {
 	}
 
 	return validURL + "index.yaml"
-}
-
-func GetChartIndex(chnPathname string, insecureSkipVerify bool, srt *corev1.Secret,
-	chnRefCfgMap *corev1.ConfigMap, logger logr.Logger) (*http.Response, error) {
-	repoURL := buildRepoURL(chnPathname)
-
-	client := decideHTTPClient(repoURL, insecureSkipVerify, chnRefCfgMap, logger)
-
-	req, err := http.NewRequest(http.MethodGet, repoURL, nil)
-
-	if err != nil {
-		return nil, err
-	}
-
-	if srt != nil && srt.Data != nil {
-		if authHeader, ok := srt.Data["authHeader"]; ok {
-			req.Header.Set("Authorization", string(authHeader))
-		}
-
-		user, password, _ := ParseSecertInfo(srt)
-		if user == "" || password == "" {
-			return nil, fmt.Errorf("password not found in secret for basic authentication")
-		}
-
-		req.SetBasicAuth(user, password)
-	}
-
-	return client.Do(req)
 }
 
 type LoadIndexPageFunc func(idxPath string, secureSkip bool, srt *corev1.Secret, cfg *corev1.ConfigMap, logger logr.Logger) (*http.Response, error)
