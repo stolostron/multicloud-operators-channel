@@ -15,11 +15,9 @@
 package utils
 
 import (
-	"crypto/tls"
 	"fmt"
 	"io/ioutil"
 	"net/http"
-	"strconv"
 
 	"github.com/ghodss/yaml"
 	"github.com/go-logr/logr"
@@ -31,38 +29,6 @@ import (
 const (
 	InsecureSkipVerifyFlag = "insecureSkipVerify"
 )
-
-func decideHTTPClient(repoURL string, insecureSkipVerify bool, chnRefCfgMap *corev1.ConfigMap, logger logr.Logger) *http.Client {
-	logger.Info(repoURL)
-
-	// rootsCA is loading from host if not configed, https://golang.org/src/crypto/x509/root_linux.go
-	tlsConfig := &tls.Config{MinVersion: tls.VersionTLS12}
-
-	if insecureSkipVerify {
-		logger.Info("Channel spec has insecureSkipVerify: true. Skipping server certificate verification.")
-
-		tlsConfig.InsecureSkipVerify = true
-	}
-
-	if chnRefCfgMap != nil && chnRefCfgMap.Data[InsecureSkipVerifyFlag] != "" {
-		b, err := strconv.ParseBool(chnRefCfgMap.Data[InsecureSkipVerifyFlag])
-		if err != nil {
-			logger.Error(err, "unable to parse insecureSkipVerify false, using default value: false")
-		}
-
-		logger.Info("Channel config map found with insecureSkipVerify: " + chnRefCfgMap.Data["insecureSkipVerify"] + ". Skipping server certificate verification.")
-
-		tlsConfig.InsecureSkipVerify = b
-	}
-
-	client := &http.Client{
-		Transport: &http.Transport{
-			TLSClientConfig: tlsConfig,
-		},
-	}
-
-	return client
-}
 
 func buildRepoURL(repoURL string) string {
 	validURL := repoURL
