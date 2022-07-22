@@ -196,13 +196,6 @@ func (desc *ChannelDescriptor) Get(chname string) (chdesc *ChannelDescription, o
 	return result, ok
 }
 
-// Delete the channel description
-func (desc *ChannelDescriptor) Delete(chname string) {
-	desc.Lock()
-	delete(desc.channelUnitRegistry, chname)
-	desc.Unlock()
-}
-
 // Put a new channel description
 func (desc *ChannelDescriptor) Put(chname string, chdesc *ChannelDescription) {
 	desc.Lock()
