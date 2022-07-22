@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package utils_test
+package utils
 
 import (
 	"context"
@@ -26,7 +26,6 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 
 	chv1 "open-cluster-management.io/multicloud-operators-channel/pkg/apis/apps/v1"
-	"open-cluster-management.io/multicloud-operators-channel/pkg/utils"
 )
 
 // this is mainly testing if a Channel resource can be created or not
@@ -40,8 +39,8 @@ func TestGenerateChannelMap(t *testing.T) {
 	}
 	chObj := &chv1.Channel{
 		TypeMeta: metav1.TypeMeta{
-			Kind:       utils.ChannelTypeKind,
-			APIVersion: utils.ChannelTypeAPIVersion,
+			Kind:       ChannelTypeKind,
+			APIVersion: ChannelTypeAPIVersion,
 		},
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      chName,
@@ -61,7 +60,7 @@ func TestGenerateChannelMap(t *testing.T) {
 	fetched := &chv1.Channel{}
 	g.Expect(c.Get(ctx, key, fetched)).NotTo(gomega.HaveOccurred())
 
-	got, _ := utils.GenerateChannelMap(c, logr.Discard())
+	got, _ := GenerateChannelMap(c, logr.Discard())
 	want := map[string]*chv1.Channel{chName: fetched}
 
 	// test cases
@@ -75,8 +74,8 @@ func TestLocateChannel(t *testing.T) {
 
 	chObj := &chv1.Channel{
 		TypeMeta: metav1.TypeMeta{
-			Kind:       utils.ChannelTypeKind,
-			APIVersion: utils.ChannelTypeAPIVersion,
+			Kind:       ChannelTypeKind,
+			APIVersion: ChannelTypeAPIVersion,
 		},
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      chName,
@@ -93,7 +92,7 @@ func TestLocateChannel(t *testing.T) {
 	g.Expect(c.Create(ctx, chObj)).NotTo(gomega.HaveOccurred())
 	defer c.Delete(ctx, chObj)
 
-	got, err := utils.LocateChannel(c, chName)
+	got, err := LocateChannel(c, chName)
 
 	if err != nil {
 		t.Fatalf("fatal error at the local channel test, %v\n", err)
@@ -103,11 +102,11 @@ func TestLocateChannel(t *testing.T) {
 
 	g.Expect((*got).GetName()).Should(gomega.Equal(chName), "There's a match")
 
-	got, _ = utils.LocateChannel(c, "")
+	got, _ = LocateChannel(c, "")
 
 	g.Expect(got).Should(gomega.BeNil(), "There's no match 1")
 
-	got, _ = utils.LocateChannel(c, "wrongName")
+	got, _ = LocateChannel(c, "wrongName")
 
 	g.Expect(got).Should(gomega.BeNil(), "There's no match 2")
 }
@@ -173,7 +172,7 @@ func TestUpdateServingChannel(t *testing.T) {
 
 	for _, tC := range testCases {
 		t.Run(tC.desc, func(t *testing.T) {
-			got := utils.UpdateServingChannel(tC.srvCh, tC.chKey, tC.action)
+			got := UpdateServingChannel(tC.srvCh, tC.chKey, tC.action)
 			a, b := convertCommaStringToMap(got), convertCommaStringToMap(tC.want)
 			if diff := cmp.Diff(a, b); diff != "" {
 				t.Errorf("UpdateServingChannel mismatch (%v, %v)", tC.want, got)

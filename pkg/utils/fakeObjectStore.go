@@ -14,10 +14,6 @@
 
 package utils
 
-import (
-	"github.com/pkg/errors"
-)
-
 type FakeObjectStore struct {
 	//map[bucket]map[objName]DeployableObject[Name, Content]
 	Clt map[string]map[string]DeployableObject
@@ -44,40 +40,4 @@ func (m *FakeObjectStore) Create(bucket string) error {
 	m.Clt[bucket] = make(map[string]DeployableObject)
 
 	return nil
-}
-
-func (m *FakeObjectStore) List(bucket string) ([]string, error) {
-	keys := []string{}
-
-	for k := range m.Clt[bucket] {
-		keys = append(keys, k)
-	}
-
-	return keys, nil
-}
-
-func (m *FakeObjectStore) Put(bucket string, dplObj DeployableObject) error {
-	m.Clt[bucket] = map[string]DeployableObject{
-		dplObj.Name: dplObj,
-	}
-
-	return nil
-}
-
-func (m *FakeObjectStore) Delete(bucket, name string) error {
-	if _, ok := m.Clt[bucket]; !ok {
-		return errors.New("empty bucket")
-	}
-
-	delete(m.Clt, bucket)
-
-	return nil
-}
-
-func (m *FakeObjectStore) Get(bucket, name string) (DeployableObject, error) {
-	if _, ok := m.Clt[bucket][name]; !ok {
-		return DeployableObject{}, errors.New("empty bucket")
-	}
-
-	return m.Clt[bucket][name], nil
 }

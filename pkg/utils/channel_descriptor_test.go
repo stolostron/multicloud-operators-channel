@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package utils_test
+package utils
 
 import (
 	"context"
@@ -21,13 +21,49 @@ import (
 	"github.com/go-logr/logr"
 	"github.com/google/go-cmp/cmp"
 	"github.com/onsi/gomega"
+	"github.com/pkg/errors"
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	chv1 "open-cluster-management.io/multicloud-operators-channel/pkg/apis/apps/v1"
-	"open-cluster-management.io/multicloud-operators-channel/pkg/utils"
 )
+
+func (m *FakeObjectStore) List(bucket string) ([]string, error) {
+	keys := []string{}
+
+	for k := range m.Clt[bucket] {
+		keys = append(keys, k)
+	}
+
+	return keys, nil
+}
+
+func (m *FakeObjectStore) Put(bucket string, dplObj DeployableObject) error {
+	m.Clt[bucket] = map[string]DeployableObject{
+		dplObj.Name: dplObj,
+	}
+
+	return nil
+}
+
+func (m *FakeObjectStore) Delete(bucket, name string) error {
+	if _, ok := m.Clt[bucket]; !ok {
+		return errors.New("empty bucket")
+	}
+
+	delete(m.Clt, bucket)
+
+	return nil
+}
+
+func (m *FakeObjectStore) Get(bucket, name string) (DeployableObject, error) {
+	if _, ok := m.Clt[bucket][name]; !ok {
+		return DeployableObject{}, errors.New("empty bucket")
+	}
+
+	return m.Clt[bucket][name], nil
+}
 
 func TestValidateChannel(t *testing.T) {
 	testCh := "objch"
@@ -50,8 +86,8 @@ func TestValidateChannel(t *testing.T) {
 		desc       string
 		chn        *chv1.Channel
 		kubeClient client.Client
-		myStorage  *utils.FakeObjectStore
-		wanted     *utils.FakeObjectStore
+		myStorage  *FakeObjectStore
+		wanted     *FakeObjectStore
 	}{
 		{
 			desc: "channel without referred secret",
@@ -108,13 +144,13 @@ func TestValidateChannel(t *testing.T) {
 				},
 			},
 			kubeClient: c,
-			myStorage: &utils.FakeObjectStore{
-				Clt: map[string]map[string]utils.DeployableObject{
-					testBucket: make(map[string]utils.DeployableObject),
+			myStorage: &FakeObjectStore{
+				Clt: map[string]map[string]DeployableObject{
+					testBucket: make(map[string]DeployableObject),
 				},
 			},
-			wanted: &utils.FakeObjectStore{
-				Clt: map[string]map[string]utils.DeployableObject{
+			wanted: &FakeObjectStore{
+				Clt: map[string]map[string]DeployableObject{
 					testBucket: {},
 				},
 			},
@@ -128,7 +164,7 @@ func TestValidateChannel(t *testing.T) {
 
 	for _, tC := range testCases {
 		t.Run(tC.desc, func(t *testing.T) {
-			myChDescriptor, _ := utils.CreateObjectStorageChannelDescriptor()
+			myChDescriptor, _ := CreateObjectStorageChannelDescriptor()
 
 			if tC.myStorage == nil {
 				_ = myChDescriptor.ConnectWithResourceHost(tC.chn, tC.kubeClient, logr.Discard())
