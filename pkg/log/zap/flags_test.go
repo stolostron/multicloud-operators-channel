@@ -91,6 +91,75 @@ func TestLevel(t *testing.T) {
 	}
 }
 
+func TestStackLevel(t *testing.T) {
+	testCases := []struct {
+		name      string
+		input     string
+		expStr    string
+		expSet    bool
+		expLevel  zapcore.Level
+		shouldErr bool
+	}{
+		{
+			name:     "debug level set",
+			input:    "debug",
+			expStr:   "debug",
+			expSet:   true,
+			expLevel: zapcore.DebugLevel,
+		},
+		{
+			name:     "info level set",
+			input:    "info",
+			expStr:   "info",
+			expSet:   true,
+			expLevel: zapcore.InfoLevel,
+		},
+		{
+			name:     "error level set",
+			input:    "error",
+			expStr:   "error",
+			expSet:   true,
+			expLevel: zapcore.ErrorLevel,
+		},
+		{
+			name:      "negative number should error",
+			input:     "-10",
+			shouldErr: true,
+			expSet:    false,
+		},
+		{
+			name:     "positive number level results in negative level set",
+			input:    "8",
+			expStr:   "Level(-8)",
+			expSet:   true,
+			expLevel: zapcore.Level(int8(-8)),
+		},
+		{
+			name:      "non-integer should cause error",
+			input:     "invalid",
+			shouldErr: true,
+			expSet:    false,
+		},
+	}
+
+	for _, tC := range testCases {
+		t.Run(tC.name, func(t *testing.T) {
+			lvl := stackLevelValue{}
+			err := lvl.Set(tC.input)
+			if err != nil && !tC.shouldErr {
+				t.Fatalf("Unknown error - %v", err)
+			}
+			if err != nil && tC.shouldErr {
+				return
+			}
+			assert.Equal(t, tC.expSet, lvl.set)
+			assert.Equal(t, tC.expLevel, lvl.level)
+			assert.Equal(t, "level", lvl.Type())
+			assert.Equal(t, tC.expStr, lvl.String())
+		})
+	}
+}
+
 func TestSample(t *testing.T) {
 	testCases := []struct {
 		name      string
