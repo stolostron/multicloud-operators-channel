@@ -62,6 +62,13 @@ func TestChannelControllerReconcile(t *testing.T) {
 		},
 	}
 
+	clusterInstance := &spokeClusterV1.ManagedCluster{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "example-cluster",
+			Namespace: targetNamespace,
+		},
+	}
+
 	// Setup the Manager and Controller.  Wrap the Controller Reconcile function so it writes each request to a
 	// channel when it is finished.
 	mgr, err := manager.New(cfg, manager.Options{MetricsBindAddress: "0"})
@@ -95,6 +102,11 @@ func TestChannelControllerReconcile(t *testing.T) {
 
 	g.Expect(err).NotTo(gomega.HaveOccurred())
 
+	err = c.Create(context.TODO(), clusterInstance)
+
+	g.Expect(err).NotTo(gomega.HaveOccurred())
+
+	defer c.Delete(context.TODO(), clusterInstance)
 	defer c.Delete(context.TODO(), channelInstance)
 
 	g.Eventually(requests, timeout).Should(gomega.Receive(gomega.Equal(expectedRequest)))

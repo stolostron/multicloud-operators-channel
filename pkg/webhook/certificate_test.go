@@ -37,6 +37,7 @@ var _ = Describe("self-signed cert", func() {
 	)
 
 	It("should create CA and store it in secret if secret doesn't exist, private key pairs should be created and put into a secret as well", func() {
+
 		os.Setenv(podNamespaceEnvVar, "test")
 		defer func() {
 			os.RemoveAll(certDir)
@@ -46,7 +47,11 @@ var _ = Describe("self-signed cert", func() {
 		podNs, err := findEnvVariable(podNamespaceEnvVar)
 		Expect(err).Should(Succeed())
 
-		ca, err := GenerateWebhookCerts(k8sClient, certDir, podNs, webhookServiceName)
+		ca, err := GenerateWebhookCerts(k8sClient, "", podNs, webhookServiceName)
+		Expect(err).Should(Succeed())
+		Expect(ca).ShouldNot(BeNil())
+
+		ca, err = GenerateWebhookCerts(k8sClient, certDir, podNs, webhookServiceName)
 		Expect(err).Should(Succeed())
 		Expect(ca).ShouldNot(BeNil())
 
