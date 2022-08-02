@@ -18,26 +18,3 @@ type FakeObjectStore struct {
 	//map[bucket]map[objName]DeployableObject[Name, Content]
 	Clt map[string]map[string]DeployableObject
 }
-
-func (m *FakeObjectStore) InitObjectStoreConnection(endpoint, accessKeyID, secretAccessKey, region string) error {
-	if len(m.Clt) == 0 {
-		m.Clt = make(map[string]map[string]DeployableObject)
-	}
-
-	return nil
-}
-
-//it's odd that we request the storage to be pre-set
-func (m *FakeObjectStore) Exists(bucket string) error {
-	if _, ok := m.Clt[bucket]; !ok {
-		return m.Create(bucket)
-	}
-
-	return nil
-}
-
-func (m *FakeObjectStore) Create(bucket string) error {
-	m.Clt[bucket] = make(map[string]DeployableObject)
-
-	return nil
-}

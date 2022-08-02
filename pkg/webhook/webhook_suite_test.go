@@ -16,8 +16,10 @@ package webhook
 
 import (
 	"context"
+	"log"
 	"os"
 	"path/filepath"
+	"sync"
 	"testing"
 	"time"
 
@@ -34,6 +36,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes/scheme"
+	"k8s.io/client-go/rest"
 
 	admissionv1 "k8s.io/api/admissionregistration/v1"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -55,6 +58,7 @@ const (
 var testEnv *envtest.Environment
 var k8sManager mgr.Manager
 var k8sClient client.Client
+var cfg *rest.Config
 
 var (
 	webhookValidatorName = "test-suite-webhook"
@@ -63,6 +67,51 @@ var (
 	resourceName         = "channels"
 	stop                 = ctrl.SetupSignalHandler()
 )
+
+func TestMain(m *testing.M) {
+	t := &envtest.Environment{
+		CRDDirectoryPaths: []string{
+			filepath.Join("..", "..", "..", "deploy", "crds"),
+			filepath.Join("..", "..", "..", "hack", "test"),
+		},
+	}
+
+	apis.AddToScheme(scheme.Scheme)
+
+	var err error
+	if cfg, err = t.Start(); err != nil {
+		log.Fatal(err)
+	}
+
+	if k8sClient, err = client.New(cfg, client.Options{Scheme: scheme.Scheme}); err != nil {
+		log.Fatal(err)
+	}
+
+	err = k8sClient.Create(context.Background(), &corev1.Namespace{
+		ObjectMeta: metav1.ObjectMeta{Name: "test"},
+	})
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	code := m.Run()
+
+	t.Stop()
+	os.Exit(code)
+}
+
+// StartTestManager adds recFn
+func StartTestManager(ctx context.Context, mgr mgr.Manager, g *GomegaWithT) *sync.WaitGroup {
+	wg := &sync.WaitGroup{}
+	wg.Add(1)
+
+	go func() {
+		wg.Done()
+		mgr.Start(ctx)
+	}()
+
+	return wg
+}
 
 func TestChannelWebhook(t *testing.T) {
 	RegisterFailHandler(Fail)

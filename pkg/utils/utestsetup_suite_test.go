@@ -19,14 +19,17 @@ import (
 	"log"
 	"os"
 	"path/filepath"
+	"sync"
 	"testing"
 
+	"github.com/onsi/gomega"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/client-go/rest"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/envtest"
+	"sigs.k8s.io/controller-runtime/pkg/manager"
 
 	"open-cluster-management.io/multicloud-operators-channel/pkg/apis"
 	chv1 "open-cluster-management.io/multicloud-operators-channel/pkg/apis/apps/v1"
@@ -101,4 +104,17 @@ func GenerateCRsAtLocalKube(c client.Client, instance client.Object) (func(), er
 	}
 
 	return closeFunc, nil
+}
+
+// StartTestManager adds recFn
+func StartTestManager(ctx context.Context, mgr manager.Manager, g *gomega.GomegaWithT) *sync.WaitGroup {
+	wg := &sync.WaitGroup{}
+	wg.Add(1)
+
+	go func() {
+		defer wg.Done()
+		mgr.Start(ctx)
+	}()
+
+	return wg
 }

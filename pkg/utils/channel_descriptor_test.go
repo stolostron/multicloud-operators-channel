@@ -65,6 +65,29 @@ func (m *FakeObjectStore) Get(bucket, name string) (DeployableObject, error) {
 	return m.Clt[bucket][name], nil
 }
 
+//it's odd that we request the storage to be pre-set
+func (m *FakeObjectStore) Exists(bucket string) error {
+	if _, ok := m.Clt[bucket]; !ok {
+		return m.Create(bucket)
+	}
+
+	return nil
+}
+
+func (m *FakeObjectStore) Create(bucket string) error {
+	m.Clt[bucket] = make(map[string]DeployableObject)
+
+	return nil
+}
+
+func (m *FakeObjectStore) InitObjectStoreConnection(endpoint, accessKeyID, secretAccessKey, region string) error {
+	if len(m.Clt) == 0 {
+		m.Clt = make(map[string]map[string]DeployableObject)
+	}
+
+	return nil
+}
+
 func TestValidateChannel(t *testing.T) {
 	testCh := "objch"
 	testNs := "ch-obj"
