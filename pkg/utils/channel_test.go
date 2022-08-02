@@ -181,6 +181,12 @@ func TestUpdateServingChannel(t *testing.T) {
 	}
 }
 
+func TestParseSecretInfo(t *testing.T) {
+	g := gomega.NewGomegaWithT(t)
+
+	g.Expect(ParseSecretInfo(nil)).To(gomega.Equal(""))
+}
+
 func TestConvertLabels(t *testing.T) {
 	g := gomega.NewGomegaWithT(t)
 

@@ -354,4 +354,8 @@ func TestChannelReconcileWithoutClusterCRD(t *testing.T) {
 		context.TODO(),
 		types.NamespacedName{Name: chn.Name, Namespace: chn.Namespace},
 		expectedRoleBinding)).NotTo(gomega.HaveOccurred())
+
+	// Object not found
+	_, err = rec.Reconcile(context.TODO(), reconcile.Request{})
+	g.Expect(err).NotTo(gomega.HaveOccurred())
 }

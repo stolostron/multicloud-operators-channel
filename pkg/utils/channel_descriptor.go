@@ -53,7 +53,7 @@ func CreateObjectStorageChannelDescriptor() (*ChannelDescriptor, error) {
 
 // ConnectWithResourceHost validates and makes channel object store connection
 func (desc *ChannelDescriptor) ConnectWithResourceHost(chn *chv1.Channel, kubeClient client.Client, log logr.Logger, objStoreHandler ...ObjectStore) error {
-	var storageHanler ObjectStore
+	var storageHandler ObjectStore
 
 	chUnit, _ := desc.Get(chn.Name)
 
@@ -62,11 +62,11 @@ func (desc *ChannelDescriptor) ConnectWithResourceHost(chn *chv1.Channel, kubeCl
 	// 2, if not injected, and there's old one for the channel, then use the old one
 	// 3, otherwise, use the AWS one
 	if len(objStoreHandler) != 0 && objStoreHandler[0] != nil {
-		storageHanler = objStoreHandler[0]
+		storageHandler = objStoreHandler[0]
 	} else if chUnit != nil && chUnit.ObjectStore != nil {
-		storageHanler = chUnit.ObjectStore
+		storageHandler = chUnit.ObjectStore
 	} else {
-		storageHanler = &AWSHandler{}
+		storageHandler = &AWSHandler{}
 	}
 
 	var accessID, secretAccessKey, region string
@@ -81,7 +81,7 @@ func (desc *ChannelDescriptor) ConnectWithResourceHost(chn *chv1.Channel, kubeCl
 		}
 	}
 	// Add new channel to the map
-	if err := desc.updateChannelRegistry(chn, accessID, secretAccessKey, region, storageHanler, log); err != nil {
+	if err := desc.updateChannelRegistry(chn, accessID, secretAccessKey, region, storageHandler, log); err != nil {
 		log.Error(err, "unable to initialize channel ObjectStore description")
 		return err
 	}
@@ -111,7 +111,7 @@ func getCredentialFromKube(secretRef *corev1.ObjectReference, defaultNs string, 
 		return "", "", "", errors.Wrap(err, "unable to get secret")
 	}
 
-	accessKeyID, secretAccessKey, region = ParseSecertInfo(secret)
+	accessKeyID, secretAccessKey, region = ParseSecretInfo(secret)
 
 	return accessKeyID, secretAccessKey, region, nil
 }
