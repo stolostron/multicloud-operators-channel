@@ -21,20 +21,26 @@ const defaultSyncInterval = 60 //seconds
 
 // ChannelCMDOptions for command line flag parsing
 type ChannelCMDOptions struct {
-	MetricsAddr  string
-	KubeConfig   string
-	SyncInterval int
-	LeaderElect  bool
-	Debug        bool
-	LogLevel     bool
+	MetricsAddr          string
+	KubeConfig           string
+	SyncInterval         int
+	LeaderElect          bool
+	Debug                bool
+	LogLevel             bool
+	LeaseDurationSeconds int
+	RenewDeadlineSeconds int
+	RetryPeriodSeconds   int
 }
 
 var (
 	options = ChannelCMDOptions{
-		MetricsAddr:  "",
-		SyncInterval: defaultSyncInterval,
-		Debug:        false,
-		LogLevel:     false,
+		MetricsAddr:          "",
+		SyncInterval:         defaultSyncInterval,
+		Debug:                false,
+		LogLevel:             false,
+		LeaseDurationSeconds: 137,
+		RenewDeadlineSeconds: 107,
+		RetryPeriodSeconds:   26,
 	}
 )
 
@@ -98,5 +104,26 @@ func ProcessFlags() {
 		"zap-devel",
 		false,
 		"zap-devel, default only log INFO(fasle), set to true for debugging",
+	)
+
+	flag.IntVar(
+		&options.LeaseDurationSeconds,
+		"lease-duration",
+		options.LeaseDurationSeconds,
+		"The lease duration in seconds.",
+	)
+
+	flag.IntVar(
+		&options.RenewDeadlineSeconds,
+		"renew-deadline",
+		options.RenewDeadlineSeconds,
+		"The renew deadline in seconds.",
+	)
+
+	flag.IntVar(
+		&options.RetryPeriodSeconds,
+		"retry-period",
+		options.RetryPeriodSeconds,
+		"The retry period in seconds.",
 	)
 }
