@@ -20,7 +20,7 @@ See `multicloud-operators-subscription` [stand-alone](https://github.com/open-cl
 
 Check the [CONTRIBUTING Doc](CONTRIBUTING.md) for how to contribute to the repo.
 
-### Communication channels
+### Communication channels 
 
 Slack channel: [#open-cluster-mgmt](http://slack.k8s.io/#open-cluster-mgmt)
 
