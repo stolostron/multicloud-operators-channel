@@ -21,26 +21,26 @@ const defaultSyncInterval = 60 //seconds
 
 // ChannelCMDOptions for command line flag parsing
 type ChannelCMDOptions struct {
-	MetricsAddr          string
-	KubeConfig           string
-	SyncInterval         int
-	LeaderElect          bool
-	Debug                bool
-	LogLevel             bool
-	LeaseDurationSeconds int
-	RenewDeadlineSeconds int
-	RetryPeriodSeconds   int
+	MetricsAddr                        string
+	KubeConfig                         string
+	SyncInterval                       int
+	LeaderElect                        bool
+	Debug                              bool
+	LogLevel                           bool
+	LeaderElectionLeaseDurationSeconds int
+	RenewDeadlineSeconds               int
+	RetryPeriodSeconds                 int
 }
 
 var (
 	options = ChannelCMDOptions{
-		MetricsAddr:          "",
-		SyncInterval:         defaultSyncInterval,
-		Debug:                false,
-		LogLevel:             false,
-		LeaseDurationSeconds: 137,
-		RenewDeadlineSeconds: 107,
-		RetryPeriodSeconds:   26,
+		MetricsAddr:                        "",
+		SyncInterval:                       defaultSyncInterval,
+		Debug:                              false,
+		LogLevel:                           false,
+		LeaderElectionLeaseDurationSeconds: 137,
+		RenewDeadlineSeconds:               107,
+		RetryPeriodSeconds:                 26,
 	}
 )
 
@@ -107,10 +107,10 @@ func ProcessFlags() {
 	)
 
 	flag.IntVar(
-		&options.LeaseDurationSeconds,
-		"lease-duration",
-		options.LeaseDurationSeconds,
-		"The lease duration in seconds.",
+		&options.LeaderElectionLeaseDurationSeconds,
+		"leader-election-lease-duration",
+		options.LeaderElectionLeaseDurationSeconds,
+		"The leader election lease duration in seconds.",
 	)
 
 	flag.IntVar(
