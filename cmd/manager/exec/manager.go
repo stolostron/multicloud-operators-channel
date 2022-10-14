@@ -66,7 +66,7 @@ const (
 	kindName = "channels"
 )
 
-//RunManager initial controller, synchronizer and start manager
+// RunManager initial controller, synchronizer and start manager
 func RunManager() {
 	var err error
 

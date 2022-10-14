@@ -149,8 +149,8 @@ func DelPreValiationCfg20(clt client.Client) error {
 	return clt.Delete(ctx, pCfg)
 }
 
-//assuming we have a service set up for the webhook, and the service is linking
-//to a secret which has the CA
+// assuming we have a service set up for the webhook, and the service is linking
+// to a secret which has the CA
 func (w *WireUp) WireUpWebhookSupplymentryResource(isExternalAPIServer bool, inClient client.Client,
 	caCert []byte, gvk schema.GroupVersionKind, ops []admissionv1.OperationType, cFuncs ...CleanUpFunc) error {
 	w.Logger.Info("entry wire up webhook resources")

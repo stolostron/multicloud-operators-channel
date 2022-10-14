@@ -65,7 +65,7 @@ func (m *FakeObjectStore) Get(bucket, name string) (DeployableObject, error) {
 	return m.Clt[bucket][name], nil
 }
 
-//it's odd that we request the storage to be pre-set
+// it's odd that we request the storage to be pre-set
 func (m *FakeObjectStore) Exists(bucket string) error {
 	if _, ok := m.Clt[bucket]; !ok {
 		return m.Create(bucket)
