@@ -68,7 +68,7 @@ func getSignedCASecretKey(whKey types.NamespacedName) types.NamespacedName {
 	}
 }
 
-//getSelfSignedCACert will try to get the CA from the secret, if it doesn't exit, then
+// getSelfSignedCACert will try to get the CA from the secret, if it doesn't exit, then
 // it will generate a self singed CA cert and store it to the secret.
 func getSelfSignedCACert(clt client.Client, certName string, whKey types.NamespacedName) (Certificate, error) {
 	srtIns := &corev1.Secret{}

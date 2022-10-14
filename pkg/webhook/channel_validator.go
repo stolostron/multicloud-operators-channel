@@ -35,7 +35,7 @@ type ChannelValidator struct {
 	decoder *admission.Decoder
 }
 
-//ValidateLogic add ChannelValidator to webhook wireup
+// ValidateLogic add ChannelValidator to webhook wireup
 var ValidateLogic = func(w *WireUp) {
 	w.Handler = &ChannelValidator{Client: w.mgr.GetClient(), Logger: w.Logger}
 }
@@ -76,11 +76,11 @@ func (v *ChannelValidator) Handle(ctx context.Context, req admission.Request) ad
 	return admission.Allowed("")
 }
 
-//isGitOrSameKey will check: 1, if the exist channel in the request namespace
-// is a git git channel, if so, pass the request
+// isGitOrSameKey will check: 1, if the exist channel in the request namespace
+// is a git channel, if so, pass the request
 // 2. if the exist channel has the same name as the request channel, if so,
 // pass the request and let the k8s api server handle it(eventually reject
-//the request with 409)
+// the request with 409)
 // 3. request all the requesting channel, that doesnt meet the above rule
 func isGitOrSameKey(chList *chv1.ChannelList, inReq types.NamespacedName) (string, bool) {
 	for _, chn := range chList.Items {

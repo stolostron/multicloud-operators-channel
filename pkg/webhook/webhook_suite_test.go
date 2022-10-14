@@ -140,7 +140,7 @@ var _ = BeforeSuite(func(done Done) {
 	}
 
 	var err error
-	// be careful, if we use shorthand assignment, the the cCfg will be a local variable
+	// be careful, if we use shorthand assignment, the cCfg will be a local variable
 	initializeWebhookInEnvironment()
 	cfg, err := testEnv.Start()
 	Expect(err).ToNot(HaveOccurred())
