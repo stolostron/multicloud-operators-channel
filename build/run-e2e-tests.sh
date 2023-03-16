@@ -55,7 +55,7 @@ if [ "$TRAVIS_BUILD" != 1 ]; then
     sed -i -e "s|image: .*:latest$|image: $BUILD_IMAGE|" deploy/standalone/operator.yaml
 
     echo -e "\nDownload and install KinD\n"
-    GO111MODULE=on go get sigs.k8s.io/kind@v0.13.0
+    go install sigs.k8s.io/kind@v0.17.0
 
 
 else
@@ -68,7 +68,7 @@ if [ $? != 0 ]; then
         exit $?;
 fi
 
-kind create cluster --image=kindest/node:v1.21.1
+kind create cluster --image=kindest/node:v1.25.3
 if [ $? != 0 ]; then
         exit $?;
 fi
@@ -124,7 +124,10 @@ kind get kubeconfig > cluster_config/hub
 echo -e "\nGet the applifecycle-backend-e2e server"
 
 export GO111MODULE=on
-go install github.com/stolostron/applifecycle-backend-e2e@v0.2.10
+git clone --depth 1 --branch release-2.8 https://github.com/stolostron/applifecycle-backend-e2e.git
+cd applifecycle-backend-e2e
+go install
+cd ..
 ls ~/go/bin
 
 export PATH=$PATH:~/go/bin
@@ -150,6 +153,8 @@ function cleanup()
 
 trap cleanup EXIT
 
+echo -e "\nClean cache\n"
+go clean -cache
 
 echo -e "\nStart to run e2e test(s)\n"
 go test -v ./e2e
