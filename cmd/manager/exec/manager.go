@@ -21,7 +21,6 @@ import (
 	"log"
 	"os"
 	"path/filepath"
-	"time"
 
 	"k8s.io/apimachinery/pkg/api/equality"
 	"k8s.io/client-go/tools/clientcmd"
@@ -132,9 +131,11 @@ func RunManager() {
 		logger.Info("LeaderElection disabled as not running in cluster")
 	}
 
-	leaseDuration := time.Duration(options.LeaderElectionLeaseDurationSeconds) * time.Second
-	renewDeadline := time.Duration(options.RenewDeadlineSeconds) * time.Second
-	retryPeriod := time.Duration(options.RetryPeriodSeconds) * time.Second
+	logger.Info("Leader election settings",
+		"leaseDuration", options.LeaderElectionLeaseDuration,
+		"renewDeadline", options.LeaderElectionRenewDeadline,
+		"retryPeriod", options.LeaderElectionRetryPeriod)
+
 	// Create a new Cmd to provide shared dependencies and start components
 	mgr, err := ctrl.NewManager(cfg, ctrl.Options{
 		MetricsBindAddress:      fmt.Sprintf("%s:%d", metricsHost, metricsPort),
@@ -142,9 +143,9 @@ func RunManager() {
 		LeaderElection:          enableLeaderElection,
 		LeaderElectionID:        "multicloud-operators-channel-leader.open-cluster-management.io",
 		LeaderElectionNamespace: "kube-system",
-		LeaseDuration:           &leaseDuration,
-		RenewDeadline:           &renewDeadline,
-		RetryPeriod:             &retryPeriod,
+		LeaseDuration:           &options.LeaderElectionLeaseDuration,
+		RenewDeadline:           &options.LeaderElectionRenewDeadline,
+		RetryPeriod:             &options.LeaderElectionRetryPeriod,
 		WebhookServer:           &k8swebhook.Server{TLSMinVersion: "1.2"},
 	})
 
