@@ -70,7 +70,11 @@ func GetHelmRepoIndex(
 		return nil, errors.Wrap(err, "failed to get chart index")
 	}
 
-	defer resp.Body.Close()
+	defer func() {
+		if err := resp.Body.Close(); err != nil {
+			logger.Error(err, "failed to close response")
+		}
+	}()
 
 	logger.Info(fmt.Sprint("Done retrieving URL: ", buildRepoURL(channelPathName)))
 
