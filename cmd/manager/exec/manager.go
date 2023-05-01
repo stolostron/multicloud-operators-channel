@@ -146,7 +146,7 @@ func RunManager() {
 		LeaseDuration:           &options.LeaderElectionLeaseDuration,
 		RenewDeadline:           &options.LeaderElectionRenewDeadline,
 		RetryPeriod:             &options.LeaderElectionRetryPeriod,
-		WebhookServer:           &k8swebhook.Server{TLSMinVersion: "1.2"},
+		WebhookServer:           &k8swebhook.Server{TLSMinVersion: "1.3"},
 	})
 
 	if err != nil {
