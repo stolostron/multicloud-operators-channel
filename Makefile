@@ -83,4 +83,4 @@ endif
 .PHONY: ensure-kubebuilder-tools
 
 test: ensure-kubebuilder-tools
-	go test -timeout 300s -v ./pkg/... 
+	go test -timeout 300s -v ./pkg/... -coverprofile=coverage.out
