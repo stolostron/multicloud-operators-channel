@@ -57,6 +57,9 @@ const (
 
 	// Type defines type name of Git repository
 	ChannelTypeGit = "git"
+
+	// TLS minimum version as a string
+	TLSMinVersionString = "1.2"
 )
 
 // ChannelGate defines criteria for promoting a Deployable to Channel
