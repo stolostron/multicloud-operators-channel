@@ -52,7 +52,7 @@ build:
 
 .PHONY: build-images
 
-build-images: build
+build-images:
 	@docker build -t ${IMAGE_NAME_AND_VERSION} -f build/Dockerfile .
 
 .PHONY: lint
