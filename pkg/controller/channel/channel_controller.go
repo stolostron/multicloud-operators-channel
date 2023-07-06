@@ -440,7 +440,7 @@ func (r *ReconcileChannel) validateClusterRBAC(instance *chv1.Channel, logger lo
 			rbac.Subject{
 				APIGroup: "rbac.authorization.k8s.io",
 				Kind:     "User",
-				Name:     "system:open-cluster-management:cluster:" + cl.Name + ":addon:application-manager:agent:appmgr",
+				Name:     "system:open-cluster-management:cluster:" + cl.Name + ":addon:application-manager:agent:application-manager",
 			},
 			rbac.Subject{
 				APIGroup: "rbac.authorization.k8s.io",
