@@ -46,6 +46,5 @@ if [[ "${STATIC}" !=  "1" ]];then
 fi
 
 time GOOS=${BUILD_GOOS} GOARCH=${BUILD_GOARCH} ${GOBINARY} build \
-        ${V} "${GOBUILDFLAGS_ARRAY[@]}" ${GCFLAGS:+-gcflags "${GCFLAGS}"} \
-        -o "${OUT}" \
-        -ldflags "${LDFLAGS}" "${@}"
+        -a -tags static \
+        -o "${OUT}" "${@}"
