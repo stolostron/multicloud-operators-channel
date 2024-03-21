@@ -27,64 +27,6 @@ import (
 )
 
 var _ = Describe("test channel validation logic", func() {
-	Context("given an exist namespace channel in a namespace", func() {
-		var (
-			chkey  = types.NamespacedName{Name: "ch1", Namespace: "default"}
-			chnIns = chv1.Channel{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      chkey.Name,
-					Namespace: chkey.Namespace},
-				Spec: chv1.ChannelSpec{
-					Type:     chv1.ChannelType(chv1.ChannelTypeNamespace),
-					Pathname: chkey.Namespace,
-				},
-			}
-		)
-
-		BeforeEach(func() {
-			// Create the Channel object and expect the Reconcile
-			Expect(k8sClient.Create(context.TODO(), chnIns.DeepCopy())).NotTo(HaveOccurred())
-		})
-
-		AfterEach(func() {
-			Expect(k8sClient.Delete(context.TODO(), &chnIns)).Should(Succeed())
-		})
-
-		It("should create git channel", func() {
-			dupChn := chnIns.DeepCopy()
-			dupChn.Spec.Type = chv1.ChannelTypeGit
-			dupChn.SetName("dup-chn1")
-
-			Expect(k8sClient.Create(context.TODO(), dupChn)).Should(Succeed())
-			defer func() {
-				Expect(k8sClient.Delete(context.TODO(), dupChn)).Should(Succeed())
-			}()
-		})
-
-		It("should not create 2nd  namespace channel", func() {
-			dupChn := chnIns.DeepCopy()
-			dupChn.SetName("dup-chn1")
-
-			Expect(k8sClient.Create(context.TODO(), dupChn)).ShouldNot(Succeed())
-		})
-
-		It("should not create 2nd objectbucket channel", func() {
-			dupChn := chnIns.DeepCopy()
-			dupChn.Spec.Type = chv1.ChannelTypeObjectBucket
-			dupChn.SetName("dup-chn1")
-
-			Expect(k8sClient.Create(context.TODO(), dupChn)).ShouldNot(Succeed())
-		})
-
-		It("should not create 2nd  helm channel", func() {
-			dupChn := chnIns.DeepCopy()
-			dupChn.Spec.Type = chv1.ChannelTypeHelmRepo
-			dupChn.SetName("dup-chn1")
-
-			Expect(k8sClient.Create(context.TODO(), dupChn)).ShouldNot(Succeed())
-		})
-	})
-
 	Context("given exist git channels in a namespace", func() {
 		var (
 			chkey  = types.NamespacedName{Name: "ch1", Namespace: "default"}
@@ -123,17 +65,6 @@ var _ = Describe("test channel validation logic", func() {
 			dupChn := chnIns.DeepCopy()
 			dupChn.Spec.Type = chv1.ChannelTypeGitHub
 			dupChn.SetName("dup-chn1-1")
-
-			Expect(k8sClient.Create(context.TODO(), dupChn)).Should(Succeed())
-			defer func() {
-				Expect(k8sClient.Delete(context.TODO(), dupChn)).Should(Succeed())
-			}()
-		})
-
-		It("should create 2nd  namespace channel", func() {
-			dupChn := chnIns.DeepCopy()
-			dupChn.Spec.Type = chv1.ChannelTypeNamespace
-			dupChn.SetName("dup-chn1")
 
 			Expect(k8sClient.Create(context.TODO(), dupChn)).Should(Succeed())
 			defer func() {
@@ -199,14 +130,6 @@ var _ = Describe("test channel validation logic", func() {
 			}()
 		})
 
-		It("shouldn't create 2nd  namespace channel", func() {
-			dupChn := chnIns.DeepCopy()
-			dupChn.Spec.Type = chv1.ChannelTypeNamespace
-			dupChn.SetName("dup-chn1")
-
-			Expect(k8sClient.Create(context.TODO(), dupChn)).ShouldNot(Succeed())
-		})
-
 		It("shouldn't create 2nd objectbucket channel", func() {
 			dupChn := chnIns.DeepCopy()
 			dupChn.Spec.Type = chv1.ChannelTypeObjectBucket
@@ -258,14 +181,6 @@ var _ = Describe("test channel validation logic", func() {
 			}()
 		})
 
-		It("shouldn't create 2nd  namespace channel", func() {
-			dupChn := chnIns.DeepCopy()
-			dupChn.Spec.Type = chv1.ChannelTypeNamespace
-			dupChn.SetName("dup-chn1")
-
-			Expect(k8sClient.Create(context.TODO(), dupChn)).ShouldNot(Succeed())
-		})
-
 		It("shouldn't create 2nd objectbucket channel", func() {
 			dupChn := chnIns.DeepCopy()
 			dupChn.Spec.Type = chv1.ChannelTypeObjectBucket
@@ -280,13 +195,6 @@ var _ = Describe("test channel validation logic", func() {
 			dupChn.SetName("dup-chn1")
 
 			Expect(k8sClient.Create(context.TODO(), dupChn)).ShouldNot(Succeed())
-		})
-
-		It("shouldn't create 2nd namespace type channel(same name) when , with 409(AlreadyExists)", func() {
-			dupChn := chnIns.DeepCopy()
-			dupChn.Spec.Type = chv1.ChannelTypeNamespace
-			err := k8sClient.Create(context.TODO(), dupChn)
-			Expect(kerr.IsAlreadyExists(err)).Should(BeTrue())
 		})
 
 		It("shouldn't create 2nd objectbucket type channel(same name) when , with 409(AlreadyExists)", func() {

@@ -47,7 +47,7 @@ func TestGenerateChannelMap(t *testing.T) {
 			Namespace: chNs,
 		},
 		Spec: chv1.ChannelSpec{
-			Type: chv1.ChannelType("namespace"),
+			Type: chv1.ChannelType("git"),
 		},
 	}
 
@@ -82,7 +82,7 @@ func TestLocateChannel(t *testing.T) {
 			Namespace: chNs,
 		},
 		Spec: chv1.ChannelSpec{
-			Type: chv1.ChannelType("namespace"),
+			Type: chv1.ChannelType("git"),
 		},
 	}
 
