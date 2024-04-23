@@ -106,13 +106,11 @@ func add(mgr manager.Manager, r reconcile.Reconciler, logger logr.Logger) error 
 		return err
 	}
 
-	logger.Info("failed to add CRD scheme to manager")
-
 	if err := apiextensionsv1beta1.AddToScheme(mgr.GetScheme()); err != nil {
 		logger.Error(err, "failed to add CRD scheme to manager")
 	}
 	// Watch for changes to Channel
-	err = c.Watch(&source.Kind{Type: &chv1.Channel{}}, &handler.EnqueueRequestForObject{})
+	err = c.Watch(source.Kind(mgr.GetCache(), &chv1.Channel{}), &handler.EnqueueRequestForObject{})
 	if err != nil {
 		return err
 	}
@@ -120,7 +118,7 @@ func add(mgr manager.Manager, r reconcile.Reconciler, logger logr.Logger) error 
 	if utils.IsReadyClusterRegistry(mgr.GetAPIReader()) {
 		cmapper := &clusterMapper{Client: mgr.GetClient(), logger: logger}
 		err = c.Watch(
-			&source.Kind{Type: &spokeClusterV1.ManagedCluster{}},
+			source.Kind(mgr.GetCache(), &spokeClusterV1.ManagedCluster{}),
 			handler.EnqueueRequestsFromMapFunc(cmapper.Map),
 			utils.ClusterPredicateFunc,
 		)
@@ -135,7 +133,7 @@ type clusterMapper struct {
 }
 
 // Map triggers all placements
-func (mapper *clusterMapper) Map(obj client.Object) []reconcile.Request {
+func (mapper *clusterMapper) Map(ctx context.Context, obj client.Object) []reconcile.Request {
 	cname := obj.GetName()
 
 	mapper.logger.Info(fmt.Sprintf("In cluster Mapper for %v", cname))

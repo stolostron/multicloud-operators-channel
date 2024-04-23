@@ -14,6 +14,8 @@
 package v1
 
 import (
+	"crypto/tls"
+
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
@@ -58,6 +60,8 @@ const (
 	// Type defines type name of Git repository
 	ChannelTypeGit = "git"
 
+	// TLS minimum version as integer
+	TLSMinVersionInt = tls.VersionTLS12
 	// TLS minimum version as a string
 	TLSMinVersionString = "1.2"
 )

@@ -121,12 +121,14 @@ func (h *AWSHandler) InitObjectStoreConnection(endpoint, accessKeyID, secretAcce
 	// minio object store needs immutable URL. The aws sdk is not allowed to modify the host name of the minio URL
 	customResolver := aws.EndpointResolverWithOptionsFunc(func(service, region string, options ...interface{}) (aws.Endpoint, error) {
 		klog.V(1).Infof("service: %v, region: %v", service, region)
+
 		if region == "minio" {
 			return aws.Endpoint{
 				URL:               endpoint,
 				HostnameImmutable: true,
 			}, nil
 		}
+
 		return aws.Endpoint{}, &aws.EndpointNotFoundError{}
 	})
 

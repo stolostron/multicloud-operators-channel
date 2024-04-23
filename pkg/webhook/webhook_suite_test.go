@@ -43,12 +43,14 @@ import (
 
 	mgr "sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/webhook"
+	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
 
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/envtest"
 
 	"open-cluster-management.io/multicloud-operators-channel/pkg/apis"
 	chv1 "open-cluster-management.io/multicloud-operators-channel/pkg/apis/apps/v1"
+	metricsserver "sigs.k8s.io/controller-runtime/pkg/metrics/server"
 )
 
 const (
@@ -149,11 +151,18 @@ var _ = BeforeSuite(func(done Done) {
 	err = apis.AddToScheme(scheme.Scheme)
 	Expect(err).NotTo(HaveOccurred())
 
+	webhookOption := webhook.Options{
+		Host:    testEnv.WebhookInstallOptions.LocalServingHost,
+		Port:    testEnv.WebhookInstallOptions.LocalServingPort,
+		CertDir: testEnv.WebhookInstallOptions.LocalServingCertDir,
+	}
+	webhookServer := webhook.NewServer(webhookOption)
+
 	k8sManager, err = mgr.New(cfg, mgr.Options{
-		MetricsBindAddress: "0",
-		Port:               testEnv.WebhookInstallOptions.LocalServingPort,
-		Host:               testEnv.WebhookInstallOptions.LocalServingHost,
-		CertDir:            testEnv.WebhookInstallOptions.LocalServingCertDir,
+		Metrics: metricsserver.Options{
+			BindAddress: "0",
+		},
+		WebhookServer: webhookServer,
 	})
 
 	Expect(err).NotTo(HaveOccurred())
@@ -183,8 +192,9 @@ var _ = BeforeSuite(func(done Done) {
 	hookServer.Register(validatorPath,
 		&webhook.Admission{
 			Handler: &ChannelValidator{
-				Client: k8sClient,
-				Logger: ctrl.Log,
+				Client:  k8sClient,
+				Logger:  ctrl.Log,
+				decoder: admission.NewDecoder(k8sManager.GetScheme()),
 			}})
 	Expect(err).ToNot(HaveOccurred())
 

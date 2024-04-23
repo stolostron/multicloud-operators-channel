@@ -174,6 +174,7 @@ func TestUpdateServingChannel(t *testing.T) {
 		t.Run(tC.desc, func(t *testing.T) {
 			got := UpdateServingChannel(tC.srvCh, tC.chKey, tC.action)
 			a, b := convertCommaStringToMap(got), convertCommaStringToMap(tC.want)
+
 			if diff := cmp.Diff(a, b); diff != "" {
 				t.Errorf("UpdateServingChannel mismatch (%v, %v)", tC.want, got)
 			}

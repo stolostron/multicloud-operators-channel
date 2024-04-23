@@ -306,7 +306,7 @@ func TestGetConfig(t *testing.T) {
 
 			cfg := getConfig()
 			assert.Equal(t, tc.fields.expected.level, cfg.level)
-			assert.Equal(t, len(tc.fields.expected.opts)+1, len(cfg.opts))
+			assert.Len(t, tc.fields.expected.opts, len(cfg.opts)-1)
 			assert.Equal(t, tc.fields.expected.sample, cfg.sample)
 
 			// Test that the encoder returned by getConfig encodes an entry
@@ -320,9 +320,11 @@ func TestGetConfig(t *testing.T) {
 			}
 			actualEncoderOut, err := cfg.encoder.EncodeEntry(entry, []zapcore.Field{{Key: "fieldKey",
 				Type: zapcore.StringType, String: "fieldValue"}})
+
 			if err != nil {
 				t.Fatalf("Unexpected error encoding entry with actual encoder: %s", err)
 			}
+
 			assert.Equal(t, expectedEncoderOut.String(), actualEncoderOut.String())
 
 			// This test helps ensure that we disable sampling for verbose log

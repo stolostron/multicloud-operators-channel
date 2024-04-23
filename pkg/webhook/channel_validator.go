@@ -37,7 +37,11 @@ type ChannelValidator struct {
 
 // ValidateLogic add ChannelValidator to webhook wireup
 var ValidateLogic = func(w *WireUp) {
-	w.Handler = &ChannelValidator{Client: w.mgr.GetClient(), Logger: w.Logger}
+	w.Handler = &ChannelValidator{
+		Client:  w.mgr.GetClient(),
+		Logger:  w.Logger,
+		decoder: admission.NewDecoder(w.mgr.GetScheme()),
+	}
 }
 
 // ChannelValidator admits a channel if a specific channel can co-exit in the
