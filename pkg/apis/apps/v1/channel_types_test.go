@@ -23,6 +23,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
+	metricsserver "sigs.k8s.io/controller-runtime/pkg/metrics/server"
 )
 
 func TestObjectStorageForChannel(t *testing.T) {
@@ -43,7 +44,12 @@ func TestObjectStorageForChannel(t *testing.T) {
 
 	// Setup the Manager and Controller.  Wrap the Controller Reconcile function so it writes each request to a
 	// channel when it is finished.
-	mgr, err := manager.New(cfg, manager.Options{MetricsBindAddress: "0"})
+	mgr, err := manager.New(cfg, manager.Options{
+		Metrics: metricsserver.Options{
+			BindAddress: "0",
+		},
+	})
+
 	g.Expect(err).NotTo(gomega.HaveOccurred())
 
 	c = mgr.GetClient()

@@ -24,6 +24,7 @@ import (
 	spokeClusterV1 "open-cluster-management.io/api/cluster/v1"
 	"sigs.k8s.io/controller-runtime/pkg/event"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
+	metricsserver "sigs.k8s.io/controller-runtime/pkg/metrics/server"
 )
 
 var (
@@ -165,7 +166,11 @@ func TestPredicate(t *testing.T) {
 func TestIsReadyClusterRegistry(t *testing.T) {
 	g := gomega.NewGomegaWithT(t)
 
-	mgr, err := manager.New(cfg, manager.Options{MetricsBindAddress: "0"})
+	mgr, err := manager.New(cfg, manager.Options{
+		Metrics: metricsserver.Options{
+			BindAddress: "0",
+		},
+	})
 	g.Expect(err).NotTo(gomega.HaveOccurred())
 
 	ctx, cancel := context.WithTimeout(context.TODO(), 5*time.Minute)

@@ -19,6 +19,7 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"path/filepath"
 	"strings"
 
 	gerr "github.com/pkg/errors"
@@ -47,7 +48,7 @@ type WireUp struct {
 	mgr manager.Manager
 	ctx context.Context
 
-	Server  *webhook.Server
+	Server  webhook.Server
 	Handler webhook.AdmissionHandler
 	CertDir string
 	logr.Logger
@@ -95,6 +96,7 @@ func NewWireUp(ctx context.Context, mgr manager.Manager,
 		WebhookName:        WebhookName,
 		WebHookPort:        9443,
 		WebHookServicePort: 443,
+		CertDir:            filepath.Join(os.TempDir(), "k8s-webhook-server", "serving-certs"),
 
 		ValidtorPath:       "/duplicate-validation",
 		WebHookeSvcKey:     types.NamespacedName{Name: GetWebHookServiceName(WebhookName), Namespace: podNamespace},
@@ -122,8 +124,6 @@ func GetWebHookServiceName(wbhName string) string {
 func (w *WireUp) Attach(clt client.Client) ([]byte, error) {
 	w.Logger.Info("entry Attach webhook")
 	defer w.Logger.Info("exit Attach webhook")
-
-	w.Server.Port = w.WebHookPort
 
 	w.Logger.Info("registering webhooks to the webhook server")
 	w.Server.Register(w.ValidtorPath, &webhook.Admission{Handler: w.Handler})

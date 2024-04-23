@@ -77,12 +77,15 @@ func TestLevel(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			lvl := levelValue{}
 			err := lvl.Set(tc.input)
+
 			if err != nil && !tc.shouldErr {
 				t.Fatalf("Unknown error - %v", err)
 			}
+
 			if err != nil && tc.shouldErr {
 				return
 			}
+
 			assert.Equal(t, tc.expSet, lvl.set)
 			assert.Equal(t, tc.expLevel, lvl.level)
 			assert.Equal(t, "level", lvl.Type())
@@ -146,12 +149,15 @@ func TestStackLevel(t *testing.T) {
 		t.Run(tC.name, func(t *testing.T) {
 			lvl := stackLevelValue{}
 			err := lvl.Set(tC.input)
+
 			if err != nil && !tC.shouldErr {
 				t.Fatalf("Unknown error - %v", err)
 			}
+
 			if err != nil && tC.shouldErr {
 				return
 			}
+
 			assert.Equal(t, tC.expSet, lvl.set)
 			assert.Equal(t, tC.expLevel, lvl.level)
 			assert.Equal(t, "level", lvl.Type())
@@ -208,12 +214,15 @@ func TestSample(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			sample := sampleValue{}
 			err := sample.Set(tc.input)
+
 			if err != nil && !tc.shouldErr {
 				t.Fatalf("Unknown error - %v", err)
 			}
+
 			if err != nil && tc.shouldErr {
 				return
 			}
+
 			assert.Equal(t, tc.expSet, sample.set)
 			assert.Equal(t, tc.expValue, sample.sample)
 			assert.Equal(t, "sample", sample.Type())
@@ -256,12 +265,15 @@ func TestEncoder(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			encoder := encoderValue{}
 			err := encoder.Set(tc.input)
+
 			if err != nil && !tc.shouldErr {
 				t.Fatalf("Unknown error - %v", err)
 			}
+
 			if err != nil && tc.shouldErr {
 				return
 			}
+
 			assert.Equal(t, tc.expSet, encoder.set)
 			assert.Equal(t, "encoder", encoder.Type())
 			assert.Equal(t, tc.expStr, encoder.String())
@@ -313,12 +325,15 @@ func TestTimeEncoder(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			te := timeEncodingValue{}
 			err := te.Set(tc.input)
+
 			if err != nil && !tc.shouldErr {
 				t.Fatalf("Unknown error - %v", err)
 			}
+
 			if tc.shouldErr {
 				assert.Error(t, err)
 			}
+
 			assert.Equal(t, tc.expSet, te.set)
 			assert.Equal(t, "timeEncoding", te.Type())
 			assert.Equal(t, tc.expStr, te.String())

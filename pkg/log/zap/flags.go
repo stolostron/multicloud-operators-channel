@@ -128,7 +128,7 @@ func (v *levelValue) Set(l string) error {
 		fs := flag.NewFlagSet("", flag.ContinueOnError)
 		klog.InitFlags(fs)
 
-		err := fs.Set("v", fmt.Sprintf("%v", -1*lvl))
+		err := fs.Set("v", strconv.Itoa(-1*lvl))
 		if err != nil {
 			return err
 		}

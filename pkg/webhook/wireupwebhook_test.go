@@ -26,17 +26,23 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
+	metricsserver "sigs.k8s.io/controller-runtime/pkg/metrics/server"
 )
 
 func TestWireupWebhook(t *testing.T) {
 	g := NewGomegaWithT(t)
 
-	mgr, err := manager.New(cfg, manager.Options{MetricsBindAddress: "0"})
+	mgr, err := manager.New(cfg, manager.Options{
+		Metrics: metricsserver.Options{
+			BindAddress: "0",
+		},
+	})
+
 	g.Expect(err).NotTo(HaveOccurred())
 
 	k8sClient = mgr.GetClient()
 
-	ctx, cancel := context.WithTimeout(context.TODO(), 5*time.Minute)
+	ctx, cancel := context.WithTimeout(context.TODO(), 1*time.Minute)
 	mgrStopped := StartTestManager(ctx, mgr, g)
 
 	defer func() {
@@ -55,7 +61,7 @@ func TestWireupWebhook(t *testing.T) {
 		w.WebhookName = wbhName
 	}
 
-	wireUp, err := NewWireUp(context.TODO(), mgr, wbhNameSetUp)
+	wireUp, err := NewWireUp(context.TODO(), mgr, wbhNameSetUp, ValidateLogic)
 	Expect(err).NotTo(HaveOccurred())
 
 	caCert, err := wireUp.Attach(k8sClient)
