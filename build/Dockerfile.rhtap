@@ -1,8 +1,11 @@
-FROM brew.registry.redhat.io/rh-osbs/openshift-golang-builder:rhel_8_1.21 AS builder
+FROM brew.registry.redhat.io/rh-osbs/openshift-golang-builder:rhel_8_1.21 AS plugin-builder
 
-WORKDIR go/src/open-cluster-management.io/multicloud-operators-channel
+WORKDIR /go/src/github.com/stolostron/multicluster-operators-channel
 COPY . .
-RUN make -f Makefile build
+RUN rm -fr vendor && \
+        go mod vendor && \
+        make -f Makefile.prow build
+
 
 FROM registry.access.redhat.com/ubi8/ubi-minimal:latest
 
@@ -14,7 +17,7 @@ ENV OPERATOR=/usr/local/bin/multicluster-operators-channel \
     USER_NAME=multicluster-operators-channel
 
 # install operator binary
-COPY --from=builder go/src/open-cluster-management.io/multicloud-operators-channel/build/_output/bin/multicluster-operators-channel ${OPERATOR}
+COPY --from=plugin-builder /go/src/github.com/stolostron/multicluster-operators-channel/build/_output/bin/multicluster-operators-channel ${OPERATOR}
 
 COPY build/bin /usr/local/bin
 RUN  /usr/local/bin/user_setup

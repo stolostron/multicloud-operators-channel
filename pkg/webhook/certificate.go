@@ -170,7 +170,8 @@ func GenerateWebhookCerts(clt client.Client, certDir, webhookServiceNs, webhookS
 		return nil, err
 	}
 
-	if err := os.MkdirAll(certDir, os.ModePerm); err != nil {
+	err = os.MkdirAll(certDir, os.ModePerm) // #nosec G301
+	if err != nil {
 		return nil, err
 	}
 
