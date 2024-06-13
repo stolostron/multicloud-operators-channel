@@ -41,23 +41,23 @@ var (
 	ServingChannel = SchemeGroupVersion.Group + "/serving-channel"
 )
 
-// ChannelType defines types of channel
+// ChannelType defines a type of channel
 type ChannelType string
 
 const (
-	// Type defines type name of namespace channel
+	// ChannelTypeNamespace represents the type of namespace channel
 	ChannelTypeNamespace = "namespace"
 
-	// Type defines type name of helm repository channel
+	// ChannelTypeHelmRepo represents the type of helm repository channel
 	ChannelTypeHelmRepo = "helmrepo"
 
-	// Type defines type name of bucket in object store
+	// ChannelTypeObjectBucket represents the type of object store channel
 	ChannelTypeObjectBucket = "objectbucket"
 
-	// Type defines type name of GitHub repository
+	// ChannelTypeGitHub represents the type of GitHub repository channel
 	ChannelTypeGitHub = "github"
 
-	// Type defines type name of Git repository
+	// ChannelTypeGit represents the type of GitHub repository channel
 	ChannelTypeGit = "git"
 
 	// TLS minimum version as integer
@@ -66,51 +66,43 @@ const (
 	TLSMinVersionString = "1.2"
 )
 
-// ChannelGate defines criteria for promoting a Deployable to Channel
+// ChannelGate defines a criteria for promoting a Deployable from the sourceNamespaces to Channel.
 type ChannelGate struct {
 	Name string `json:"name,omitempty"`
 
 	// A label selector for selecting the Deployables.
 	LabelSelector *metav1.LabelSelector `json:"labelSelector,omitempty"`
 
-	// The annotations which must present on a Deployable for it to be
-	// eligible for promotion.
+	// The annotations for selecting the Deployables to be eligible for promotion.
 	Annotations map[string]string `json:"annotations,omitempty"`
 }
 
 // ChannelSpec defines the desired state of Channel
 type ChannelSpec struct {
 	// A string representation of the channel type. Valid values include:
-	// `namespace`, `helmrepo`, `objectbucket` and `github`.
+	// `helmrepo`, `objectbucket` and `github`.
 
 	// +kubebuilder:validation:Enum={Namespace,HelmRepo,ObjectBucket,GitHub,Git,namespace,helmrepo,objectbucket,github,git}
 	Type ChannelType `json:"type"`
 
-	// For a `namespace` channel, pathname is the name of the namespace;
-	// For a `helmrepo` or `github` channel, pathname is the remote URL
-	// for the channel contents;
-	// For a `objectbucket` channel, pathname is the URL and name of the bucket.
+	// For a `helmrepo` or `github` channel, pathname is the repo URL.
+	// For a `objectbucket` channel, pathname is the Object store URL with the name of the bucket.
 	Pathname string `json:"pathname"`
 
 	// Skip server TLS certificate verification for Git or Helm channel.
 	InsecureSkipVerify bool `json:"insecureSkipVerify,omitempty"`
 
-	// For a `github` channel or a `helmrepo` channel on github, this
-	// can be used to reference a Secret which contains the credentials for
-	// authentication, i.e. `user` and `accessToken`.
-	// For a `objectbucket` channel, this can be used to reference a
-	// Secret which contains the AWS credentials, i.e. `AccessKeyID` and
-	// `SecretAccessKey`.
+	// For a `github` channel or a `helmrepo` channel on github,
+	// use this to reference a secret which contains the credentials for authentication, for example: `user` and `accessToken`.
+	// For a `objectbucket` channel,
+	// use this to reference a secret which contains the AWS credentials, for example: `AccessKeyID`,`SecretAccessKey` and `Region`.
 	// +optional
 	SecretRef *corev1.ObjectReference `json:"secretRef,omitempty"`
 
-	// Reference to a ConfigMap which contains additional settings for
-	// accessing the channel. For example, the `insecureSkipVerify` option
-	// for accessing HTTPS endpoints can be set in the ConfigMap to
-	// indicate a insecure connection.
+	// Reference to a ConfigMap which contains additional settings for accessing the channel.
+	// For example, the `insecureSkipVerify` option for accessing HTTPS endpoints can be set in the ConfigMap to indicate a insecure connection.
 	ConfigMapRef *corev1.ObjectReference `json:"configMapRef,omitempty"`
 
-	// Criteria for promoting a Deployable from the sourceNamespaces to Channel.
 	// +optional
 	Gates *ChannelGate `json:"gates,omitempty"`
 
@@ -127,7 +119,8 @@ type ChannelStatus struct {
 // +genclient
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 
-// Channel is the Schema for the channels API
+// Channel provides a repository containing application resources which can be deployed to clusters by subscriptions.
+// The following 3 types of channels are supported: Git repository, Helm release registry, and Object storage repository.
 // +k8s:openapi-gen=true
 // +kubebuilder:printcolumn:name="Type",type="string",JSONPath=".spec.type",description="type of the channel"
 // +kubebuilder:printcolumn:name="Pathname",type="string",JSONPath=".spec.pathname",description="pathname of the channel"
@@ -147,7 +140,7 @@ type Channel struct {
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 
-// ChannelList contains a list of Channel
+// ChannelList provides a list of channels
 type ChannelList struct {
 	metav1.TypeMeta `json:",inline"`
 	metav1.ListMeta `json:"metadata,omitempty"`
