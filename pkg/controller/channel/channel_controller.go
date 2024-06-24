@@ -115,50 +115,12 @@ func add(mgr manager.Manager, r reconcile.Reconciler, logger logr.Logger) error 
 		return err
 	}
 
-	if utils.IsReadyClusterRegistry(mgr.GetAPIReader()) {
-		cmapper := &clusterMapper{Client: mgr.GetClient(), logger: logger}
-		err = c.Watch(
-			source.Kind(mgr.GetCache(), &spokeClusterV1.ManagedCluster{}),
-			handler.EnqueueRequestsFromMapFunc(cmapper.Map),
-			utils.ClusterPredicateFunc,
-		)
-	}
+	// Watching managed cluster changes has been removed.
+	// For any managed cluster reconcile events(create, update, delete), don't trigger the automatic role/rolebing update for all channels.
+	// It turns out an expensive action if there are > 1000 managed clusters. The OOMKilled issue would hit easiy due to tons of duplicate reconciliations
+	// In this case, users should manually update channel cr to trigger the role/rolebinding update.
 
 	return err
-}
-
-type clusterMapper struct {
-	client.Client
-	logger logr.Logger
-}
-
-// Map triggers all placements
-func (mapper *clusterMapper) Map(ctx context.Context, obj client.Object) []reconcile.Request {
-	cname := obj.GetName()
-
-	mapper.logger.Info(fmt.Sprintf("In cluster Mapper for %v", cname))
-
-	plList := &chv1.ChannelList{}
-
-	listopts := &client.ListOptions{}
-	err := mapper.List(context.TODO(), plList, listopts)
-
-	if err != nil {
-		mapper.logger.Error(err, "failed to list channels")
-	}
-
-	var requests []reconcile.Request
-
-	for _, pl := range plList.Items {
-		objkey := types.NamespacedName{
-			Name:      pl.GetName(),
-			Namespace: pl.GetNamespace(),
-		}
-
-		requests = append(requests, reconcile.Request{NamespacedName: objkey})
-	}
-
-	return requests
 }
 
 var _ reconcile.Reconciler = &ReconcileChannel{}

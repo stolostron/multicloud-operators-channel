@@ -155,6 +155,10 @@ func RunManager() {
 		RenewDeadline:           &options.LeaderElectionRenewDeadline,
 		RetryPeriod:             &options.LeaderElectionRetryPeriod,
 		WebhookServer:           webhookServer,
+		// create non cache client
+		NewClient: func(config *rest.Config, options client.Options) (client.Client, error) {
+			return client.New(config, client.Options{})
+		},
 	})
 
 	if err != nil {

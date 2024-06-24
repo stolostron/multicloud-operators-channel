@@ -17,52 +17,13 @@ package utils
 import (
 	"context"
 	"os"
-	"reflect"
 	"time"
 
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/klog"
 	spokeClusterV1 "open-cluster-management.io/api/cluster/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/controller-runtime/pkg/event"
-	"sigs.k8s.io/controller-runtime/pkg/predicate"
 )
-
-var ClusterPredicateFunc = predicate.Funcs{
-	UpdateFunc: func(e event.UpdateEvent) bool {
-		oldcl := e.ObjectOld.(*spokeClusterV1.ManagedCluster)
-		newcl := e.ObjectNew.(*spokeClusterV1.ManagedCluster)
-
-		//if managed cluster is being deleted
-		if !reflect.DeepEqual(oldcl.DeletionTimestamp, newcl.DeletionTimestamp) {
-			return true
-		}
-
-		if !reflect.DeepEqual(oldcl.Labels, newcl.Labels) {
-			return true
-		}
-
-		oldcondMap := make(map[string]metav1.ConditionStatus)
-		for _, cond := range oldcl.Status.Conditions {
-			oldcondMap[cond.Type] = cond.Status
-		}
-		for _, cond := range newcl.Status.Conditions {
-			oldcondst, ok := oldcondMap[cond.Type]
-			if !ok || oldcondst != cond.Status {
-				return true
-			}
-			delete(oldcondMap, cond.Type)
-		}
-
-		if len(oldcondMap) > 0 {
-			return true
-		}
-
-		klog.V(1).Info("Out Cluster Predicate Func ", oldcl.Name, " with false possitive")
-		return false
-	},
-}
 
 // IsReadyClusterRegistry check if Cluster API service is ready or not.
 func IsReadyClusterRegistry(clReader client.Reader) bool {
