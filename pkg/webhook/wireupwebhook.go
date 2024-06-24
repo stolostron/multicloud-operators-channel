@@ -363,6 +363,11 @@ func setWebhookOwnerReferences(c client.Client, logger logr.Logger, obj metav1.O
 		return
 	}
 
+	// The TypeMeta fields (APIVersion and Kind) are not automatically populated
+	// when you fetch a Kubernetes resource using the client-go or controller-runtime client
+	owner.APIVersion = "apiextensions.k8s.io/v1"
+	owner.Kind = "CustomResourceDefinition"
+
 	obj.SetOwnerReferences([]metav1.OwnerReference{
 		{
 			APIVersion: owner.APIVersion,

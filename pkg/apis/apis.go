@@ -20,6 +20,7 @@ import (
 
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 
+	admissionv1 "k8s.io/api/admissionregistration/v1"
 	spokeClusterV1 "open-cluster-management.io/api/cluster/v1"
 )
 
@@ -32,6 +33,11 @@ func AddToScheme(s *runtime.Scheme) error {
 
 	if err = spokeClusterV1.AddToScheme(s); err != nil {
 		logf.Log.Error(err, "unable add managed cluster APIs to scheme")
+		return err
+	}
+
+	if err = admissionv1.AddToScheme(s); err != nil {
+		logf.Log.Error(err, "unable add k8s admission registration APIs to scheme")
 		return err
 	}
 

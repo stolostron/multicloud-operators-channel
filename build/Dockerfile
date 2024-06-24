@@ -1,6 +1,6 @@
 FROM registry.ci.openshift.org/stolostron/builder:go1.21-linux AS builder
 
-WORKDIR go/src/open-cluster-management.io/multicloud-operators-channel
+WORKDIR /go/src/open-cluster-management.io/multicloud-operators-channel
 COPY . .
 RUN make -f Makefile build
 
