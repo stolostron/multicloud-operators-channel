@@ -19,6 +19,7 @@ import (
 	"fmt"
 	"reflect"
 	"strings"
+	"time"
 
 	spokeClusterV1 "open-cluster-management.io/api/cluster/v1"
 	chv1 "open-cluster-management.io/multicloud-operators-channel/pkg/apis/apps/v1"
@@ -72,6 +73,7 @@ const (
 	controllerName  = "channel"
 	controllerSetup = "channel-setup"
 	backupLabel     = "cluster.open-cluster-management.io/backup"
+	requeuAfter     = 1 * time.Minute
 )
 
 /**
@@ -116,9 +118,9 @@ func add(mgr manager.Manager, r reconcile.Reconciler, logger logr.Logger) error 
 	}
 
 	// Watching managed cluster changes has been removed.
-	// For any managed cluster reconcile events(create, update, delete), don't trigger the automatic role/rolebing update for all channels.
 	// It turns out an expensive action if there are > 1000 managed clusters. The OOMKilled issue would hit easiy due to tons of duplicate reconciliations
-	// In this case, users should manually update channel cr to trigger the role/rolebinding update.
+	// To trigger the automatic role/rolebing update for all channels, every channel is enforced to reconcile every 1 minute.
+	// So all managed cluster add/removal will be reflected to the channel rolebindings in 1 minute.
 
 	return err
 }
@@ -157,19 +159,19 @@ func (r *ReconcileChannel) Reconcile(ctx context.Context, request reconcile.Requ
 			// For additional cleanup logic use finalizers.
 			//sync the channel to the serving-channel annotation in all involved secrets - remove channel
 			if err := r.syncReferredObjAnnotationLabel(request, nil, srtGvk, log); err != nil {
-				return reconcile.Result{}, err
+				return reconcile.Result{RequeueAfter: requeuAfter}, err
 			}
 
 			//remove the channel from the serving-channel annotation in all involved ConfigMaps - remove channel
 			if err := r.syncReferredObjAnnotationLabel(request, nil, cmGvk, log); err != nil {
-				return reconcile.Result{}, err
+				return reconcile.Result{RequeueAfter: requeuAfter}, err
 			}
 
-			return reconcile.Result{}, nil
+			return reconcile.Result{RequeueAfter: requeuAfter}, nil
 		}
 
 		// Error reading the object - requeue the request.
-		return reconcile.Result{}, err
+		return reconcile.Result{RequeueAfter: requeuAfter}, err
 	}
 
 	if (strings.EqualFold(string(instance.Spec.Type), chv1.ChannelTypeNamespace)) && (instance.Spec.Pathname != instance.GetNamespace()) {
@@ -178,10 +180,10 @@ func (r *ReconcileChannel) Reconcile(ctx context.Context, request reconcile.Requ
 		err := r.Update(context.TODO(), instance)
 		if err != nil {
 			log.Info(fmt.Sprintf("can't update the pathname field due to %v", err))
-			return reconcile.Result{}, err
+			return reconcile.Result{RequeueAfter: requeuAfter}, err
 		}
 
-		return reconcile.Result{}, nil
+		return reconcile.Result{RequeueAfter: requeuAfter}, nil
 	}
 
 	// find the channel controller pod namespace, it is running in the ACM namespece
@@ -190,20 +192,20 @@ func (r *ReconcileChannel) Reconcile(ctx context.Context, request reconcile.Requ
 	err = r.validateClusterRBAC(instance, log, mchNamespace)
 	if err != nil {
 		log.Error(err, fmt.Sprintf("failed to validate RBAC for clusters for channel %v", instance.Name))
-		return reconcile.Result{}, err
+		return reconcile.Result{RequeueAfter: requeuAfter}, err
 	}
 
 	if err := r.handleReferencedObjects(instance, request, log); err != nil {
-		return reconcile.Result{}, err
+		return reconcile.Result{RequeueAfter: requeuAfter}, err
 	}
 
 	err = r.cleanRoleFromAcmNS(instance, log, mchNamespace)
 	if err != nil {
 		log.Error(err, "failed to clean up channel role/rolebinding in the ACM system NameSpace")
-		return reconcile.Result{}, err
+		return reconcile.Result{RequeueAfter: requeuAfter}, err
 	}
 
-	return reconcile.Result{}, nil
+	return reconcile.Result{RequeueAfter: requeuAfter}, nil
 }
 
 func (r *ReconcileChannel) handleReferencedObjects(instance *chv1.Channel, req reconcile.Request, log logr.Logger) error {
