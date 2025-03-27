@@ -18,6 +18,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"math"
 	"os"
 	"path/filepath"
 	"strings"
@@ -394,7 +395,7 @@ func newWebhookServiceTemplate(isExternalAPIServer bool, svcKey types.Namespaced
 			Spec: corev1.ServiceSpec{
 				Ports: []corev1.ServicePort{
 					{
-						Port: int32(webHookServicePort),
+						Port: validateInt32(webHookServicePort),
 					},
 				},
 			},
@@ -413,7 +414,7 @@ func newWebhookServiceTemplate(isExternalAPIServer bool, svcKey types.Namespaced
 		Spec: corev1.ServiceSpec{
 			Ports: []corev1.ServicePort{
 				{
-					Port:       int32(webHookServicePort),
+					Port:       validateInt32(webHookServicePort),
 					TargetPort: intstr.FromInt(webHookPort),
 				},
 			},
@@ -441,7 +442,7 @@ func newWebhookEndpointTemplate(svcKey types.NamespacedName, webHookServicePort 
 				},
 				Ports: []corev1.EndpointPort{
 					{
-						Port: int32(webHookServicePort),
+						Port: validateInt32(webHookServicePort),
 					},
 				},
 			},
@@ -487,4 +488,14 @@ func newValidatingWebhookCfg(svcKey types.NamespacedName, validatorName, path st
 		},
 		},
 	}
+}
+
+func validateInt32(number int) int32 {
+	if number > math.MaxInt32 {
+		return math.MaxInt32
+	} else if number < math.MinInt32 {
+		return math.MinInt32
+	}
+
+	return int32(number)
 }
