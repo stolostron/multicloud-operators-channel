@@ -17,6 +17,7 @@ package zap
 import (
 	"flag"
 	"fmt"
+	"math"
 	"strconv"
 	"strings"
 
@@ -122,7 +123,8 @@ func (v *levelValue) Set(l string) error {
 		return err
 	}
 
-	v.level = zapcore.Level(int8(lvl))
+	v.level = zapcore.Level(validateInt8(lvl))
+
 	// If log level is greater than debug, set glog/klog level to that level.
 	if lvl < -3 {
 		fs := flag.NewFlagSet("", flag.ContinueOnError)
@@ -158,9 +160,19 @@ func (v *stackLevelValue) Set(l string) error {
 		return err
 	}
 
-	v.level = zapcore.Level(int8(lvl))
+	v.level = zapcore.Level(validateInt8(lvl))
 
 	return nil
+}
+
+func validateInt8(number int) int8 {
+	if number > math.MaxInt8 {
+		return math.MaxInt8
+	} else if number < math.MinInt8 {
+		return math.MinInt8
+	}
+
+	return int8(number)
 }
 
 func (v stackLevelValue) String() string {
