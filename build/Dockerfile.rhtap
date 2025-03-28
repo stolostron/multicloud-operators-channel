@@ -1,4 +1,4 @@
-FROM brew.registry.redhat.io/rh-osbs/openshift-golang-builder:rhel_8_1.21 AS plugin-builder
+FROM brew.registry.redhat.io/rh-osbs/openshift-golang-builder:rhel_9_1.23 AS plugin-builder
 
 WORKDIR /go/src/github.com/stolostron/multicluster-operators-channel
 COPY . .
@@ -7,7 +7,7 @@ RUN rm -fr vendor && \
         make -f Makefile.prow build
 
 
-FROM registry.access.redhat.com/ubi8/ubi-minimal:latest
+FROM registry.access.redhat.com/ubi9/ubi-minimal:latest
 
 RUN microdnf update && \
      microdnf clean all

@@ -1,10 +1,10 @@
-FROM registry.ci.openshift.org/stolostron/builder:go1.21-linux AS builder
+FROM registry.ci.openshift.org/stolostron/builder:go1.23-linux AS builder
 
 WORKDIR /go/src/open-cluster-management.io/multicloud-operators-channel
 COPY . .
 RUN make -f Makefile build
 
-FROM registry.access.redhat.com/ubi8/ubi-minimal:latest
+FROM registry.access.redhat.com/ubi9/ubi-minimal:latest
 
 RUN microdnf update && \
      microdnf clean all
