@@ -1,6 +1,8 @@
 module open-cluster-management.io/multicloud-operators-channel
 
-go 1.20
+go 1.21
+
+toolchain go1.22.9
 
 require (
 	github.com/aws/aws-sdk-go-v2 v1.16.7
@@ -56,7 +58,7 @@ require (
 	github.com/docker/cli v20.10.17+incompatible // indirect
 	github.com/docker/distribution v2.8.1+incompatible // indirect
 	github.com/docker/docker v20.10.17+incompatible // indirect
-	github.com/docker/docker-credential-helpers v0.6.4 // indirect
+	github.com/docker/docker-credential-helpers v0.9.3 // indirect
 	github.com/docker/go-connections v0.4.0 // indirect
 	github.com/docker/go-metrics v0.0.1 // indirect
 	github.com/docker/go-units v0.4.0 // indirect
