@@ -23,7 +23,7 @@ import (
 	"github.com/spf13/pflag"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
-	"k8s.io/klog"
+	"k8s.io/klog/v2"
 )
 
 var (
