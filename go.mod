@@ -9,15 +9,15 @@ require (
 	github.com/aws/aws-sdk-go-v2/config v1.15.14
 	github.com/aws/aws-sdk-go-v2/service/s3 v1.27.1
 	github.com/ghodss/yaml v1.0.1-0.20190212211648-25d852aebe32
-	github.com/go-logr/logr v1.2.3
-	github.com/go-logr/zapr v1.2.3
+	github.com/go-logr/logr v1.3.0
+	github.com/go-logr/zapr v1.3.0
 	github.com/google/go-cmp v0.5.9
 	github.com/onsi/ginkgo v1.16.5
 	github.com/onsi/gomega v1.24.1
 	github.com/pkg/errors v0.9.1
 	github.com/spf13/pflag v1.0.5
-	github.com/stretchr/testify v1.8.0
-	go.uber.org/zap v1.24.0
+	github.com/stretchr/testify v1.8.4
+	go.uber.org/zap v1.26.0
 	golang.org/x/net v0.34.0
 	helm.sh/helm/v3 v3.10.3
 	k8s.io/api v0.26.7
@@ -46,7 +46,6 @@ require (
 	github.com/aws/aws-sdk-go-v2/service/sso v1.11.12 // indirect
 	github.com/aws/aws-sdk-go-v2/service/sts v1.16.9 // indirect
 	github.com/aws/smithy-go v1.12.0 // indirect
-	github.com/benbjohnson/clock v1.3.0 // indirect
 	github.com/beorn7/perks v1.0.1 // indirect
 	github.com/bshuster-repo/logrus-logstash-hook v1.0.2 // indirect
 	github.com/bugsnag/bugsnag-go v2.1.2+incompatible // indirect
@@ -117,8 +116,7 @@ require (
 	github.com/yvasiyarov/gorelic v0.0.7 // indirect
 	github.com/yvasiyarov/newrelic_platform_go v0.0.0-20160601141957-9c099fbc30e9 // indirect
 	go.starlark.net v0.0.0-20220714194419-4cadf0a12139 // indirect
-	go.uber.org/atomic v1.9.0 // indirect
-	go.uber.org/multierr v1.8.0 // indirect
+	go.uber.org/multierr v1.10.0 // indirect
 	golang.org/x/crypto v0.35.0 // indirect
 	golang.org/x/oauth2 v0.27.0 // indirect
 	golang.org/x/sync v0.11.0 // indirect
