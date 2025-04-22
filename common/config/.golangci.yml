@@ -12,6 +12,7 @@ linters:
     - bodyclose
     - containedctx
     - contextcheck
+    - copyloopvar
     - cyclop
     - depguard
     - dupl
@@ -20,6 +21,8 @@ linters:
     - errchkjson
     - exhaustive
     - exhaustruct
+    - exportloopref
+    - execinquery
     - err113
     - forcetypeassert
     - gci
