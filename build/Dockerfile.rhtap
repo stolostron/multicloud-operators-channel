@@ -16,6 +16,18 @@ ENV OPERATOR=/usr/local/bin/multicluster-operators-channel \
     USER_UID=1001 \
     USER_NAME=multicluster-operators-channel
 
+LABEL \
+    name="multicloud-operators-channel" \
+    com.redhat.component="multicloud-operators-channel" \
+    description="multicluster channel controller" \
+    maintainer="acm-contact@redhat.com" \
+    io.k8s.description="multicluster channel controller" \
+    org.label-schema.license="Red Hat Advanced Cluster Management for Kubernetes EULA" \
+    org.label-schema.schema-version="1.0" \
+    summary="multicluster channel controller" \
+    io.k8s.display-name="multicluster channel" \
+    io.openshift.tags="mce acm multicloud-operators-channel"
+
 # install operator binary
 COPY --from=plugin-builder /go/src/github.com/stolostron/multicluster-operators-channel/build/_output/bin/multicluster-operators-channel ${OPERATOR}
 
