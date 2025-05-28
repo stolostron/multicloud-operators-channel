@@ -10,11 +10,15 @@
 
 Channels (channel.apps.open-cluster-management.io) define the source repositories that a cluster can subscribe to with a subscription, and can be the following types: Git, Helm release, and Object storage repositories, and resource templates on the hub cluster.
 
-See how channels are being used in the [multicloud-operators-subscription](https://github.com/open-cluster-management-io/multicloud-operators-subscription) project.
+See how channels are being used in the
+[multicloud-operators-subscription](https://github.com/stolostron/multicloud-operators-subscription) project.
 
 ## Deployment
 
-See `multicloud-operators-subscription` [stand-alone](https://github.com/open-cluster-management-io/multicloud-operators-subscription#stand-alone-deployment) and [multi-cluster](https://github.com/open-cluster-management-io/multicloud-operators-subscription#multi-cluster-deployment) deployments for more information.
+See `multicloud-operators-subscription`
+[stand-alone](https://github.com/stolostron/multicloud-operators-subscription#stand-alone-deployment) and
+[multi-cluster](https://github.com/stolostron/multicloud-operators-subscription#multi-cluster-deployment)
+deployments for more information.
 
 ## Community, discussion, contribution, and support
 
