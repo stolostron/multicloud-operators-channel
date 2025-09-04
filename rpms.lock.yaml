@@ -1,0 +1,188 @@
+---
+lockfileVersion: 1
+lockfileVendor: redhat
+arches:
+- arch: aarch64
+  packages:
+  - url: https://cdn-ubi.redhat.com/content/public/ubi/dist/ubi9/9/aarch64/appstream/os/Packages/j/jq-1.6-15.el9.aarch64.rpm
+    repoid: ubi-9-for-aarch64-appstream-rpms
+    size: 187128
+    checksum: sha256:e21b572bcb332664bb342fe53d5ced4714ccd5008f2170049ef77fa2162183a0
+    name: jq
+    evr: 1.6-15.el9
+    sourcerpm: jq-1.6-15.el9.src.rpm
+  - url: https://cdn-ubi.redhat.com/content/public/ubi/dist/ubi9/9/aarch64/appstream/os/Packages/o/oniguruma-6.9.6-1.el9.5.aarch64.rpm
+    repoid: ubi-9-for-aarch64-appstream-rpms
+    size: 222582
+    checksum: sha256:bc2305dad655ddb94f966158112efd6cefa6824d5aa2e80f63881f16cee74598
+    name: oniguruma
+    evr: 6.9.6-1.el9.5
+    sourcerpm: oniguruma-6.9.6-1.el9.5.src.rpm
+  - url: https://cdn-ubi.redhat.com/content/public/ubi/dist/ubi9/9/aarch64/baseos/os/Packages/f/findutils-4.8.0-7.el9.aarch64.rpm
+    repoid: ubi-9-for-aarch64-baseos-rpms
+    size: 564807
+    checksum: sha256:158af4d5ecbd8b87f0da762ea1655bd4c86512071a95d8307eda3e0b3991105d
+    name: findutils
+    evr: 1:4.8.0-7.el9
+    sourcerpm: findutils-4.8.0-7.el9.src.rpm
+  - url: https://cdn-ubi.redhat.com/content/public/ubi/dist/ubi9/9/aarch64/baseos/os/Packages/g/gzip-1.12-1.el9.aarch64.rpm
+    repoid: ubi-9-for-aarch64-baseos-rpms
+    size: 169809
+    checksum: sha256:45710df49b439ddc4a2848fd3877367761b574234ae28b6be46f1cf54f3fcdca
+    name: gzip
+    evr: 1.12-1.el9
+    sourcerpm: gzip-1.12-1.el9.src.rpm
+  - url: https://cdn-ubi.redhat.com/content/public/ubi/dist/ubi9/9/aarch64/baseos/os/Packages/r/rsync-3.2.3-20.el9_5.1.aarch64.rpm
+    repoid: ubi-9-for-aarch64-baseos-rpms
+    size: 404320
+    checksum: sha256:cfe364a3eec12784b2397428ed21d7300a3cab826ec04208ff8e7a8539b73ccd
+    name: rsync
+    evr: 3.2.3-20.el9_5.1
+    sourcerpm: rsync-3.2.3-20.el9_5.1.src.rpm
+  - url: https://cdn-ubi.redhat.com/content/public/ubi/dist/ubi9/9/aarch64/baseos/os/Packages/t/tar-1.34-7.el9.aarch64.rpm
+    repoid: ubi-9-for-aarch64-baseos-rpms
+    size: 900197
+    checksum: sha256:44552dea889d350403c3074a33d7cb274b3f57553e47db998745df13f931b458
+    name: tar
+    evr: 2:1.34-7.el9
+    sourcerpm: tar-1.34-7.el9.src.rpm
+  source: []
+  module_metadata: []
+- arch: ppc64le
+  packages:
+  - url: https://cdn-ubi.redhat.com/content/public/ubi/dist/ubi9/9/ppc64le/appstream/os/Packages/j/jq-1.6-15.el9.ppc64le.rpm
+    repoid: ubi-9-for-ppc64le-appstream-rpms
+    size: 207041
+    checksum: sha256:f1e01ff06dee639c707ff605d9566b8dd9a962bd61845ce2fcdb426dfcb007c6
+    name: jq
+    evr: 1.6-15.el9
+    sourcerpm: jq-1.6-15.el9.src.rpm
+  - url: https://cdn-ubi.redhat.com/content/public/ubi/dist/ubi9/9/ppc64le/appstream/os/Packages/o/oniguruma-6.9.6-1.el9.5.ppc64le.rpm
+    repoid: ubi-9-for-ppc64le-appstream-rpms
+    size: 246370
+    checksum: sha256:0b700ed36523819c0dd5066cf5835c7ffb3691dbc13657e3f49acc71635fd6a6
+    name: oniguruma
+    evr: 6.9.6-1.el9.5
+    sourcerpm: oniguruma-6.9.6-1.el9.5.src.rpm
+  - url: https://cdn-ubi.redhat.com/content/public/ubi/dist/ubi9/9/ppc64le/baseos/os/Packages/f/findutils-4.8.0-7.el9.ppc64le.rpm
+    repoid: ubi-9-for-ppc64le-baseos-rpms
+    size: 603076
+    checksum: sha256:d4662cea7b9ae75c86e6afa1c69b3047773acf7d4a6cf8b99e63355cde0e8de8
+    name: findutils
+    evr: 1:4.8.0-7.el9
+    sourcerpm: findutils-4.8.0-7.el9.src.rpm
+  - url: https://cdn-ubi.redhat.com/content/public/ubi/dist/ubi9/9/ppc64le/baseos/os/Packages/g/gzip-1.12-1.el9.ppc64le.rpm
+    repoid: ubi-9-for-ppc64le-baseos-rpms
+    size: 175705
+    checksum: sha256:55b983f08d8b2a0741b07f114cdba89a8ecb207064c001e90e4c76a13836d458
+    name: gzip
+    evr: 1.12-1.el9
+    sourcerpm: gzip-1.12-1.el9.src.rpm
+  - url: https://cdn-ubi.redhat.com/content/public/ubi/dist/ubi9/9/ppc64le/baseos/os/Packages/r/rsync-3.2.3-20.el9_5.1.ppc64le.rpm
+    repoid: ubi-9-for-ppc64le-baseos-rpms
+    size: 437418
+    checksum: sha256:cdaf5865066cf04fdecbaeafdde5c69126a949426fe03966f4db30061ba5f67e
+    name: rsync
+    evr: 3.2.3-20.el9_5.1
+    sourcerpm: rsync-3.2.3-20.el9_5.1.src.rpm
+  - url: https://cdn-ubi.redhat.com/content/public/ubi/dist/ubi9/9/ppc64le/baseos/os/Packages/t/tar-1.34-7.el9.ppc64le.rpm
+    repoid: ubi-9-for-ppc64le-baseos-rpms
+    size: 937724
+    checksum: sha256:f2cc206dfacc9981fad6cf33600ad28bcd1c573f16d8c18523dc9df52ca90660
+    name: tar
+    evr: 2:1.34-7.el9
+    sourcerpm: tar-1.34-7.el9.src.rpm
+  source: []
+  module_metadata: []
+- arch: s390x
+  packages:
+  - url: https://cdn-ubi.redhat.com/content/public/ubi/dist/ubi9/9/s390x/appstream/os/Packages/j/jq-1.6-15.el9.s390x.rpm
+    repoid: ubi-9-for-s390x-appstream-rpms
+    size: 203811
+    checksum: sha256:71fb2e4304ac31cd465b213e582e43bd888df76d0b15a2eb687d9f0ba05af091
+    name: jq
+    evr: 1.6-15.el9
+    sourcerpm: jq-1.6-15.el9.src.rpm
+  - url: https://cdn-ubi.redhat.com/content/public/ubi/dist/ubi9/9/s390x/appstream/os/Packages/o/oniguruma-6.9.6-1.el9.5.s390x.rpm
+    repoid: ubi-9-for-s390x-appstream-rpms
+    size: 225810
+    checksum: sha256:02fab0b52c89158bd45ccc575ccc9186f196fc514eccd66ebfc72c6b0a08849f
+    name: oniguruma
+    evr: 6.9.6-1.el9.5
+    sourcerpm: oniguruma-6.9.6-1.el9.5.src.rpm
+  - url: https://cdn-ubi.redhat.com/content/public/ubi/dist/ubi9/9/s390x/baseos/os/Packages/f/findutils-4.8.0-7.el9.s390x.rpm
+    repoid: ubi-9-for-s390x-baseos-rpms
+    size: 562344
+    checksum: sha256:58a784cd8f94da5182ab13c9696c7e5410b0452b20c524013040d234517e931e
+    name: findutils
+    evr: 1:4.8.0-7.el9
+    sourcerpm: findutils-4.8.0-7.el9.src.rpm
+  - url: https://cdn-ubi.redhat.com/content/public/ubi/dist/ubi9/9/s390x/baseos/os/Packages/g/gzip-1.12-1.el9.s390x.rpm
+    repoid: ubi-9-for-s390x-baseos-rpms
+    size: 173101
+    checksum: sha256:50034ee6281864a218a5f3bc47de5afb434400fb8415907fd31d8351adbdc5a6
+    name: gzip
+    evr: 1.12-1.el9
+    sourcerpm: gzip-1.12-1.el9.src.rpm
+  - url: https://cdn-ubi.redhat.com/content/public/ubi/dist/ubi9/9/s390x/baseos/os/Packages/r/rsync-3.2.3-20.el9_5.1.s390x.rpm
+    repoid: ubi-9-for-s390x-baseos-rpms
+    size: 406780
+    checksum: sha256:da733c8c0afb85c1d3c5c1c637c3e4ba23fc083f02fb4298915cb12891f151f3
+    name: rsync
+    evr: 3.2.3-20.el9_5.1
+    sourcerpm: rsync-3.2.3-20.el9_5.1.src.rpm
+  - url: https://cdn-ubi.redhat.com/content/public/ubi/dist/ubi9/9/s390x/baseos/os/Packages/t/tar-1.34-7.el9.s390x.rpm
+    repoid: ubi-9-for-s390x-baseos-rpms
+    size: 902370
+    checksum: sha256:fa8758bac6a56830de66ad1ab623c87768065bcc6f8242faa42ac4198260d456
+    name: tar
+    evr: 2:1.34-7.el9
+    sourcerpm: tar-1.34-7.el9.src.rpm
+  source: []
+  module_metadata: []
+- arch: x86_64
+  packages:
+  - url: https://cdn-ubi.redhat.com/content/public/ubi/dist/ubi9/9/x86_64/appstream/os/Packages/j/jq-1.6-15.el9.x86_64.rpm
+    repoid: ubi-9-for-x86_64-appstream-rpms
+    size: 194271
+    checksum: sha256:d3157267cce88006c2ad3327ea7eb8983bea6f69327c157228b89814a3c473ae
+    name: jq
+    evr: 1.6-15.el9
+    sourcerpm: jq-1.6-15.el9.src.rpm
+  - url: https://cdn-ubi.redhat.com/content/public/ubi/dist/ubi9/9/x86_64/appstream/os/Packages/o/oniguruma-6.9.6-1.el9.5.x86_64.rpm
+    repoid: ubi-9-for-x86_64-appstream-rpms
+    size: 226331
+    checksum: sha256:6c884cc2216e5b4699ebd8cde27b39e99532520b367f645ed6cc660d081916dc
+    name: oniguruma
+    evr: 6.9.6-1.el9.5
+    sourcerpm: oniguruma-6.9.6-1.el9.5.src.rpm
+  - url: https://cdn-ubi.redhat.com/content/public/ubi/dist/ubi9/9/x86_64/baseos/os/Packages/f/findutils-4.8.0-7.el9.x86_64.rpm
+    repoid: ubi-9-for-x86_64-baseos-rpms
+    size: 563531
+    checksum: sha256:a6328afea0a11647b7fb5c48436f0af6c795407bac0650676d3196dd47070de6
+    name: findutils
+    evr: 1:4.8.0-7.el9
+    sourcerpm: findutils-4.8.0-7.el9.src.rpm
+  - url: https://cdn-ubi.redhat.com/content/public/ubi/dist/ubi9/9/x86_64/baseos/os/Packages/g/gzip-1.12-1.el9.x86_64.rpm
+    repoid: ubi-9-for-x86_64-baseos-rpms
+    size: 171206
+    checksum: sha256:c8b3e0414d55b1eedb0185a564ac6cb2368bee2fd5f995447d045f6a714488ac
+    name: gzip
+    evr: 1.12-1.el9
+    sourcerpm: gzip-1.12-1.el9.src.rpm
+  - url: https://cdn-ubi.redhat.com/content/public/ubi/dist/ubi9/9/x86_64/baseos/os/Packages/r/rsync-3.2.3-20.el9_5.1.x86_64.rpm
+    repoid: ubi-9-for-x86_64-baseos-rpms
+    size: 409799
+    checksum: sha256:cb9b3bbbba8f4f00414da7ce1b2ae12c8f3313a7ddb8b1162d60a690ca7e3a98
+    name: rsync
+    evr: 3.2.3-20.el9_5.1
+    sourcerpm: rsync-3.2.3-20.el9_5.1.src.rpm
+  - url: https://cdn-ubi.redhat.com/content/public/ubi/dist/ubi9/9/x86_64/baseos/os/Packages/t/tar-1.34-7.el9.x86_64.rpm
+    repoid: ubi-9-for-x86_64-baseos-rpms
+    size: 910235
+    checksum: sha256:17f2e592a2c04c050b690afeb9042e02521a0b5ee3288dad837463f4acf542c3
+    name: tar
+    evr: 2:1.34-7.el9
+    sourcerpm: tar-1.34-7.el9.src.rpm
+  source: []
+  module_metadata: []
