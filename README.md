@@ -18,7 +18,7 @@ See `multicloud-operators-subscription` [stand-alone](https://github.com/open-cl
 
 ## Community, discussion, contribution, and support
 
-Check the [CONTRIBUTING Doc](CONTRIBUTING.md) for how to contribute to the repo.
+Check the [CONTRIBUTING Doc](CONTRIBUTING.md) for how to contribute to the repo. 
 
 ### Communication channels 
 

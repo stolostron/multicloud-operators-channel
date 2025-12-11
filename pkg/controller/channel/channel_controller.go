@@ -111,8 +111,8 @@ func add(mgr manager.Manager, r reconcile.Reconciler, logger logr.Logger) error 
 	if err := apiextensionsv1beta1.AddToScheme(mgr.GetScheme()); err != nil {
 		logger.Error(err, "failed to add CRD scheme to manager")
 	}
-	// Watch for changes to Channel
-	err = c.Watch(source.Kind(mgr.GetCache(), &chv1.Channel{}), &handler.EnqueueRequestForObject{})
+	// Watch for changes to Channel (controller-runtime v0.20+ typed source API)
+	err = c.Watch(source.Kind(mgr.GetCache(), &chv1.Channel{}, &handler.TypedEnqueueRequestForObject[*chv1.Channel]{}))
 	if err != nil {
 		return err
 	}

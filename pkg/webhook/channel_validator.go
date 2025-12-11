@@ -32,7 +32,7 @@ import (
 type ChannelValidator struct {
 	logr.Logger
 	client.Client
-	decoder *admission.Decoder
+	decoder admission.Decoder
 }
 
 // ValidateLogic add ChannelValidator to webhook wireup
@@ -107,7 +107,7 @@ func isGitOrSameKey(chList *chv1.ChannelList, inReq types.NamespacedName) (strin
 // A decoder will be automatically injected.
 
 // InjectDecoder injects the decoder.
-func (v *ChannelValidator) InjectDecoder(d *admission.Decoder) error {
+func (v *ChannelValidator) InjectDecoder(d admission.Decoder) error {
 	v.decoder = d
 	return nil
 }
