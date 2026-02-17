@@ -18,7 +18,7 @@ ENV OPERATOR=/usr/local/bin/multicluster-operators-channel \
 
 LABEL \
     name="rhacm2/multicluster-operators-channel-rhel9" \
-    cpe="cpe:/a:redhat:acm:2.16::el9" \
+    cpe="cpe:/a:redhat:acm:2.17::el9" \
     com.redhat.component="multicloud-operators-channel" \
     description="multicluster channel controller" \
     maintainer="acm-contact@redhat.com" \
