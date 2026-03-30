@@ -15,6 +15,7 @@
 package exec
 
 import (
+	"context"
 	"crypto/tls"
 	"errors"
 	"fmt"
@@ -23,7 +24,9 @@ import (
 	"os"
 	"path/filepath"
 
+	configv1 "github.com/openshift/api/config/v1"
 	"k8s.io/apimachinery/pkg/api/equality"
+	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/tools/clientcmd"
 
 	v1 "k8s.io/api/core/v1"
@@ -51,6 +54,7 @@ import (
 	"open-cluster-management.io/multicloud-operators-channel/pkg/apis"
 	"open-cluster-management.io/multicloud-operators-channel/pkg/controller"
 	"open-cluster-management.io/multicloud-operators-channel/pkg/utils"
+	"open-cluster-management.io/multicloud-operators-channel/pkg/utils/tlsconfig"
 	chWebhook "open-cluster-management.io/multicloud-operators-channel/pkg/webhook"
 	metricsserver "sigs.k8s.io/controller-runtime/pkg/metrics/server"
 	k8swebhook "sigs.k8s.io/controller-runtime/pkg/webhook"
@@ -122,6 +126,11 @@ func RunManager() {
 		logger.Info("connect to external api server, kubeconfig:" + options.KubeConfig)
 	}
 
+	// Cache cluster TLS profile (API Server) for use by webhook listener.
+	schemeForTLS := runtime.NewScheme()
+	_ = configv1.AddToScheme(schemeForTLS)
+	tlsconfig.InitClusterTLSConfig(context.Background(), cfg, schemeForTLS)
+
 	enableLeaderElection := false
 
 	if _, err := rest.InClusterConfig(); err == nil {
@@ -139,7 +148,9 @@ func RunManager() {
 
 	webhookOption := k8swebhook.Options{}
 	webhookOption.TLSOpts = append(webhookOption.TLSOpts, func(config *tls.Config) {
-		config.MinVersion = chv1.TLSMinVersionInt
+		c := tlsconfig.GetClusterTLSConfig()
+		config.MinVersion = c.MinVersion
+		config.CipherSuites = c.CipherSuites
 	})
 	webhookServer := k8swebhook.NewServer(webhookOption)
 
