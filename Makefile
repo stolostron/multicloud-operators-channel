@@ -34,11 +34,10 @@ export GOPACKAGES   = $(shell go list ./... | grep -v /manager | grep -v /bindat
 
 TEST_TMP :=/tmp
 export KUBEBUILDER_ASSETS ?=$(TEST_TMP)/kubebuilder/bin
-K8S_VERSION ?=1.28.3
-GOHOSTOS ?=$(shell go env GOHOSTOS)
-GOHOSTARCH ?= $(shell go env GOHOSTARCH)
-KB_TOOLS_ARCHIVE_NAME :=kubebuilder-tools-$(K8S_VERSION)-$(GOHOSTOS)-$(GOHOSTARCH).tar.gz
-KB_TOOLS_ARCHIVE_PATH := $(TEST_TMP)/$(KB_TOOLS_ARCHIVE_NAME)
+# Use setup-envtest to download envtest binaries from the new location (controller-tools releases).
+# See: https://github.com/kubernetes-sigs/kubebuilder/discussions/4082
+ENVTEST_K8S_VERSION ?= 1.30.0
+ENVTEST_VERSION ?= v0.20.4
 
 .PHONY: local
 
@@ -82,15 +81,11 @@ lint-go:
 
 .PHONY: test
 
-# download the kubebuilder-tools to get kube-apiserver binaries from it
+# Install setup-envtest (used to download envtest binaries from controller-tools GitHub releases).
 ensure-kubebuilder-tools:
-	$(info Downloading kube-apiserver into '$(KUBEBUILDER_ASSETS)')
-	rm -fr '$(KUBEBUILDER_ASSETS)'
-	mkdir -p '$(KUBEBUILDER_ASSETS)'
-	curl -s -f -L https://storage.googleapis.com/kubebuilder-tools/$(KB_TOOLS_ARCHIVE_NAME) -o '$(KB_TOOLS_ARCHIVE_PATH)'
-	tar -C '$(KUBEBUILDER_ASSETS)' --strip-components=2 -zvxf '$(KB_TOOLS_ARCHIVE_PATH)'
+	@which setup-envtest >/dev/null 2>&1 || go install sigs.k8s.io/controller-runtime/tools/setup-envtest@$(ENVTEST_VERSION)
 
 .PHONY: ensure-kubebuilder-tools
 
 test: ensure-kubebuilder-tools
-	go test -timeout 300s -v ./pkg/... -coverprofile=coverage.out
+	KUBEBUILDER_ASSETS=$$(setup-envtest use -i -p path $(ENVTEST_K8S_VERSION)) go test -timeout 300s -v ./pkg/... -coverprofile=coverage.out
