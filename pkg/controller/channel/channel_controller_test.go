@@ -373,3 +373,64 @@ func TestChannelReconcileWithoutClusterCRD(t *testing.T) {
 	_, err = rec.Reconcile(context.TODO(), reconcile.Request{})
 	g.Expect(err).NotTo(gomega.HaveOccurred())
 }
+
+// TestChannelRejectsCrossNamespaceSecretRef verifies that a Channel whose
+// spec.secretRef.namespace points at a foreign namespace cannot cause the
+// controller to mutate that foreign Secret. The reconciler must pin the
+// reference to the Channel's own namespace.
+func TestChannelRejectsCrossNamespaceSecretRef(t *testing.T) {
+	g := gomega.NewGomegaWithT(t)
+
+	foreignNs := &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: "foreign-ns"}}
+	victimSrt := &corev1.Secret{
+		ObjectMeta: metav1.ObjectMeta{Name: "victim-srt", Namespace: "foreign-ns"},
+	}
+
+	chn := &chv1.Channel{
+		ObjectMeta: metav1.ObjectMeta{Name: "xns", Namespace: targetNamespace},
+		Spec: chv1.ChannelSpec{
+			Type:      targetChannelType,
+			Pathname:  targetNamespace,
+			SecretRef: &corev1.ObjectReference{Name: "victim-srt", Namespace: "foreign-ns", Kind: "secret"},
+		},
+	}
+
+	mgr, err := manager.New(cfg, manager.Options{Metrics: metricsserver.Options{BindAddress: "0"}})
+	g.Expect(err).NotTo(gomega.HaveOccurred())
+
+	c = mgr.GetClient()
+	tRecorder := record.NewBroadcaster().NewRecorder(mgr.GetScheme(), corev1.EventSource{Component: "channel"})
+
+	ctx, cancel := context.WithTimeout(context.TODO(), 5*time.Minute)
+	mgrStopped := StartTestManager(ctx, mgr, g)
+
+	defer func() {
+		cancel()
+		mgrStopped.Wait()
+	}()
+
+	dynamicClient := dynamic.NewForConfigOrDie(cfg)
+	rec := newReconciler(mgr, dynamicClient, tRecorder, logr.Discard()).(*ReconcileChannel)
+
+	g.Expect(c.Create(context.TODO(), foreignNs)).NotTo(gomega.HaveOccurred())
+
+	defer c.Delete(context.TODO(), victimSrt)
+	g.Expect(c.Create(context.TODO(), victimSrt)).NotTo(gomega.HaveOccurred())
+
+	defer c.Delete(context.TODO(), chn)
+	g.Expect(c.Create(context.TODO(), chn)).NotTo(gomega.HaveOccurred())
+
+	rq := reconcile.Request{NamespacedName: types.NamespacedName{Name: chn.Name, Namespace: chn.Namespace}}
+
+	// handleReferencedObjects must look up the Secret in the Channel's namespace,
+	// not the attacker-supplied foreign-ns, so it should fail to find it.
+	err = rec.handleReferencedObjects(chn, rq, logr.Discard())
+	g.Expect(err).To(gomega.HaveOccurred())
+	g.Expect(chn.Spec.SecretRef.Namespace).To(gomega.Equal(targetNamespace))
+
+	// The foreign Secret must remain untouched: no serving-channel label.
+	got := &corev1.Secret{}
+	g.Expect(c.Get(context.TODO(),
+		types.NamespacedName{Name: "victim-srt", Namespace: "foreign-ns"}, got)).NotTo(gomega.HaveOccurred())
+	g.Expect(got.GetLabels()).NotTo(gomega.HaveKey(chv1.ServingChannel))
+}
