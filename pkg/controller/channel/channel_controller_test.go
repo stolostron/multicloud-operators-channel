@@ -434,3 +434,40 @@ func TestChannelRejectsCrossNamespaceSecretRef(t *testing.T) {
 		types.NamespacedName{Name: "victim-srt", Namespace: "foreign-ns"}, got)).NotTo(gomega.HaveOccurred())
 	g.Expect(got.GetLabels()).NotTo(gomega.HaveKey(chv1.ServingChannel))
 }
+
+// TestBuildChannelRoleRulesScopedToReferencedObjects verifies that the
+// per-Channel Role granted to managed-cluster agents never includes a
+// namespace-wide secrets/configmaps rule; access must be limited to the
+// single referenced object via ResourceNames.
+func TestBuildChannelRoleRulesScopedToReferencedObjects(t *testing.T) {
+	g := gomega.NewGomegaWithT(t)
+
+	chn := &chv1.Channel{
+		ObjectMeta: metav1.ObjectMeta{Name: "ch", Namespace: targetNamespace},
+		Spec: chv1.ChannelSpec{
+			Type:         targetChannelType,
+			SecretRef:    &corev1.ObjectReference{Name: "ch-srt"},
+			ConfigMapRef: &corev1.ObjectReference{Name: "ch-cm"},
+		},
+	}
+
+	rules := buildChannelRoleRules(chn)
+
+	for _, rule := range rules {
+		for _, res := range rule.Resources {
+			if res == "secrets" || res == "configmaps" {
+				g.Expect(rule.ResourceNames).NotTo(gomega.BeEmpty(),
+					"rule for %s must be scoped via ResourceNames", res)
+				g.Expect(rule.Verbs).NotTo(gomega.ContainElement("list"),
+					"rule for %s must not grant list", res)
+			}
+		}
+	}
+
+	// A Channel with no refs must grant no secret/configmap access at all.
+	bare := &chv1.Channel{ObjectMeta: metav1.ObjectMeta{Name: "bare", Namespace: targetNamespace}}
+	for _, rule := range buildChannelRoleRules(bare) {
+		g.Expect(rule.Resources).NotTo(gomega.ContainElement("secrets"))
+		g.Expect(rule.Resources).NotTo(gomega.ContainElement("configmaps"))
+	}
+}
