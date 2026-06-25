@@ -214,9 +214,10 @@ func (r *ReconcileChannel) handleReferencedObjects(instance *chv1.Channel, req r
 	srtRef := instance.Spec.SecretRef
 
 	if srtRef != nil {
-		if srtRef.Namespace == "" {
-			srtRef.Namespace = instance.GetNamespace()
-		}
+		// Referenced Secrets must live in the Channel's own namespace. Ignore any
+		// caller-supplied srtRef.Namespace so a tenant cannot direct the controller's
+		// privileged client to Get/Update a Secret in a foreign namespace.
+		srtRef.Namespace = instance.GetNamespace()
 
 		if err := r.updatedReferencedObjectLabels(srtRef, srtGvk, log); err != nil {
 			r.Log.Error(err, "failed to update referred secret label")
@@ -234,9 +235,10 @@ func (r *ReconcileChannel) handleReferencedObjects(instance *chv1.Channel, req r
 	//	//sync the channel to the serving-channel annotation in all involved ConfigMaps.
 	cmRef := instance.Spec.ConfigMapRef
 	if cmRef != nil {
-		if cmRef.Namespace == "" {
-			cmRef.Namespace = instance.GetNamespace()
-		}
+		// Referenced ConfigMaps must live in the Channel's own namespace. Ignore any
+		// caller-supplied cmRef.Namespace so a tenant cannot direct the controller's
+		// privileged client to Get/Update a ConfigMap in a foreign namespace.
+		cmRef.Namespace = instance.GetNamespace()
 
 		if err := r.updatedReferencedObjectLabels(cmRef, cmGvk, log); err != nil {
 			r.Log.Error(err, "failed to update referred configMap label")
