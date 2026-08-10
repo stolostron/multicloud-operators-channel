@@ -32,6 +32,8 @@ import (
 
 	configv1 "github.com/openshift/api/config/v1"
 	"github.com/openshift/library-go/pkg/crypto"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/apimachinery/pkg/api/meta"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/wait"
@@ -80,20 +82,37 @@ func GetClusterTLSConfig() *tls.Config {
 	return profileSpecToTLSConfig(configv1.TLSProfiles[configv1.TLSProfileIntermediateType])
 }
 
+// isPermanentAPIServerError reports whether err reflects a condition that retrying will never
+// resolve: the resource doesn't exist (e.g. the cluster is not OpenShift, so the APIServer CRD
+// was never installed) or the API server has no route for its kind at all. Anything else
+// (connection refused, timeout, RBAC not yet propagated, etc.) is treated as transient and
+// worth retrying.
+func isPermanentAPIServerError(err error) bool {
+	return apierrors.IsNotFound(err) || meta.IsNoMatchError(err)
+}
+
 // retryAPIServerOp retries op every apiserverGetRetryInterval for up to apiserverGetRetryTimeout
-// (trying immediately first). desc is used only for logging. Returns op's last error, if any,
-// once the retry window is exhausted.
+// (trying immediately first), unless op fails with a permanent error (see
+// isPermanentAPIServerError), in which case it gives up immediately instead of burning the whole
+// retry window on a condition that will never change. desc is used only for logging. Returns
+// op's last error, if any, once retrying stops.
 func retryAPIServerOp(ctx context.Context, desc string, op func(ctx context.Context) error) error {
 	var lastErr error
 
 	pollErr := wait.PollUntilContextTimeout(ctx, apiserverGetRetryInterval, apiserverGetRetryTimeout, true,
 		func(pollCtx context.Context) (bool, error) {
-			if lastErr = op(pollCtx); lastErr != nil {
-				klog.Warningf("failed to %s, will retry: %v", desc, lastErr)
-				return false, nil
+			lastErr = op(pollCtx)
+			if lastErr == nil {
+				return true, nil
 			}
 
-			return true, nil
+			if isPermanentAPIServerError(lastErr) {
+				return false, lastErr
+			}
+
+			klog.Warningf("failed to %s, will retry: %v", desc, lastErr)
+
+			return false, nil
 		})
 
 	if pollErr != nil {
@@ -105,10 +124,11 @@ func retryAPIServerOp(ctx context.Context, desc string, op func(ctx context.Cont
 
 // fetchTLSConfigFromCluster reads the APIServer "cluster" resource and converts its
 // tlsSecurityProfile into a *tls.Config. If creating the client or reading the resource fails
-// (e.g. RBAC not yet propagated, API server transiently unavailable), it retries every
-// apiserverGetRetryInterval for up to apiserverGetRetryTimeout. If it still fails (or the
-// cluster is not OpenShift/resource is missing), the error is logged and nil is returned so the
-// caller falls back to Intermediate.
+// with a transient error (e.g. RBAC not yet propagated, API server temporarily unreachable), it
+// retries every apiserverGetRetryInterval for up to apiserverGetRetryTimeout. If the failure is
+// permanent instead (the cluster is not OpenShift, or the resource genuinely doesn't exist), it
+// gives up immediately rather than blocking for the whole retry window. Either way, once it
+// gives up the error is logged and nil is returned so the caller falls back to Intermediate.
 func fetchTLSConfigFromCluster(ctx context.Context, cfg *rest.Config, scheme *runtime.Scheme) *tls.Config {
 	var kubeClient client.Client
 
@@ -119,9 +139,8 @@ func fetchTLSConfigFromCluster(ctx context.Context, cfg *rest.Config, scheme *ru
 
 			return err
 		}); err != nil {
-		klog.Errorf("giving up creating client to read APIServer %q for TLS security profile after retrying "+
-			"for %s, falling back to %s profile: %v", apiserverClusterName, apiserverGetRetryTimeout,
-			configv1.TLSProfileIntermediateType, err)
+		klog.Errorf("giving up creating client to read APIServer %q for TLS security profile, "+
+			"falling back to %s profile: %v", apiserverClusterName, configv1.TLSProfileIntermediateType, err)
 
 		return nil
 	}
@@ -132,9 +151,8 @@ func fetchTLSConfigFromCluster(ctx context.Context, cfg *rest.Config, scheme *ru
 		func(pollCtx context.Context) error {
 			return kubeClient.Get(pollCtx, types.NamespacedName{Name: apiserverClusterName}, &apiServer)
 		}); err != nil {
-		klog.Errorf("giving up reading APIServer %q for TLS security profile after retrying for %s, "+
-			"falling back to %s profile: %v", apiserverClusterName, apiserverGetRetryTimeout,
-			configv1.TLSProfileIntermediateType, err)
+		klog.Errorf("giving up reading APIServer %q for TLS security profile, falling back to %s profile: %v",
+			apiserverClusterName, configv1.TLSProfileIntermediateType, err)
 
 		return nil
 	}
