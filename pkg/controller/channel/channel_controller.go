@@ -51,22 +51,44 @@ import (
 )
 
 var (
-	clusterRules = []rbac.PolicyRule{
+	srtGvk = schema.GroupVersionKind{Group: "", Kind: "Secret", Version: "v1"}
+	cmGvk  = schema.GroupVersionKind{Group: "", Kind: "ConfigMap", Version: "v1"}
+)
+
+// buildChannelRoleRules returns the RBAC rules granted to every managed
+// cluster's application-manager agent for this Channel's namespace.
+// Secret/ConfigMap access is scoped via ResourceNames to the single object
+// the Channel itself references, so a compromised or malicious spoke cannot
+// enumerate or read unrelated Secrets/ConfigMaps in the Channel namespace.
+func buildChannelRoleRules(instance *chv1.Channel) []rbac.PolicyRule {
+	rules := []rbac.PolicyRule{
 		{
 			Verbs:     []string{"get", "list", "watch"},
 			APIGroups: []string{chv1.SchemeGroupVersion.Group},
 			Resources: []string{"channels", "channels/status"},
 		},
-		{
-			Verbs:     []string{"get", "list", "watch"},
-			APIGroups: []string{""},
-			Resources: []string{"secrets", "configmaps"},
-		},
 	}
 
-	srtGvk = schema.GroupVersionKind{Group: "", Kind: "Secret", Version: "v1"}
-	cmGvk  = schema.GroupVersionKind{Group: "", Kind: "ConfigMap", Version: "v1"}
-)
+	if ref := instance.Spec.SecretRef; ref != nil && ref.Name != "" {
+		rules = append(rules, rbac.PolicyRule{
+			Verbs:         []string{"get", "watch"},
+			APIGroups:     []string{""},
+			Resources:     []string{"secrets"},
+			ResourceNames: []string{ref.Name},
+		})
+	}
+
+	if ref := instance.Spec.ConfigMapRef; ref != nil && ref.Name != "" {
+		rules = append(rules, rbac.PolicyRule{
+			Verbs:         []string{"get", "watch"},
+			APIGroups:     []string{""},
+			Resources:     []string{"configmaps"},
+			ResourceNames: []string{ref.Name},
+		})
+	}
+
+	return rules
+}
 
 const (
 	clusterCRDName  = "clusters.clusterregistry.k8s.io"
@@ -214,9 +236,10 @@ func (r *ReconcileChannel) handleReferencedObjects(instance *chv1.Channel, req r
 	srtRef := instance.Spec.SecretRef
 
 	if srtRef != nil {
-		if srtRef.Namespace == "" {
-			srtRef.Namespace = instance.GetNamespace()
-		}
+		// Referenced Secrets must live in the Channel's own namespace. Ignore any
+		// caller-supplied srtRef.Namespace so a tenant cannot direct the controller's
+		// privileged client to Get/Update a Secret in a foreign namespace.
+		srtRef.Namespace = instance.GetNamespace()
 
 		if err := r.updatedReferencedObjectLabels(srtRef, srtGvk, log); err != nil {
 			r.Log.Error(err, "failed to update referred secret label")
@@ -234,9 +257,10 @@ func (r *ReconcileChannel) handleReferencedObjects(instance *chv1.Channel, req r
 	//	//sync the channel to the serving-channel annotation in all involved ConfigMaps.
 	cmRef := instance.Spec.ConfigMapRef
 	if cmRef != nil {
-		if cmRef.Namespace == "" {
-			cmRef.Namespace = instance.GetNamespace()
-		}
+		// Referenced ConfigMaps must live in the Channel's own namespace. Ignore any
+		// caller-supplied cmRef.Namespace so a tenant cannot direct the controller's
+		// privileged client to Get/Update a ConfigMap in a foreign namespace.
+		cmRef.Namespace = instance.GetNamespace()
 
 		if err := r.updatedReferencedObjectLabels(cmRef, cmGvk, log); err != nil {
 			r.Log.Error(err, "failed to update referred configMap label")
@@ -458,11 +482,13 @@ func (r *ReconcileChannel) validateClusterRBAC(instance *chv1.Channel, logger lo
 }
 
 func (r *ReconcileChannel) setupRole(instance *chv1.Channel, role *rbac.Role) error {
+	wantRules := buildChannelRoleRules(instance)
+
 	if err := r.Get(context.TODO(), types.NamespacedName{Name: instance.Name, Namespace: instance.Namespace}, role); err != nil {
 		if kerr.IsNotFound(err) {
 			role.Name = instance.Name
 			role.Namespace = instance.Namespace
-			role.Rules = clusterRules
+			role.Rules = wantRules
 
 			if err := controllerutil.SetControllerReference(instance, role, r.scheme); err != nil {
 				return gerr.Wrap(err, "failed to set controller reference for role set up")
@@ -478,8 +504,8 @@ func (r *ReconcileChannel) setupRole(instance *chv1.Channel, role *rbac.Role) er
 		return err
 	}
 
-	if !reflect.DeepEqual(role.Rules, clusterRules) {
-		role.Rules = clusterRules
+	if !reflect.DeepEqual(role.Rules, wantRules) {
+		role.Rules = wantRules
 
 		if err := controllerutil.SetControllerReference(instance, role, r.scheme); err != nil {
 			return gerr.Wrap(err, "failed to set controller reference for role set up")
