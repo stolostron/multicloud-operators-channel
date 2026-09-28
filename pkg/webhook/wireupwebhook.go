@@ -217,6 +217,13 @@ func (w *WireUp) getOrCreateWebhookService(isExternalAPIServer bool, inClusterCl
 
 	w.Logger.Info(fmt.Sprintf("created in Cluster service %s ", w.WebHookeSvcKey.String()))
 
+	// Keep a reference to the in-cluster service object created above. createOrRecreate()
+	// populates it with the server response (including Spec.ClusterIP), so step 3 below can
+	// read the ClusterIP directly from it instead of issuing a follow-up Get() through a
+	// (possibly cache-backed) client, which can race with the very recent create/delete above
+	// and intermittently return NotFound.
+	inClusterService := newService
+
 	// 2. If isExternalAPIServer = true, create the additional service in the hosted cluster
 	if !isExternalAPIServer {
 		return nil
@@ -248,15 +255,22 @@ func (w *WireUp) getOrCreateWebhookService(isExternalAPIServer bool, inClusterCl
 
 	w.Logger.Info(fmt.Sprintf("created hosted cluster service %s ", w.WebHookeSvcKey.String()))
 
-	// 3. get the service Cluster IP of the webhook server running on the management cluster. The service is created in step 1
+	// 3. get the service Cluster IP of the webhook server running on the management cluster. The service was
+	// created in step 1 above; reuse that object (rather than re-fetching it) since re-fetching immediately
+	// after a create/delete can race with a cache-backed client that hasn't observed the write yet.
+	serviceClusterIP := inClusterService.Spec.ClusterIP
 
-	service = &corev1.Service{}
+	if serviceClusterIP == "" {
+		// Fall back to a fresh Get in case the client implementation didn't populate the object
+		// in place on Create (e.g. some fake clients used in tests).
+		service = &corev1.Service{}
 
-	if err = inClusterClient.Get(context.TODO(), w.WebHookeSvcKey, service); err != nil {
-		return err
+		if err = inClusterClient.Get(context.TODO(), w.WebHookeSvcKey, service); err != nil {
+			return err
+		}
+
+		serviceClusterIP = service.Spec.ClusterIP
 	}
-
-	serviceClusterIP := service.Spec.ClusterIP
 
 	if serviceClusterIP == "" {
 		return errors.New("no service Cluster IP found: " + w.WebHookeSvcKey.String())
