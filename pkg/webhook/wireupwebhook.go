@@ -210,7 +210,8 @@ func (w *WireUp) getOrCreateWebhookService(isExternalAPIServer bool, inClusterCl
 
 	setOwnerReferences(inClusterClient, w.Logger, w.WebHookeSvcKey.Namespace, w.DeployLabel, newService)
 
-	if err := inClusterClient.Create(context.TODO(), newService); err != nil {
+	if err := createOrRecreate(context.TODO(), inClusterClient, newService, w.Logger,
+		fmt.Sprintf("service %s", w.WebHookeSvcKey.String())); err != nil {
 		return err
 	}
 
@@ -240,7 +241,8 @@ func (w *WireUp) getOrCreateWebhookService(isExternalAPIServer bool, inClusterCl
 
 	newService = newWebhookServiceTemplate(true, w.WebHookeSvcKey, w.WebHookPort, w.WebHookServicePort, w.DeploymentSelector)
 
-	if err := outCLusterClient.Create(context.TODO(), newService); err != nil {
+	if err := createOrRecreate(context.TODO(), outCLusterClient, newService, w.Logger,
+		fmt.Sprintf("hosted cluster service %s", w.WebHookeSvcKey.String())); err != nil {
 		return err
 	}
 
@@ -280,11 +282,37 @@ func (w *WireUp) getOrCreateWebhookService(isExternalAPIServer bool, inClusterCl
 
 	newEndpoint := newWebhookEndpointTemplate(w.WebHookeSvcKey, w.WebHookServicePort, serviceClusterIP)
 
-	if err := outCLusterClient.Create(context.TODO(), newEndpoint); err != nil {
+	if err := createOrRecreate(context.TODO(), outCLusterClient, newEndpoint, w.Logger,
+		fmt.Sprintf("hosted cluster endpoint %s", w.WebHookeSvcKey.String())); err != nil {
 		return err
 	}
 
 	w.Logger.Info(fmt.Sprintf("created hosted cluster endpoint %s ", w.WebHookeSvcKey.String()))
+
+	return nil
+}
+
+// createOrRecreate creates obj and gracefully handles the case where it already exists.
+// This can legitimately happen even right after a "does it exist" check returned "no",
+// because that check may be served from a client-side cache (e.g. mgr.GetClient()) whose
+// informer hasn't yet observed a concurrent/previous create of the same object. Rather than
+// failing outright, delete the stale object and retry the create once.
+func createOrRecreate(ctx context.Context, c client.Client, obj client.Object, logger logr.Logger, desc string) error {
+	if err := c.Create(ctx, obj); err != nil {
+		if !apierrors.IsAlreadyExists(err) {
+			return err
+		}
+
+		logger.Info(fmt.Sprintf("%s already exists, deleting and recreating", desc))
+
+		if delErr := c.Delete(ctx, obj); delErr != nil && !apierrors.IsNotFound(delErr) {
+			return delErr
+		}
+
+		if err := c.Create(ctx, obj); err != nil {
+			return err
+		}
+	}
 
 	return nil
 }
