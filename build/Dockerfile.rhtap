@@ -4,7 +4,7 @@ WORKDIR /go/src/github.com/stolostron/multicluster-operators-channel
 COPY . .
 RUN rm -fr vendor && \
         go mod vendor && \
-        make -f Makefile.prow build
+        CGO_ENABLED=1 GOEXPERIMENT=strictfipsruntime make -f Makefile.prow build
 
 
 FROM registry.access.redhat.com/ubi9/ubi-minimal:latest
