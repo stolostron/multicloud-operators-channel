@@ -12,7 +12,7 @@ require (
 	github.com/google/go-cmp v0.7.0
 	github.com/onsi/ginkgo v1.16.5
 	github.com/onsi/gomega v1.38.2
-	github.com/openshift/api v0.0.0-20251009160459-595e66a09a84
+	github.com/openshift/api v0.0.0-20260610142756-120a096a2850
 	github.com/openshift/library-go v0.0.0-20251009131428-6c2d3d0d6f05
 	github.com/pkg/errors v0.9.1
 	github.com/spf13/pflag v1.0.10
